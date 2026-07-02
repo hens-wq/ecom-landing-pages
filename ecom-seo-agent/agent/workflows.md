@@ -1,6 +1,6 @@
-# תהליכי עבודה תפעוליים מלאים (10 תהליכים)
+# תהליכי עבודה תפעוליים מלאים (11 תהליכים)
 
-מסמך זה הוא ההגדרה התפעולית המדויקת (קלט → שלבים → פלט → תבנית → סטטוס פתיחה) לכל אחד מעשרת התהליכים. ההסבר העסקי/אסטרטגי נמצא ב-`docs/05_CONTENT_WORKFLOWS.md`, `docs/06_WORDPRESS_WORKFLOW.md`, `docs/07_SEARCH_CONSOLE_WORKFLOW.md`, `docs/08_BRAND_SERP_STRATEGY.md`.
+מסמך זה הוא ההגדרה התפעולית המדויקת (קלט → שלבים → פלט → תבנית → סטטוס פתיחה) לכל אחד מ-11 התהליכים. ההסבר העסקי/אסטרטגי נמצא ב-`docs/05_CONTENT_WORKFLOWS.md`, `docs/06_WORDPRESS_WORKFLOW.md`, `docs/07_SEARCH_CONSOLE_WORKFLOW.md`, `docs/08_BRAND_SERP_STRATEGY.md`, `docs/10_TECHNICAL_SEO_WORKFLOW.md`.
 
 ---
 
@@ -73,6 +73,15 @@
 - **פלט:** `data/output/schema/<page-slug>_schema.json`
 - **סטטוס פתיחה:** `Draft`
 
-## 10. אישור ובטיחות
+## 10. SEO טכני (Technical SEO)
 
-- אינו תהליך יצירת תוכן, אלא שכבת בקרה שרצה על **כל** הפריטים מתהליכים 1, 4, 5, 6, 8, 9. ראו `agent/approval_rules.md` ו-`docs/09_APPROVAL_PROCESS.md` לפירוט המלא.
+- **קלט:** ייצוא crawler לפי `docs/11_CRAWLER_EXPORT_GUIDE.md` (`data/input/website_exports/`), בתוספת הדבקה ידנית של `sitemap.xml`/`robots.txt` ובדיקות שלא נכללות ב-CSV (alt text, Core Web Vitals).
+- **שלבים:** הרצת `scripts/content_inventory_parser.py` על קובץ ה-crawler → זיהוי ממצאים טכניים (status code, indexability, canonical, robots meta, H1 חסר/כפול, כותרות/meta כפולים) → השלמת בדיקות ידניות (sitemap, robots.txt, breadcrumbs, alt text, עימוד, ארכיוני קטגוריה/תגית) → תקינות Schema מול `agent/compliance_checker.md` שלב 4.
+- **תבנית:** רשימת הבדיקות המובנית ב-`docs/10_TECHNICAL_SEO_WORKFLOW.md`
+- **פלט:** `data/output/audits/technical_seo_audit_<date>.md` (ביקורת מלאה) או `data/output/reports/<technical-check-name>_<date>.md` (דוח ממוקד)
+- **סטטוס פתיחה:** `Draft`
+- **הערת בטיחות:** המלצות לשינויים טכניים (הפניות, `noindex`/`index`, מחיקת עמודים) הן בלתי הפיכות בקלות - הסוכן ממליץ ומתעד בלבד, אינו מיישם בעצמו, ומצריך מעבר מלא דרך `docs/09_APPROVAL_PROCESS.md` לפני מסירה לביצוע.
+
+## 11. אישור ובטיחות
+
+- אינו תהליך יצירת תוכן, אלא שכבת בקרה שרצה על **כל** הפריטים מתהליכים 1, 4, 5, 6, 8, 9, 10. ראו `agent/approval_rules.md` ו-`docs/09_APPROVAL_PROCESS.md` לפירוט המלא.

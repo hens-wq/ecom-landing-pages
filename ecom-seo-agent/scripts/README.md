@@ -8,14 +8,20 @@ Python 3.8+ בלבד, ללא ספריות נוספות להתקנה.
 
 ## content_inventory_parser.py
 
-בונה טבלת מלאי תוכן (Markdown) מקובץ CSV של סריקת אתר.
+בונה טבלת מלאי תוכן (Markdown) מקובץ CSV של סריקת אתר. תומך בפורמט המורחב שמתואר ב-`docs/11_CRAWLER_EXPORT_GUIDE.md` (למשל ייצוא Screaming Frog) ומוסיף עמודת "בעיות טכניות" (status code לא תקין, `noindex`, H1 חסר/כפול, Canonical חסר) – ראו `docs/10_TECHNICAL_SEO_WORKFLOW.md`.
 
 ```bash
 python3 content_inventory_parser.py path/to/crawl_export.csv -o ../data/output/audits/content_inventory.md
+
+# דוגמה עם קובץ הדגמה בפורמט המלא (נתונים דמה, לא תוכן אמיתי מהאתר)
+python3 content_inventory_parser.py ../data/input/website_exports/sample_crawler_export.csv
 ```
 
-**עמודות חובה ב-CSV:** `url,page_type,title,meta_description,h1,word_count,target_keyword`
-**עמודות אופציונליות:** `search_intent,internal_links_out`
+**עמודות חובה ב-CSV:** `url,title,meta_description,h1,word_count`
+**עמודות אופציונליות (פורמט בסיסי):** `page_type,target_keyword,search_intent,internal_links_out`
+**עמודות אופציונליות נוספות (פורמט crawler מורחב):** `status_code,indexability,canonical,robots_meta,h1_count,title_length,meta_description_length,h2,inlinks,outlinks`
+
+עמודות חסרות בפורמט המורחב פשוט מדלגות על הבדיקה הטכנית המתאימה, ולא גורמות לשגיאה.
 
 ## metadata_auditor.py
 
