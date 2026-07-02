@@ -1,0 +1,8 @@
+url,status_code,indexability,title,title_length,meta_description,meta_description_length,h1,h1_count,h2,word_count,canonical,robots_meta,inlinks,outlinks,page_type,target_keyword
+https://www.example.com/course/sample-cyber/,200,Indexable,קורס לדוגמה | שם המכללה,25,תיאור מטא לדוגמה עבור קורס לדוגמה במכללה שממחיש פורמט תקין.,60,קורס לדוגמה,1,למה ללמוד;מה לומדים;למי מתאים,850,https://www.example.com/course/sample-cyber/,"index,follow",18,9,course,קורס לדוגמה
+https://www.example.com/course/sample-ai/,200,Indexable,קורס לדוגמה | שם המכללה,25,,0,קורס AI לדוגמה,1,מבנה הקורס;דרישות קדם,410,https://www.example.com/course/sample-ai/,"index,follow",6,7,course,קורס AI לדוגמה
+https://www.example.com/blog/sample-old-post/,200,Indexable,מאמר ישן ללא כותרת ייחודית,26,,0,,0,,180,https://www.example.com/blog/sample-old-post/,"index,follow",1,3,blog,
+https://www.example.com/blog/sample-duplicate-h1/,200,Indexable,מאמר לדוגמה עם שני H1,23,תיאור מטא תקין למאמר לדוגמה עם בעיית כותרות כפולות.,53,כותרת ראשית לדוגמה;כותרת שנייה בטעות,2,רקע;פירוט,620,https://www.example.com/blog/sample-duplicate-h1/,"index,follow",4,5,blog,נושא לדוגמה
+https://www.example.com/course/sample-old-url/,301,Non-Indexable: Redirected,,0,,0,,0,,0,,,0,0,redirect,
+https://www.example.com/blog/sample-removed-post/,404,Non-Indexable: Not Found,,0,,0,,0,,0,,,2,0,blog,
+https://www.example.com/course/sample-marketing/,200,Non-Indexable: noindex,קורס לדוגמה בטעות עם noindex,29,תיאור מטא תקין אך העמוד מוגדר בטעות כ-noindex.,49,קורס שיווק לדוגמה,1,תוכנית הלימודים,700,https://www.example.com/course/sample-marketing/,"noindex,follow",10,6,course,קורס שיווק לדוגמה

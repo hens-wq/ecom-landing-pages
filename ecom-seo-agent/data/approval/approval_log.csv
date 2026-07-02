@@ -1,0 +1,2 @@
+item_id,item_type,file_path,title,target_keyword,content_status,compliance_check_result,wp_draft_clearance,cleared_by,cleared_date,draft_created,wp_post_id,wp_edit_link,notes
+EXAMPLE-001,article_draft,data/output/content_plans/cyber_cluster_first_10_articles_2026-07.md#1,קורס סייבר - מה כולל המסלול במכללת איקום,קורס סייבר,Draft,לא הורץ עדיין,No,,,No,,,שורת דוגמה בלבד להמחשת הפורמט - אין לראות בכך אישור בפועל
