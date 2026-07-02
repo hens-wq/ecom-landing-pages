@@ -7,12 +7,15 @@
 ## מבנה הפרויקט
 
 ```
-docs/        אסטרטגיה, כללים ותהליכים – מקור האמת העסקי
-agent/       ה"מוח" התפעולי של הסוכן (system prompt, workflows, כללי אישור, בדיקת ציות)
-templates/   תבניות מילוי לכל סוג פלט
-data/input/  קבצים שהמשתמש מזין (ייצוא GSC/GA, הערות מתחרים, תוכן מהאתר)
-data/output/ כל מה שהסוכן מייצר (audits, content_plans, article_drafts, page_optimizations, schema, reports)
-scripts/     סקריפטי Python לעיבוד קבצי CSV שהוזנו (ללא חיבור API חי)
+docs/            אסטרטגיה, כללים ותהליכים – מקור האמת העסקי
+agent/           ה"מוח" התפעולי של הסוכן (system prompt, workflows, כללי אישור, בדיקת ציות)
+templates/       תבניות מילוי לכל סוג פלט
+data/input/      קבצים שהמשתמש מזין (ייצוא GSC/GA, הערות מתחרים, תוכן מהאתר)
+data/output/     כל מה שהסוכן מייצר (audits, content_plans, article_drafts, page_optimizations, schema, reports)
+data/approval/   קובץ האישור המקומי (approval_log.csv) - שער האישור בפועל ליצירת טיוטות וורדפרס
+scripts/         סקריפטי Python לעיבוד קבצי CSV שהוזנו (ללא חיבור API חי)
+integration/     תוכניות טכניות (specs) לשכבת האינטגרציה הבטוחה - תכנון בלבד, לא מחובר
+SAFE_INTEGRATION_PLAN.md   תוכנית האינטגרציה הבטוחה המלאה - קרא לפני כל חיבור למערכת חיה
 ```
 
 ## מאיפה מתחילים
@@ -20,6 +23,7 @@ scripts/     סקריפטי Python לעיבוד קבצי CSV שהוזנו (לל�
 1. קראו את `docs/00_PROJECT_OVERVIEW.md` – סקירת הפרויקט המלאה.
 2. קראו את `agent/system_prompt.md` – זהות הסוכן וכללי הברזל שלו.
 3. עיינו ב-`data/output/audits/00_MVP2_STATUS_AND_NEXT_STEPS.md` – תוכנית הפעולה הראשונה ומה נדרש כדי להשלים אותה עם נתונים אמיתיים.
+4. לפני כל חיבור למערכת חיה (וורדפרס/Search Console/Analytics) – קראו את `SAFE_INTEGRATION_PLAN.md` ואת `integration/`.
 
 ## סטטוס נוכחי (MVP1 + MVP2 ראשוני)
 
@@ -33,6 +37,12 @@ scripts/     סקריפטי Python לעיבוד קבצי CSV שהוזנו (לל�
 - אין חיבור API ל-WordPress, ל-Search Console, או ל-Google Analytics.
 - אין פרסום אוטומטי – כל תוכן הוא Draft בלבד עד אישור אנושי.
 - אין נתוני מחקר מתחרים אמיתיים עדיין (יש מתודולוגיה ותבנית, ממתין לתוכן שיסופק).
+
+**שכבת אינטגרציה בטוחה (חדש) – תכנון בלבד, טרם מחובר:**
+- `SAFE_INTEGRATION_PLAN.md` – תוכנית מלאה: אילו גישות נדרשות, מה כל גישה מאפשרת/אוסרת, סיכונים, איך מצמצמים אותם, זרימת האוטומציה הבטוחה הראשונה, מנגנון האישור, ומה אסור לסוכן לעשות בהחלט.
+- `integration/` – מפרטים טכניים ליצירת טיוטות וורדפרס (Contributor בלבד, POST חדש בלבד, לעולם לא publish), ייבוא קריאה-בלבד מ-Search Console ו-Analytics, ושער אישור שאוכף הכל ברמת קוד.
+- `data/approval/approval_log.csv` – קובץ האישור המקומי בפועל, ללא צורך בשום קרדנציאל.
+- שום קרדנציאל לא התבקש ולא סופק, ושום חיבור לא בוצע.
 
 ## איך להריץ את הסקריפטים
 

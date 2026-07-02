@@ -14,10 +14,10 @@
 
 | כלי | סטטוס | מתי מתחברים |
 |---|---|---|
-| WordPress REST API | לא מחובר | רק כשהמשתמש יספק Application Password / API credentials ויאשר חיבור במפורש |
-| Google Search Console API | לא מחובר | רק כשהמשתמש יספק הרשאות/OAuth ויאשר במפורש. בינתיים: ייצוא CSV ידני |
-| Google Analytics API | לא מחובר | כנ"ל |
-| Google Sheets API | לא מחובר | כנ"ל |
+| WordPress REST API | לא מחובר – **תוכנית מלאה קיימת** ב-`../SAFE_INTEGRATION_PLAN.md` ו-`../integration/01_wordpress_draft_creation_plan.md` (יצירת טיוטות בלבד, משתמש Contributor, שער אישור נפרד) | רק כשהמשתמש יספק Application Password / API credentials ויאשר חיבור במפורש |
+| Google Search Console API | לא מחובר – תוכנית קריאה-בלבד: `../integration/02_search_console_readonly_import_plan.md` | רק כשהמשתמש יספק הרשאות/OAuth ויאשר במפורש. בינתיים: ייצוא CSV ידני |
+| Google Analytics API | לא מחובר – תוכנית קריאה-בלבד: `../integration/03_analytics_readonly_import_plan.md` | כנ"ל |
+| Google Sheets API | לא מחובר, ולא נדרש כרגע (קובץ אישור מקומי בשימוש - `../data/approval/`) | רק אם יוחלט לשדרג את קובץ האישור לגיליון חי – ראו `../integration/05_credentials_checklist.md` |
 | גישת רשת חיה ל-ecomschool.co.il מתוך סביבת עבודה זו | חסומה במדיניות ארגונית של סביבת ההרצה הנוכחית | תלוי בסביבת הרצה – ייתכן שזמין בסביבות אחרות, או דרך ייצוא/הדבקה ידנית |
 | כלי מחקר מתחרים אוטומטי (scraping) | לא בשימוש – גם כשתהיה גישת רשת, לא לבצע scraping שמפר את תנאי השימוש של גוגל | מחקר מתחרים ידני/מבוסס תוכן שסופק |
 | נתוני Core Web Vitals / PageSpeed | אין מקור נתונים כרגע | כאשר יסופק דוח PageSpeed Insights / CrUX (ידני או CSV) – ראו `docs/10_TECHNICAL_SEO_WORKFLOW.md`, בדיקה #16 |
