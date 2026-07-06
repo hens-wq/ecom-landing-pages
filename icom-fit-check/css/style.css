@@ -82,6 +82,16 @@ img, svg { display: block; max-width: 100%; }
 
 /* ---------- רקע חי ---------- */
 
+.bg-ambient-img {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.6;
+}
+
 #bg-particles {
   position: fixed;
   inset: 0;
@@ -601,8 +611,14 @@ img, svg { display: block; max-width: 100%; }
   transition: transform 0.3s var(--ease-spring);
 }
 .track-icon img {
-  width: 100%; height: 100%;
+  width: 138%; height: 138%;
+  max-width: none;
+  margin: -19%;
   object-fit: contain;
+  /* ה-JPG מגיע על רקע שחור — מיזוג screen + מסיכה רדיאלית ממיסים אותו לתוך הכרטיס */
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 52%, transparent 74%);
+  mask-image: radial-gradient(circle at 50% 50%, black 52%, transparent 74%);
   filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--tc) 45%, transparent));
 }
 .track-icon svg {

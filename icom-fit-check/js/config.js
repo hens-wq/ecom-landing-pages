@@ -17,17 +17,18 @@ const CONFIG = {
 
   /* ---------- נכסי Nano Banana ---------- */
 
-  // הנכסים הגרפיים שמורים בספריית Pixelcut (קישור ההורדה ב־README).
-  // אחרי הורדת הקבצים לתיקיית assets/img — שנו את הדגל ל־true.
-  ASSETS_READY: false,
+  // כל הנכסים נמצאים בתיקיית assets/img ומשולבים בדף.
+  ASSETS_READY: true,
+
+  // רקע האווירה הגלובלי (ערפילית + מעגלים מודפסים)
+  AMBIENT_BG: 'assets/img/bg-ambient.jpg',
 
   /* ---------- דמות ה־Hero במסך הפתיחה ---------- */
 
   hero: {
-    // כשהדגל דולק, תמונת הדמות מ־Nano Banana נכנסת לפורטל
-    // במקום הקומפוזיציה ההולוגרפית המובנית.
-    ART_READY: false,
-    art: 'assets/img/hero-character.webp',
+    // תמונת הדמות נכנסת לפורטל במקום הקומפוזיציה ההולוגרפית.
+    ART_READY: true,
+    art: 'assets/img/hero-character.jpg',
     // שורות הטרמינל המוקלדות בפורטל
     terminal: [
       '> icom.run(בדיקת_התאמה)',
@@ -118,7 +119,7 @@ const CONFIG = {
       salary: '16,000 ש"ח',
       color: '#7C4DFF',
       color2: '#6836FF',
-      art: 'assets/img/track-cyber.webp',
+      art: 'assets/img/track-cyber.jpg',
       gameTitle: 'חשיבה של האקר',
       gameInstruction: 'שלוש שאלות אבטחה מהעולם האמיתי. זהו את האיום או את ההגנה החזקה — יש רק ניסיון אחד לכל שאלה.',
       resultLine: 'זיהיתם איומים וקיבלתם החלטות אבטחה נכונות — בסיס מצוין לקורס סייבר ואבטחת מידע.',
@@ -129,7 +130,7 @@ const CONFIG = {
       salary: '14,500 ש"ח',
       color: '#9B6BFF',
       color2: '#34D1C3',
-      art: 'assets/img/track-ai.webp',
+      art: 'assets/img/track-ai.jpg',
       gameTitle: 'לאמן את המודל',
       gameInstruction: 'בדיוק כמו מודל AI — תקבלו דוגמאות ותצטרכו להסיק את החוק. שלוש שאלות, ניסיון אחד לכל אחת.',
       resultLine: 'הסקתם חוקים מתוך דוגמאות בדיוק כמו שמודל לומד — התאמה מצוינת לקורס AI למפתחים.',
@@ -140,7 +141,7 @@ const CONFIG = {
       salary: '11,000 ש"ח',
       color: '#85ED72',
       color2: '#34D1C3',
-      art: 'assets/img/track-qa.webp',
+      art: 'assets/img/track-qa.jpg',
       gameTitle: 'ציד הבאגים',
       gameInstruction: 'בכל מסך מסתתר באג אחד אמיתי — טעות בחישוב, תאריך בלתי אפשרי… קראו בעיון ולחצו על השורה הבעייתית.',
       resultLine: 'איתרתם באגים שרוב האנשים מפספסים — עין חדה שמתאימה בדיוק לקורס QA בדיקות תוכנה.',
@@ -151,7 +152,7 @@ const CONFIG = {
       salary: '15,000 ש"ח',
       color: '#34D1C3',
       color2: '#6836FF',
-      art: 'assets/img/track-fullstack.webp',
+      art: 'assets/img/track-fullstack.jpg',
       gameTitle: 'בונים אפליקציה',
       gameInstruction: 'סדרו את שלבי הבנייה של אפליקציה בסדר הנכון, וענו על שאלת המשך. ניסיון אחד לכל שלב.',
       resultLine: 'הבנתם איך מוצר דיגיטלי נבנה מקצה לקצה — חשיבה טבעית של מפתח Full Stack.',
@@ -162,7 +163,7 @@ const CONFIG = {
       salary: '12,000 ש"ח',
       color: '#5FE39A',
       color2: '#34D1C3',
-      art: 'assets/img/track-marketing.webp',
+      art: 'assets/img/track-marketing.jpg',
       gameTitle: 'המודעה המנצחת',
       gameInstruction: 'אינטואיציה שיווקית: בחרו את המודעה, הקהל והכפתור שיביאו הכי הרבה תוצאות. ניסיון אחד לכל שאלה.',
       resultLine: 'יש לכם אינטואיציה טבעית למה שגורם לאנשים ללחוץ — התאמה מצוינת לקורס שיווק דיגיטלי.',
@@ -173,7 +174,7 @@ const CONFIG = {
       salary: '11,000 ש"ח',
       color: '#B08CFF',
       color2: '#6836FF',
-      art: 'assets/img/track-uxui.webp',
+      art: 'assets/img/track-uxui.jpg',
       gameTitle: 'העין המעצבת',
       gameInstruction: 'שתי החלטות עיצוב אמיתיות: איפה קל יותר למצוא את המידע, ומה יבלוט למשתמש. ניסיון אחד לכל שאלה.',
       resultLine: 'בחרתם בדיוק כמו שמעצבים מנוסים בוחרים — רגישות עיצובית שמתאימה לקורס UX/UI.',
@@ -184,7 +185,7 @@ const CONFIG = {
       salary: '16,000 ש"ח',
       color: '#4DDBB8',
       color2: '#85ED72',
-      art: 'assets/img/track-devops.webp',
+      art: 'assets/img/track-devops.jpg',
       gameTitle: 'לילה בחדר השרתים',
       gameInstruction: 'תקלות אמיתיות מחיי DevOps: שרת שקרס, עדכון מסוכן ובדיקות שנכשלו. בחרו את ההחלטה הנכונה — ניסיון אחד לכל שאלה.',
       resultLine: 'קור רוח והחלטות נכונות תחת לחץ — בדיוק מה שמחפשים בקורס DevOps.',

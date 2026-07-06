@@ -427,7 +427,6 @@
       if (C.ASSETS_READY && track.art) {
         const img = new Image();
         img.alt = '';
-        img.loading = 'lazy';
         img.decoding = 'async';
         img.onload = () => { icon.innerHTML = ''; icon.appendChild(img); };
         img.src = track.art;
@@ -958,6 +957,14 @@
      ============================================================ */
 
   function init() {
+    // רקע האווירה הגלובלי (Nano Banana) — מתחת לחלקיקים ולהילות
+    if (C.ASSETS_READY && C.AMBIENT_BG) {
+      const amb = h('div', 'bg-ambient-img');
+      amb.setAttribute('aria-hidden', 'true');
+      amb.style.backgroundImage = `url("${C.AMBIENT_BG}")`;
+      document.body.insertBefore(amb, $('#bg-particles'));
+    }
+
     initTexts();
     initHero();
     buildTrackCards();
