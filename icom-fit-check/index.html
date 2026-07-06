@@ -42,7 +42,54 @@
     <!-- ============ מסך 1: פתיחה ============ -->
     <section class="screen screen--active" id="screen-intro" aria-labelledby="intro-title">
       <div class="screen-inner intro">
-        <div class="intro-orb" aria-hidden="true"><span class="orb-core"></span></div>
+
+        <!-- Hero ויזואלי: פורטל דמות + טבעת אנרגיה + שבבים צפים -->
+        <div class="hero-visual" id="hero-visual" aria-hidden="true">
+          <div class="hero-ring"></div>
+          <div class="hero-glow"></div>
+          <div class="hero-portal" id="hero-portal">
+            <!-- צללית ברירת מחדל — מוחלפת בתמונת ה־Nano Banana כש־hero.ART_READY=true -->
+            <svg class="hero-silhouette" viewBox="0 0 240 300" preserveAspectRatio="xMidYMax meet">
+              <defs>
+                <linearGradient id="sil-body" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#1C1C2E"/><stop offset="1" stop-color="#0A0A14"/>
+                </linearGradient>
+                <linearGradient id="sil-rim-l" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#6836FF"/><stop offset="1" stop-color="#6836FF" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="sil-rim-r" x1="1" y1="0" x2="0" y2="0">
+                  <stop offset="0" stop-color="#34D1C3"/><stop offset="1" stop-color="#34D1C3" stop-opacity="0"/>
+                </linearGradient>
+                <radialGradient id="sil-halo" cx="0.5" cy="0.32" r="0.55">
+                  <stop offset="0" stop-color="#6836FF" stop-opacity="0.35"/><stop offset="1" stop-color="#6836FF" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="sil-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
+              </defs>
+              <rect width="240" height="300" fill="url(#sil-halo)"/>
+              <circle cx="120" cy="96" r="60" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="3 6"/>
+              <!-- דמות: ראש וכתפיים -->
+              <g>
+                <circle cx="120" cy="92" r="34" fill="url(#sil-body)"/>
+                <path d="M120 132c-46 0-74 30-80 76-2 14 0 92 0 92h160s2-78 0-92c-6-46-34-76-80-76z" fill="url(#sil-body)"/>
+                <!-- תאורת קצה סגולה משמאל -->
+                <path d="M92 68a34 34 0 0 0-5 44" fill="none" stroke="url(#sil-rim-l)" stroke-width="3.5" stroke-linecap="round" filter="url(#sil-blur)" opacity="0.9"/>
+                <path d="M64 168c-12 16-19 38-22 62" fill="none" stroke="url(#sil-rim-l)" stroke-width="4" stroke-linecap="round" filter="url(#sil-blur)" opacity="0.8"/>
+                <!-- תאורת קצה טורקיז מימין -->
+                <path d="M148 68a34 34 0 0 1 5 44" fill="none" stroke="url(#sil-rim-r)" stroke-width="3.5" stroke-linecap="round" filter="url(#sil-blur)" opacity="0.9"/>
+                <path d="M176 168c12 16 19 38 22 62" fill="none" stroke="url(#sil-rim-r)" stroke-width="4" stroke-linecap="round" filter="url(#sil-blur)" opacity="0.8"/>
+              </g>
+              <!-- חלקיקים -->
+              <circle cx="52" cy="70" r="2.5" fill="#34D1C3" opacity="0.8"/>
+              <circle cx="196" cy="102" r="2" fill="#85ED72" opacity="0.7"/>
+              <circle cx="184" cy="52" r="1.8" fill="#6836FF" opacity="0.9"/>
+              <circle cx="38" cy="150" r="1.6" fill="#85ED72" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="hero-chip hero-chip--1" id="hero-chip-1"></div>
+          <div class="hero-chip hero-chip--2" id="hero-chip-2"></div>
+          <div class="hero-chip hero-chip--3" id="hero-chip-3"></div>
+        </div>
+
         <div class="intro-badge" id="intro-badge"></div>
         <h1 class="intro-title" id="intro-title"></h1>
         <p class="intro-subtitle" id="intro-subtitle"></p>

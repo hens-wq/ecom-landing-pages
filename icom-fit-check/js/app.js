@@ -196,6 +196,60 @@
   }
 
   /* ============================================================
+     Hero — דמות, שבבים צפים ופרלקסה
+     ============================================================ */
+
+  function initHero() {
+    // שבבי המידע הצפים
+    C.hero.chips.forEach((chip, i) => {
+      const el = $('#hero-chip-' + (i + 1));
+      if (!el) return;
+      el.innerHTML = (chip.dot ? '<span class="chip-pulse"></span>' : '') + chip.text;
+      if (chip.mono) el.classList.add('mono');
+    });
+
+    // החלפת הצללית בדמות ה־Nano Banana כשהקובץ במקום
+    if (C.hero.ART_READY && C.hero.art) {
+      const portal = $('#hero-portal');
+      const img = new Image();
+      img.alt = '';
+      img.decoding = 'async';
+      img.onload = () => {
+        const sil = portal.querySelector('.hero-silhouette');
+        if (sil) sil.remove();
+        portal.prepend(img);
+
+        // וריאציה עדינה במסך המסלולים — אותה דמות כרקע אווירה מטושטש
+        const ambient = h('div', 'tracks-ambient');
+        ambient.style.backgroundImage = `url("${C.hero.art}")`;
+        $('#screen-tracks').prepend(ambient);
+      };
+      img.src = C.hero.art;
+    }
+
+    // פרלקסה עדינה בעכבר — דסקטופ בלבד, לא ב־Reduced Motion
+    if (reducedMotion || !window.matchMedia('(pointer: fine)').matches) return;
+    const visual = $('#hero-visual');
+    const portal = $('#hero-portal');
+    const chips = [$('#hero-chip-1'), $('#hero-chip-2'), $('#hero-chip-3')];
+    let raf = null;
+
+    $('#screen-intro').addEventListener('pointermove', (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const r = visual.getBoundingClientRect();
+        const dx = (e.clientX - (r.left + r.width / 2)) / window.innerWidth;
+        const dy = (e.clientY - (r.top + r.height / 2)) / window.innerHeight;
+        portal.style.transform = `translate(${dx * -8}px, ${dy * -6}px)`;
+        chips.forEach((c, i) => {
+          if (c) c.style.translate = `${dx * (10 + i * 5)}px ${dy * (8 + i * 4)}px`;
+        });
+      });
+    });
+  }
+
+  /* ============================================================
      מסך 2 — כרטיסי המסלולים
      ============================================================ */
 
@@ -732,6 +786,7 @@
 
   function init() {
     initTexts();
+    initHero();
     buildTrackCards();
     initEvents();
     initKeyboard();

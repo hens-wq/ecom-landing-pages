@@ -298,45 +298,122 @@ img, svg { display: block; max-width: 100%; }
 
 /* ---------- מסך פתיחה ---------- */
 
-/* אובייקט פתיחה — טבעת אנרגיה מסתובבת עם ליבה זוהרת */
-.intro-orb {
+/* ---------- Hero ויזואלי: פורטל דמות, טבעת אנרגיה ושבבים צפים ---------- */
+
+.hero-visual {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin-bottom: 30px;
-  display: grid;
-  place-items: center;
+  width: min(48vw, 200px);
+  aspect-ratio: 4 / 5;
+  margin-bottom: 24px;
   animation: fade-up 0.9s var(--ease-out) both;
 }
-.intro-orb::before {
-  content: '';
+
+/* טבעת אנרגיה מסתובבת מאחורי הפורטל */
+.hero-ring {
+  position: absolute;
+  inset: -9%;
+  border-radius: 34px;
+  background: conic-gradient(from 40deg, transparent 0 20deg, var(--purple) 120deg, var(--teal) 215deg, var(--green) 290deg, transparent 340deg 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  padding: 2px;
+  opacity: 0.85;
+  animation: ring-breathe 4.5s ease-in-out infinite;
+}
+/* נשימה עדינה — בלי סטייה מצבעי המותג */
+@keyframes ring-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* הילת עומק מאחורי הדמות */
+.hero-glow {
+  position: absolute;
+  inset: -22%;
+  background:
+    radial-gradient(ellipse 60% 48% at 28% 30%, rgba(104,54,255,0.32), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 75% 60%, rgba(52,209,195,0.22), transparent 70%),
+    radial-gradient(ellipse 40% 32% at 55% 95%, rgba(133,237,114,0.12), transparent 70%);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.hero-portal {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 30deg, var(--purple) 110deg, var(--teal) 200deg, var(--green) 285deg, transparent 330deg 360deg);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 2.5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 2.5px));
-  animation: spin 7s linear infinite;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015) 55%),
+    radial-gradient(ellipse 90% 60% at 50% 20%, rgba(104,54,255,0.16), transparent 70%),
+    var(--bg-2);
+  border: 1px solid rgba(255,255,255,0.11);
+  box-shadow:
+    0 24px 60px rgba(0,0,0,0.55),
+    0 0 44px rgba(104,54,255,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  will-change: transform;
 }
-.intro-orb::after {
+
+/* עמעום תחתון — כדי שהדמות תתמזג עם הרקע והטקסט יישאר חד */
+.hero-portal::after {
   content: '';
   position: absolute;
-  inset: 14px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255,255,255,0.12);
-  animation: spin 16s linear infinite reverse;
+  inset: auto 0 0 0;
+  height: 38%;
+  background: linear-gradient(180deg, transparent, rgba(5,5,8,0.9));
+  pointer-events: none;
 }
-.orb-core {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 30%, #B9A0FF, var(--purple) 55%, #2A1470);
-  box-shadow: 0 0 34px rgba(104,54,255,0.75), 0 0 80px rgba(52,209,195,0.3);
-  animation: orb-breathe 3.2s ease-in-out infinite;
+
+.hero-silhouette { width: 100%; height: 100%; }
+
+.hero-portal img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
 }
-@keyframes orb-breathe {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 34px rgba(104,54,255,0.75), 0 0 80px rgba(52,209,195,0.3); }
-  50% { transform: scale(1.12); box-shadow: 0 0 46px rgba(104,54,255,0.9), 0 0 110px rgba(52,209,195,0.45); }
+
+/* שבבי מידע צפים */
+.hero-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(16,16,26,0.72);
+  border: 1px solid var(--stroke);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+  white-space: nowrap;
+  will-change: transform;
+  animation: chip-float 5s ease-in-out infinite;
+}
+.hero-chip .chip-pulse {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 9px var(--green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.hero-chip.mono { font-family: ui-monospace, 'SF Mono', Consolas, monospace; color: #C9B4FF; }
+
+.hero-chip--1 { top: 9%; inset-inline-start: -12%; animation-delay: 0s; }
+.hero-chip--2 { top: 42%; inset-inline-end: -14%; animation-delay: 1.4s; color: var(--teal); }
+.hero-chip--3 { bottom: 7%; inset-inline-start: -6%; animation-delay: 2.6s; }
+
+@keyframes chip-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
 }
 
 .intro-badge {
@@ -369,7 +446,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .intro-title {
-  margin-top: 22px;
+  margin-top: 16px;
   font-size: clamp(1.85rem, 7.2vw, 2.9rem);
   font-weight: 800;
   line-height: 1.22;
@@ -395,7 +472,7 @@ img, svg { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 30px;
+  margin-top: 24px;
   animation: fade-up 0.7s var(--ease-out) 0.52s both;
   flex-wrap: wrap;
   justify-content: center;
@@ -426,10 +503,10 @@ img, svg { display: block; max-width: 100%; }
 }
 .intro-step-sep { color: var(--text-faint); font-size: 0.8rem; }
 
-#btn-start { margin-top: 34px; animation: fade-up 0.7s var(--ease-out) 0.64s both; }
+#btn-start { margin-top: 26px; animation: fade-up 0.7s var(--ease-out) 0.64s both; }
 
 .intro-hint {
-  margin-top: 16px;
+  margin-top: 14px;
   font-size: 0.8rem;
   color: var(--text-faint);
   animation: fade-up 0.7s var(--ease-out) 0.76s both;
@@ -1364,8 +1441,8 @@ img, svg { display: block; max-width: 100%; }
 
 @media (max-height: 700px) {
   .screen { padding-top: calc(52px + env(safe-area-inset-top)); }
-  .intro-orb { width: 88px; height: 88px; margin-bottom: 20px; }
-  .orb-core { width: 26px; height: 26px; }
+  .hero-visual { width: min(38vw, 150px); margin-bottom: 16px; }
+  .hero-chip { font-size: 0.64rem; padding: 4px 9px; }
   .game-stage { min-height: 210px; margin-top: 12px; }
   .game-title { margin-top: 14px; }
   .intro-steps { margin-top: 20px; }
@@ -1378,7 +1455,7 @@ img, svg { display: block; max-width: 100%; }
   .game-stage { min-height: 170px; }
   .scan-track { height: 54px; }
   .intro-steps { display: none; }
-  .intro-orb { display: none; }
+  .hero-visual { display: none; }
   .track-tagline { display: none; }
 }
 
@@ -1397,7 +1474,47 @@ img, svg { display: block; max-width: 100%; }
 
 @media (min-width: 1100px) {
   .tracks { max-width: 880px; }
-  .screen-inner:not(.tracks) { max-width: 620px; }
+  .screen-inner:not(.tracks):not(.intro) { max-width: 620px; }
+}
+
+/* דסקטופ רחב: מסך הפתיחה הופך לפריסה דו־טורית — טקסט מימין, דמות משמאל */
+@media (min-width: 1024px) {
+  .screen-inner.intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    column-gap: 56px;
+    align-items: center;
+    justify-items: start;
+    text-align: start;
+    max-width: 1060px;
+  }
+  .intro > * { grid-column: 1; }
+  .intro .hero-visual {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    justify-self: center;
+    width: min(30vw, 330px);
+    margin-bottom: 0;
+  }
+  .intro-title { max-width: 15ch; }
+  .intro-subtitle { margin-top: 18px; }
+  .intro-steps { justify-content: flex-start; }
+}
+
+/* רקע אווירה עדין במסך המסלולים — נוצר רק כשדמות ה־Hero זמינה */
+#screen-tracks { position: relative; }
+.tracks-ambient {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 58%;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.11;
+  filter: blur(26px) saturate(1.25);
+  -webkit-mask-image: linear-gradient(180deg, black 20%, transparent 90%);
+  mask-image: linear-gradient(180deg, black 20%, transparent 90%);
+  pointer-events: none;
 }
 
 /* ---------- Reduced Motion ---------- */
@@ -1408,7 +1525,8 @@ img, svg { display: block; max-width: 100%; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.15s !important;
   }
-  .aurora, .btn--primary::after, .scanner-ring, .scanner-ring--2 { animation: none !important; }
+  .aurora, .btn--primary::after, .scanner-ring, .scanner-ring--2,
+  .hero-ring, .hero-chip { animation: none !important; }
   #bg-particles, #confetti-canvas { display: none; }
   .screen { transform: none; }
   .screen--active { transform: none; }
