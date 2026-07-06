@@ -101,7 +101,7 @@
 
     function frame() {
       ctx2d.clearRect(0, 0, w, h2);
-      const linkDist = 110;
+      const linkDist = 125;
 
       for (const p of particles) {
         p.x += p.vx; p.y += p.vy;
@@ -119,7 +119,7 @@
           const dx = a.x - b.x, dy = a.y - b.y;
           const d = dx * dx + dy * dy;
           if (d < linkDist * linkDist) {
-            const alpha = (1 - Math.sqrt(d) / linkDist) * 0.09;
+            const alpha = (1 - Math.sqrt(d) / linkDist) * 0.12;
             ctx2d.beginPath();
             ctx2d.moveTo(a.x, a.y);
             ctx2d.lineTo(b.x, b.y);
@@ -144,7 +144,7 @@
   function goTo(id) {
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('screen--active'));
     $('#' + id).classList.add('screen--active');
-    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+    window.scrollTo(0, 0);
   }
 
   /* ============================================================
@@ -152,6 +152,7 @@
      ============================================================ */
 
   let session = null;
+  let retryCount = 0;
 
   function newSession(track) {
     session = {
@@ -161,6 +162,7 @@
       startedAt: new Date().toISOString(),
       attempts: [],       // { round, correct, action, rtMs }
       correctCount: 0,
+      retries: retryCount,
       score: null,
       finishedAt: null,
     };
@@ -190,14 +192,145 @@
     $('#result-title').textContent = C.texts.resultTitle;
     $('#score-label').textContent = C.texts.resultScoreLabel;
     $('#result-disclaimer').textContent = C.texts.resultDisclaimer;
-    $('#btn-whatsapp-label').textContent = C.texts.resultCta;
-    $('#btn-again').textContent = C.texts.resultSecondary;
-    $('#btn-whatsapp').href = C.WHATSAPP_RETURN_URL;
+    $('#btn-again').textContent = C.texts.resultCta;
+
+    $('#game-intro-btn').textContent = C.texts.gameIntroCta;
+    $('#game-timeout-title').textContent = C.texts.timeoutTitle;
+    $('#game-timeout-text').textContent = C.texts.timeoutText;
+    $('#game-timeout-btn').textContent = C.texts.timeoutCta;
   }
 
   /* ============================================================
-     Hero — דמות, שבבים צפים ופרלקסה
+     Hero — קומפוזיציה הולוגרפית, שבבים ופרלקסה
      ============================================================ */
+
+  function initHeroTerminal() {
+    const body = $('#hero-terminal-body');
+    const lines = C.hero.terminal;
+
+    if (reducedMotion) {
+      lines.forEach((l) => body.appendChild(h('div', 'term-line', l)));
+      return;
+    }
+
+    let li = 0;
+    function typeLine() {
+      if (li >= lines.length) {
+        // השהיה ואתחול הלולאה
+        setTimeout(() => {
+          body.innerHTML = '';
+          li = 0;
+          typeLine();
+        }, 3200);
+        return;
+      }
+      const line = h('div', 'term-line');
+      const cursor = h('span', 'term-cursor');
+      body.appendChild(line);
+      line.appendChild(cursor);
+      const text = lines[li];
+      let ci = 0;
+      (function typeChar() {
+        if (ci < text.length) {
+          cursor.insertAdjacentText('beforebegin', text[ci]);
+          ci++;
+          setTimeout(typeChar, 26 + Math.random() * 30);
+        } else {
+          cursor.remove();
+          if (li === lines.length - 1) line.classList.add('term-line--ok');
+          li++;
+          setTimeout(typeLine, 420);
+        }
+      })();
+    }
+    typeLine();
+  }
+
+  function initHeroPoly() {
+    const canvas = $('#hero-poly');
+    const ctx2d = canvas.getContext('2d');
+
+    // איקוסהדרון — 12 קודקודים, 30 צלעות
+    const t = (1 + Math.sqrt(5)) / 2;
+    const V = [
+      [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+      [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+      [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+    ].map((v) => {
+      const len = Math.hypot(...v);
+      return v.map((x) => x / len);
+    });
+    const E = [];
+    for (let i = 0; i < V.length; i++) {
+      for (let j = i + 1; j < V.length; j++) {
+        const d = Math.hypot(V[i][0] - V[j][0], V[i][1] - V[j][1], V[i][2] - V[j][2]);
+        if (d < 1.1) E.push([i, j]);
+      }
+    }
+
+    let w = 0, hh = 0;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const r = canvas.getBoundingClientRect();
+      if (!r.width) return;
+      w = r.width; hh = r.height;
+      canvas.width = w * dpr;
+      canvas.height = hh * dpr;
+      ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    let rx = 0.4, ry = 0.2;
+
+    function draw() {
+      ctx2d.clearRect(0, 0, w, hh);
+      const scale = Math.min(w, hh) * 0.36;
+      const cx = w / 2, cy = hh / 2;
+
+      const pts = V.map(([x, y, z]) => {
+        // סיבוב סביב X ו־Y
+        let y1 = y * Math.cos(rx) - z * Math.sin(rx);
+        let z1 = y * Math.sin(rx) + z * Math.cos(rx);
+        let x1 = x * Math.cos(ry) + z1 * Math.sin(ry);
+        let z2 = -x * Math.sin(ry) + z1 * Math.cos(ry);
+        const p = 2.6 / (2.6 - z2 * 0.9);
+        return { x: cx + x1 * scale * p, y: cy + y1 * scale * p, z: z2 };
+      });
+
+      for (const [i, j] of E) {
+        const a = pts[i], b = pts[j];
+        const depth = (a.z + b.z) / 2;                 // -1..1
+        const alpha = 0.18 + (depth + 1) * 0.26;
+        ctx2d.beginPath();
+        ctx2d.moveTo(a.x, a.y);
+        ctx2d.lineTo(b.x, b.y);
+        ctx2d.strokeStyle = depth > 0
+          ? `rgba(52,209,195,${alpha})`
+          : `rgba(104,54,255,${alpha})`;
+        ctx2d.lineWidth = 1.1;
+        ctx2d.stroke();
+      }
+      for (const p of pts) {
+        const r = 1.4 + (p.z + 1) * 1.1;
+        ctx2d.beginPath();
+        ctx2d.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx2d.fillStyle = p.z > 0.3 ? 'rgba(133,237,114,0.95)' : 'rgba(52,209,195,0.65)';
+        ctx2d.fill();
+      }
+    }
+
+    if (reducedMotion) {
+      draw();
+      return;
+    }
+    (function frame() {
+      rx += 0.0038;
+      ry += 0.0052;
+      draw();
+      requestAnimationFrame(frame);
+    })();
+  }
 
   function initHero() {
     // שבבי המידע הצפים
@@ -208,23 +341,26 @@
       if (chip.mono) el.classList.add('mono');
     });
 
-    // החלפת הצללית בדמות ה־Nano Banana כשהקובץ במקום
     if (C.hero.ART_READY && C.hero.art) {
+      // דמות ה־Nano Banana מחליפה את הקומפוזיציה ההולוגרפית
       const portal = $('#hero-portal');
       const img = new Image();
       img.alt = '';
       img.decoding = 'async';
       img.onload = () => {
-        const sil = portal.querySelector('.hero-silhouette');
-        if (sil) sil.remove();
+        const holo = $('#hero-holo');
+        if (holo) holo.remove();
         portal.prepend(img);
 
-        // וריאציה עדינה במסך המסלולים — אותה דמות כרקע אווירה מטושטש
+        // וריאציה עדינה במסך הקורסים — אותה דמות כרקע אווירה מטושטש
         const ambient = h('div', 'tracks-ambient');
         ambient.style.backgroundImage = `url("${C.hero.art}")`;
         $('#screen-tracks').prepend(ambient);
       };
       img.src = C.hero.art;
+    } else {
+      initHeroTerminal();
+      initHeroPoly();
     }
 
     // פרלקסה עדינה בעכבר — דסקטופ בלבד, לא ב־Reduced Motion
@@ -250,7 +386,7 @@
   }
 
   /* ============================================================
-     מסך 2 — כרטיסי המסלולים
+     מסך 2 — כרטיסי הקורסים
      ============================================================ */
 
   /* אייקוני SVG בגרדיאנט מותג — ברירת המחדל של הכרטיסים.
@@ -300,7 +436,7 @@
       card.append(
         icon,
         h('div', 'track-name', track.name),
-        h('div', 'track-tagline', track.tagline),
+        h('div', 'track-salary', `<span>${C.texts.salaryLabel}</span> ${track.salary}`),
         h('span', 'track-check', '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>')
       );
 
@@ -333,19 +469,14 @@
      מסך 3 — מעטפת המשחק
      ============================================================ */
 
-  let gameRuntime = null; // מצב ריצה של המשחק הפעיל
+  let currentTrack = null;
 
-  function startGame(track) {
-    newSession(track);
-    const gameDef = window.GAMES[track.id];
-
-    // כותרות ושבב מסלול
+  function prepareGameScreen(track, gameDef) {
     $('#game-chip').innerHTML = `<span class="chip-dot"></span>${track.name}`;
     $('#game-chip').style.setProperty('--chip-color', track.color);
     $('#game-title').textContent = track.gameTitle;
     $('#game-instruction').textContent = track.gameInstruction;
 
-    // נקודות סבבים
     const roundsEl = $('#game-rounds');
     roundsEl.innerHTML = '';
     for (let i = 0; i < gameDef.rounds; i++) roundsEl.appendChild(h('span', 'round-dot' + (i === 0 ? ' current' : '')));
@@ -353,10 +484,27 @@
     $('#game-stage').innerHTML = '';
     $('#game-feedback').className = 'game-feedback';
     $('#game-timer-fill').style.transform = 'scaleX(1)';
+  }
 
+  function startGame(track) {
+    retryCount = 0;
+    currentTrack = track;
+    newSession(track);
+    const gameDef = window.GAMES[track.id];
+    prepareGameScreen(track, gameDef);
     goTo('screen-game');
+
+    // מסך הוראות לפני הספירה לאחור
+    $('#game-intro-title').textContent = track.gameTitle;
+    $('#game-intro-text').textContent = track.gameInstruction;
+    $('#game-intro').classList.add('show');
+  }
+
+  function beginPlay() {
+    const track = currentTrack;
+    const gameDef = window.GAMES[track.id];
     runCountdown(() => {
-      A.track(A.events.GAME_START, { track: track.id, game: track.gameTitle });
+      A.track(A.events.GAME_START, { track: track.id, game: track.gameTitle, retry: retryCount });
       launchRounds(track, gameDef);
     });
   }
@@ -369,8 +517,7 @@
 
     function step() {
       num.classList.remove('tick', 'go');
-      // reflow כדי לאפס את האנימציה
-      void num.offsetWidth;
+      void num.offsetWidth; // reflow לאיפוס האנימציה
       if (n > 0) {
         num.textContent = n;
         num.classList.add('tick');
@@ -400,18 +547,19 @@
       round: 0,
       cleanups: [],
       finished: false,
+      answered: false,
       roundStart: performance.now(),
       timerRaf: null,
     };
-    gameRuntime = runtime;
 
-    // טיימר כללי של המשחק
+    // טיימר כללי — כשהזמן נגמר לפני סיום: מסך "נסו שוב" במקום ציון
     const t0 = performance.now();
     function timerFrame(now) {
+      if (runtime.finished) return;
       const left = 1 - (now - t0) / C.timing.gameDurationMs;
       timerFill.style.transform = `scaleX(${Math.max(0, left)})`;
       if (left <= 0) {
-        finish('timeout');
+        gameTimeout();
         return;
       }
       runtime.timerRaf = requestAnimationFrame(timerFrame);
@@ -429,16 +577,30 @@
       feedbackEl.className = 'game-feedback show ' + kind;
     }
 
+    function gameTimeout() {
+      runtime.finished = true;
+      cancelAnimationFrame(runtime.timerRaf);
+      cleanupRound();
+      A.track(A.events.GAME_TIMEOUT, { track: track.id, round: runtime.round });
+      $('#game-timeout').classList.add('show');
+      Sound.bad();
+      vibrate(40);
+    }
+
     const ctx = {
       h,
       track,
       get round() { return runtime.round; },
       onCleanup(fn) { runtime.cleanups.push(fn); },
-      attempt({ correct, action, text }) {
-        if (runtime.finished) return;
+
+      /** דיווח תשובה — פעם אחת לסבב. נכונה או לא, ממשיכים הלאה. */
+      answer({ correct, action, text }) {
+        if (runtime.finished || runtime.answered) return;
+        runtime.answered = true;
         const rtMs = Math.round(performance.now() - runtime.roundStart);
         session.attempts.push({ round: runtime.round, correct, action, rtMs });
 
+        const dot = dots[runtime.round];
         if (correct) {
           session.correctCount++;
           Sound.good();
@@ -446,55 +608,64 @@
           showFeedback('good', text);
           document.body.classList.add('flash-good');
           setTimeout(() => document.body.classList.remove('flash-good'), 520);
-
-          if (dots[runtime.round]) {
-            dots[runtime.round].classList.remove('current');
-            dots[runtime.round].classList.add('done');
-          }
-
-          const isLast = runtime.round >= gameDef.rounds - 1;
-          setTimeout(() => {
-            if (runtime.finished) return;
-            if (isLast) {
-              finish('completed');
-            } else {
-              runtime.round++;
-              if (dots[runtime.round]) dots[runtime.round].classList.add('current');
-              cleanupRound();
-              stage.innerHTML = '';
-              feedbackEl.className = 'game-feedback';
-              runtime.roundStart = performance.now();
-              gameDef.renderRound(stage, ctx);
-            }
-          }, 850);
+          if (dot) { dot.classList.remove('current'); dot.classList.add('done'); }
         } else {
           Sound.bad();
           vibrate(28);
           showFeedback('bad', text);
+          if (dot) { dot.classList.remove('current'); dot.classList.add('miss'); }
         }
+
+        const isLast = runtime.round >= gameDef.rounds - 1;
+        // בטעות נותנים רגע נוסף לראות את התשובה הנכונה שנחשפה
+        setTimeout(() => {
+          if (runtime.finished) return;
+          if (isLast) {
+            finishGame();
+          } else {
+            runtime.round++;
+            runtime.answered = false;
+            if (dots[runtime.round]) dots[runtime.round].classList.add('current');
+            cleanupRound();
+            stage.innerHTML = '';
+            feedbackEl.className = 'game-feedback';
+            runtime.roundStart = performance.now();
+            gameDef.renderRound(stage, ctx);
+          }
+        }, correct ? 900 : 1400);
       },
     };
 
-    function finish(reason) {
+    function finishGame() {
       if (runtime.finished) return;
       runtime.finished = true;
       cancelAnimationFrame(runtime.timerRaf);
       cleanupRound();
-      dots.forEach((d) => { d.classList.remove('current'); d.classList.add('done'); });
 
       session.finishedAt = new Date().toISOString();
       A.track(A.events.GAME_COMPLETE, {
         track: track.id,
         game: track.gameTitle,
-        reason,
         correct: session.correctCount,
         attempts: session.attempts.length,
+        retries: retryCount,
       });
-      setTimeout(() => runAnalysis(track), reason === 'completed' ? 500 : 250);
+      setTimeout(() => runAnalysis(track), 450);
     }
 
     runtime.roundStart = performance.now();
     gameDef.renderRound(stage, ctx);
+  }
+
+  /* ניסיון נוסף אחרי שהזמן נגמר */
+  function retryGame() {
+    retryCount++;
+    A.track(A.events.GAME_RETRY, { track: currentTrack.id, retry: retryCount });
+    newSession(currentTrack);
+    const gameDef = window.GAMES[currentTrack.id];
+    prepareGameScreen(currentTrack, gameDef);
+    $('#game-timeout').classList.remove('show');
+    beginPlay();
   }
 
   /* ============================================================
@@ -510,16 +681,15 @@
       ? correct.length / session.attempts.length
       : 0.5;
 
-    // בסיס + בונוס דיוק + בונוס מהירות → ממופה למאגר הציונים
     let idx = 0;
-    idx += accuracy >= 1 ? 3 : accuracy >= 0.75 ? 2 : accuracy >= 0.5 ? 1 : 0;
-    idx += avgRt < 1200 ? 3 : avgRt < 2200 ? 2 : avgRt < 3500 ? 1 : 0;
+    idx += accuracy >= 1 ? 3 : accuracy >= 0.66 ? 2 : accuracy >= 0.33 ? 1 : 0;
+    idx += avgRt < 2500 ? 3 : avgRt < 4500 ? 2 : avgRt < 7000 ? 1 : 0;
     idx += Math.floor(Math.random() * 2); // גיוון קטן
     const pool = C.score.pool;
     const score = pool[Math.min(idx, pool.length - 1)];
 
-    // 100 רק בביצוע מושלם, מהיר — ובהסתברות נמוכה
-    if (accuracy === 1 && avgRt < 1100 && Math.random() < C.score.perfectScoreChance) {
+    // 100 רק בביצוע מושלם ומהיר — ובהסתברות נמוכה
+    if (accuracy === 1 && avgRt < 2200 && Math.random() < C.score.perfectScoreChance) {
       return C.score.max;
     }
     return Math.max(C.score.min, Math.min(score, C.score.max));
@@ -571,7 +741,7 @@
     session.score = computeScore();
 
     const chip = $('#result-track-chip');
-    chip.innerHTML = `<span class="chip-dot"></span>מסלול ${track.name}`;
+    chip.innerHTML = `<span class="chip-dot"></span>${track.name}`;
     chip.style.setProperty('--chip-color', track.color);
     $('#result-line').textContent = track.resultLine;
 
@@ -579,7 +749,6 @@
     Sound.win();
     vibrate([20, 60, 20, 60, 40]);
 
-    // אנימציית ספירת הציון + מילוי הטבעת
     const scoreEl = $('#score-value');
     const ring = $('#ring-fill');
     const target = session.score;
@@ -597,7 +766,6 @@
 
     if (!reducedMotion) setTimeout(launchConfetti, 350);
 
-    // שמירה + שליחה + מדידה
     saveResult();
     sendAssessmentResult(buildPayload());
     A.track(A.events.RESULT_SHOWN, { track: track.id, score: session.score });
@@ -671,6 +839,7 @@
       score: session.score,
       correctCount: session.correctCount,
       totalAttempts: session.attempts.length,
+      retries: session.retries,
       actions: session.attempts.map((a) => a.action),
       reactionTimesMs: correct.map((a) => a.rtMs),
       avgReactionMs: correct.length
@@ -716,21 +885,19 @@
   window.sendAssessmentResult = sendAssessmentResult;
 
   /* ============================================================
-     מקלדת — 1‑3 לבחירת אפשרות, רווח לפעולה (משחק הסייבר)
+     מקלדת — 1‑3 לבחירת אפשרות בדסקטופ
      ============================================================ */
 
   function initKeyboard() {
     document.addEventListener('keydown', (e) => {
       const gameActive = $('#screen-game').classList.contains('screen--active');
       if (!gameActive || $('#countdown').classList.contains('show')) return;
+      if ($('#game-intro').classList.contains('show') || $('#game-timeout').classList.contains('show')) return;
       if (e.repeat) return;
 
       const stage = $('#game-stage');
       if (e.key >= '1' && e.key <= '9') {
         const btn = stage.querySelector(`[data-key="${e.key}"]`);
-        if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
-      } else if (e.key === ' ') {
-        const btn = stage.querySelector('[data-space]');
         if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
       }
     });
@@ -748,8 +915,15 @@
       goTo('screen-tracks');
     });
 
-    $('#btn-whatsapp').addEventListener('click', () => {
-      A.track(A.events.WHATSAPP_CLICK, { track: session ? session.track : null, score: session ? session.score : null });
+    $('#game-intro-btn').addEventListener('click', () => {
+      Sound.click();
+      $('#game-intro').classList.remove('show');
+      beginPlay();
+    });
+
+    $('#game-timeout-btn').addEventListener('click', () => {
+      Sound.click();
+      retryGame();
     });
 
     $('#btn-again').addEventListener('click', () => {
@@ -761,7 +935,6 @@
     });
 
     const soundBtn = $('#sound-toggle');
-    // שחזור העדפת סאונד
     let saved = null;
     try { saved = localStorage.getItem(C.storage.soundKey); } catch (e) { /* אין אחסון */ }
     if (saved === 'on') {

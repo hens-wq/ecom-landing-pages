@@ -17,6 +17,8 @@ const Analytics = {
     START_CLICK: 'fit_start_click',        // לחיצה על "מתחילים את הבדיקה"
     TRACK_SELECTED: 'fit_track_selected',  // בחירת תחום
     GAME_START: 'fit_game_start',          // התחלת משחק
+    GAME_TIMEOUT: 'fit_game_timeout',      // הזמן נגמר לפני סיום
+    GAME_RETRY: 'fit_game_retry',          // ניסיון נוסף אחרי טיימאאוט
     GAME_COMPLETE: 'fit_game_complete',    // השלמת משחק
     RESULT_SHOWN: 'fit_result_shown',      // הצגת תוצאה
     WHATSAPP_CLICK: 'fit_whatsapp_click',  // לחיצה לחזרה לוואטסאפ

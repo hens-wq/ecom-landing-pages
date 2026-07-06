@@ -276,13 +276,6 @@ img, svg { display: block; max-width: 100%; }
 .btn-arrow { display: grid; place-items: center; transition: transform 0.25s var(--ease-out); }
 .btn--primary:hover .btn-arrow { transform: translateX(-4px); }
 
-.btn--whatsapp {
-  color: #04140B;
-  background: linear-gradient(120deg, #45E67F, var(--green));
-  box-shadow: 0 10px 34px rgba(69,230,127,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
-}
-.btn--whatsapp:hover { filter: brightness(1.06); box-shadow: 0 12px 42px rgba(69,230,127,0.5); }
-
 .btn--ghost {
   margin-top: 14px;
   padding: 12px 22px;
@@ -624,17 +617,21 @@ img, svg { display: block; max-width: 100%; }
   line-height: 1.3;
 }
 
-.track-tagline {
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--text-dim);
-  line-height: 1.5;
-  min-height: 2.4em;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.track-salary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--green);
+  background: rgba(133,237,114,0.08);
+  border: 1px solid rgba(133,237,114,0.22);
+  border-radius: 999px;
+  padding: 5px 12px;
+  margin-top: 2px;
+  white-space: nowrap;
 }
+.track-salary span { font-weight: 500; color: var(--text-dim); font-size: 0.72rem; }
 
 /* סימון בחירה */
 .track-check {
@@ -804,124 +801,7 @@ img, svg { display: block; max-width: 100%; }
 }
 @keyframes flash-fade { from { opacity: 1; } to { opacity: 0; } }
 
-/* ========== משחק סייבר: קו סריקה ========== */
-
-.cyber-game {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px;
-}
-
-.scan-track {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  height: 68px;
-  border-radius: var(--radius-s);
-  background: rgba(255,255,255,0.035);
-  border: 1px solid var(--stroke-soft);
-  overflow: hidden;
-}
-.scan-track::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 24px);
-}
-
-.scan-zone {
-  position: absolute;
-  top: 0; bottom: 0;
-  background: linear-gradient(180deg, rgba(133,237,114,0.28), rgba(133,237,114,0.1));
-  border-inline: 1.5px solid rgba(133,237,114,0.8);
-  box-shadow: 0 0 22px rgba(133,237,114,0.3), inset 0 0 14px rgba(133,237,114,0.15);
-}
-.scan-zone::after {
-  content: '';
-  position: absolute;
-  top: 6px; left: 50%;
-  width: 6px; height: 6px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: pulse-dot 1.2s ease-in-out infinite;
-}
-
-.scan-line {
-  position: absolute;
-  top: -6px; bottom: -6px;
-  width: 3px;
-  left: 0;
-  background: linear-gradient(180deg, transparent, var(--teal) 25%, #fff 50%, var(--teal) 75%, transparent);
-  box-shadow: 0 0 16px var(--teal), 0 0 40px rgba(52,209,195,0.5);
-  will-change: transform;
-}
-
-.scan-hit-marker {
-  position: absolute;
-  top: 50%;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  pointer-events: none;
-  animation: hit-pop 0.6s var(--ease-spring) forwards;
-}
-.scan-hit-marker.hit { background: var(--green); box-shadow: 0 0 20px var(--green); }
-.scan-hit-marker.miss { background: #FFB27A; box-shadow: 0 0 14px rgba(255,178,122,0.7); }
-@keyframes hit-pop {
-  0% { transform: translate(-50%, -50%) scale(0); }
-  60% { transform: translate(-50%, -50%) scale(1.25); }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.85; }
-}
-
-.tap-btn {
-  min-width: 190px;
-  min-height: 58px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #fff;
-  border-radius: 999px;
-  background: linear-gradient(120deg, var(--purple), var(--teal));
-  box-shadow: 0 10px 30px rgba(104,54,255,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
-  transition: transform 0.12s;
-  touch-action: manipulation;
-}
-.tap-btn:active { transform: scale(0.94); }
-.tap-hint { font-size: 0.78rem; color: var(--text-faint); }
-
 /* ========== משחקים מבוססי אפשרויות (AI / שיווק / DevOps / UX) ========== */
-
-.seq-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.seq-cell {
-  width: 52px; height: 52px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: var(--glass);
-  border: 1px solid var(--stroke-soft);
-}
-.seq-cell svg { width: 30px; height: 30px; }
-.seq-cell.mystery {
-  border: 1.5px dashed rgba(52,209,195,0.55);
-  color: var(--teal);
-  font-size: 1.35rem;
-  font-weight: 800;
-  animation: mystery-pulse 1.6s ease-in-out infinite;
-}
-@keyframes mystery-pulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(52,209,195,0); }
-  50% { box-shadow: 0 0 18px rgba(52,209,195,0.35); }
-}
-.seq-cell.filled { animation: hit-pop 0.5s var(--ease-spring); border-color: rgba(133,237,114,0.7); }
 
 .option-grid {
   display: grid;
@@ -1038,73 +918,10 @@ img, svg { display: block; max-width: 100%; }
   border: none;
 }
 
-/* סוגי באגים ויזואליים */
-.qa-el.bug-offset { transform: translateX(-34px) rotate(-2.5deg); width: 82%; }
-.qa-el.bug-offset:active { transform: translateX(-34px) rotate(-2.5deg) scale(0.97); }
-.qa-el.bug-flipped { transform: scaleY(-1); }
-.qa-el.bug-flipped:active { transform: scaleY(-1) scale(0.97); }
-.qa-el.bug-clipped { overflow: hidden; white-space: nowrap; width: 58%; text-overflow: clip; }
-.qa-el.bug-glitch { animation: glitch-jitter 0.7s steps(2) infinite; color: #FF8FA3; }
-@keyframes glitch-jitter {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(1.5px, -1px); }
-  50% { transform: translate(-1.5px, 1px); }
-  75% { transform: translate(1px, 1.5px); }
-}
-
 .qa-el.found {
   border-color: var(--green) !important;
   box-shadow: 0 0 22px rgba(133,237,114,0.35);
   animation: hit-pop 0.5s var(--ease-spring);
-}
-
-/* ========== משחק Full Stack: חיבור רכיבים ========== */
-
-.fs-game {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.fs-front {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  padding: 14px 22px;
-  border-radius: var(--radius-s);
-  background: rgba(104,54,255,0.13);
-  border: 1px solid rgba(104,54,255,0.5);
-  box-shadow: 0 0 26px rgba(104,54,255,0.25);
-}
-.fs-front svg { width: 22px; height: 22px; }
-
-.fs-wire {
-  width: 2px;
-  height: 34px;
-  background: repeating-linear-gradient(180deg, rgba(255,255,255,0.25) 0 5px, transparent 5px 10px);
-  position: relative;
-}
-.fs-wire.connected { background: linear-gradient(180deg, var(--purple), var(--green)); box-shadow: 0 0 12px rgba(133,237,114,0.6); }
-.fs-wire.connected::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 12px var(--green);
-  transform: translateX(-50%);
-  animation: pulse-travel 0.7s ease-in forwards;
-}
-@keyframes pulse-travel {
-  from { top: 0; opacity: 1; }
-  to { top: calc(100% - 8px); opacity: 0.9; }
 }
 
 /* ========== משחק UX/UI: השוואת גרסאות ========== */
@@ -1159,7 +976,6 @@ img, svg { display: block; max-width: 100%; }
 .ab-card.messy .sk-title { width: 95%; }
 .ab-card.messy .sk { border-radius: 2px; }
 .ab-card.messy .sk:nth-child(odd) { margin-inline-start: 14px; }
-.ab-card.messy .sk-btn { filter: hue-rotate(95deg) saturate(2.2); }
 
 /* ========== משחק DevOps: pipeline ========== */
 
@@ -1225,51 +1041,6 @@ img, svg { display: block; max-width: 100%; }
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--text);
-}
-
-/* ========== משחק שיווק: כרטיסי קמפיין ========== */
-
-.mk-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-  max-width: 440px;
-}
-
-.mk-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 16px 8px 14px;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--stroke);
-  background: var(--glass);
-  transition: transform 0.2s var(--ease-spring), border-color 0.2s, box-shadow 0.25s;
-  touch-action: manipulation;
-}
-@media (hover: hover) { .mk-card:hover { transform: translateY(-3px); border-color: rgba(52,209,195,0.5); } }
-.mk-card:active { transform: scale(0.95); }
-.mk-card.correct { border-color: var(--green); box-shadow: 0 0 26px rgba(133,237,114,0.3); }
-.mk-card.wrong { animation: shake 0.4s ease; }
-
-.mk-name { font-size: 0.72rem; font-weight: 600; color: var(--text-dim); }
-.mk-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--teal), var(--green));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.mk-metric { font-size: 0.66rem; font-weight: 500; color: var(--text-faint); }
-
-.mk-bars { display: flex; align-items: flex-end; gap: 3px; height: 26px; margin-top: 2px; }
-.mk-bars i {
-  width: 7px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--purple), rgba(104,54,255,0.3));
 }
 
 /* ---------- מסך ניתוח ---------- */
@@ -1434,8 +1205,7 @@ img, svg { display: block; max-width: 100%; }
   animation: fade-up 0.6s var(--ease-out) 0.8s both;
 }
 
-#btn-whatsapp { margin-top: 24px; animation: fade-up 0.6s var(--ease-out) 0.9s both; }
-#btn-again { animation: fade-up 0.6s var(--ease-out) 1s both; }
+#btn-again { margin-top: 26px; animation: fade-up 0.6s var(--ease-out) 0.9s both; }
 
 /* ---------- מסכים נמוכים (מקלדת פתוחה / מכשירים קטנים) ---------- */
 
@@ -1453,10 +1223,8 @@ img, svg { display: block; max-width: 100%; }
 
 @media (max-height: 560px) {
   .game-stage { min-height: 170px; }
-  .scan-track { height: 54px; }
   .intro-steps { display: none; }
   .hero-visual { display: none; }
-  .track-tagline { display: none; }
 }
 
 /* ---------- טאבלט ודסקטופ ---------- */
@@ -1468,7 +1236,6 @@ img, svg { display: block; max-width: 100%; }
   }
   /* בטור משולש הכרטיס השביעי חוזר לרוחב רגיל וממורכז */
   .track-card:last-child:nth-child(odd) { grid-column: 2; }
-  .track-tagline { font-size: 0.8rem; }
   .tracks { max-width: 760px; }
 }
 
@@ -1517,6 +1284,201 @@ img, svg { display: block; max-width: 100%; }
   pointer-events: none;
 }
 
+
+/* ---------- רצפת גריד פרספקטיבית — אווירת הייטק ---------- */
+
+.bg-floor {
+  position: fixed;
+  left: -20vw; right: -20vw; bottom: -6vh;
+  height: 40vh;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(104,54,255,0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52,209,195,0.12) 1px, transparent 1px);
+  background-size: 56px 44px;
+  transform: perspective(520px) rotateX(62deg);
+  transform-origin: top center;
+  -webkit-mask-image: linear-gradient(180deg, transparent, black 32%, black 76%, transparent);
+  mask-image: linear-gradient(180deg, transparent, black 32%, black 76%, transparent);
+  animation: floor-scroll 18s linear infinite;
+  opacity: 0.75;
+}
+@keyframes floor-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 440px; }
+}
+
+/* ---------- Hero: קומפוזיציה הולוגרפית (טרמינל + תלת־ממד) ---------- */
+
+.hero-holo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+.hero-terminal {
+  flex-shrink: 0;
+  background: rgba(8,8,14,0.74);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hero-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+.hero-terminal-bar span { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+.hero-terminal-bar em {
+  font-style: normal;
+  font-size: 0.56rem;
+  color: var(--text-faint);
+  margin-inline-start: auto;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+.hero-terminal-body {
+  padding: 9px 10px 11px;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  direction: ltr;
+  text-align: left;
+}
+.term-line {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 0.6rem;
+  color: var(--teal);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.term-line--ok { color: var(--green); text-shadow: 0 0 10px rgba(133,237,114,0.5); }
+.term-cursor {
+  display: inline-block;
+  width: 6px; height: 10px;
+  background: var(--teal);
+  vertical-align: -1px;
+  margin-left: 2px;
+  animation: cursor-blink 0.9s steps(2) infinite;
+}
+@keyframes cursor-blink { 50% { opacity: 0; } }
+
+.hero-poly { flex: 1; width: 100%; min-height: 0; }
+
+/* ---------- שכבות משחק: הוראות + "הזמן נגמר" ---------- */
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 28;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5,5,8,0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.game-overlay.show { display: grid; }
+
+.game-overlay-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 30px 24px;
+  border-radius: var(--radius-l);
+  background: rgba(14,14,24,0.9);
+  border: 1px solid var(--stroke);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 44px rgba(104,54,255,0.16);
+  animation: hit-pop 0.45s var(--ease-spring);
+}
+.game-overlay-icon { font-size: 2.1rem; line-height: 1; }
+.game-overlay-title { font-size: 1.4rem; font-weight: 800; }
+.game-overlay-text { font-size: 0.95rem; color: var(--text-dim); line-height: 1.65; max-width: 34ch; }
+.game-overlay .btn { margin-top: 8px; }
+
+/* ---------- רכיבי שאלות ---------- */
+
+.game-q {
+  width: 100%;
+  max-width: 440px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+
+.option-btn.mono {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  letter-spacing: 0.04em;
+  font-size: 1rem;
+}
+/* חשיפת התשובה הנכונה אחרי טעות */
+.option-btn.reveal {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px rgba(133,237,114,0.4), 0 0 18px rgba(133,237,114,0.22);
+}
+.option-btn.wrong {
+  animation: shake 0.4s ease;
+  border-color: rgba(255,122,122,0.75);
+  background: rgba(255,110,110,0.07);
+}
+
+.order-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--green));
+  color: #04140B;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-inline-end: 8px;
+  flex-shrink: 0;
+}
+
+.qa-mock-title { font-size: 0.92rem; font-weight: 800; text-align: center; margin-bottom: 2px; }
+.qa-fixed { color: var(--green); font-weight: 800; font-size: 0.78rem; }
+.qa-el.wrong-el { border-color: rgba(255,122,122,0.75); animation: shake 0.4s ease; }
+
+.ux-price {
+  font-size: 1.2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff, var(--teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 3px 0;
+}
+.ux-price--buried {
+  font-size: 0.58rem;
+  font-weight: 500;
+  background: none;
+  -webkit-text-fill-color: var(--text-faint);
+  margin: 0;
+}
+.ab-card.reveal { border-color: var(--green); box-shadow: 0 0 22px rgba(133,237,114,0.22); }
+
+.swatch {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-inline-end: 7px;
+  vertical-align: -3px;
+}
+
+.round-dot.miss { background: #FF8A8A; box-shadow: 0 0 8px rgba(255,138,138,0.55); }
+
 /* ---------- Reduced Motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1527,6 +1489,7 @@ img, svg { display: block; max-width: 100%; }
   }
   .aurora, .btn--primary::after, .scanner-ring, .scanner-ring--2,
   .hero-ring, .hero-chip { animation: none !important; }
+  .bg-floor, .term-cursor { animation: none !important; }
   #bg-particles, #confetti-canvas { display: none; }
   .screen { transform: none; }
   .screen--active { transform: none; }
