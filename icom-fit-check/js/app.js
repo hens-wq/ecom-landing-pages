@@ -173,7 +173,6 @@
      ============================================================ */
 
   function initTexts() {
-    $('#intro-badge').textContent = C.texts.badge;
     $('#intro-title').textContent = C.texts.introTitle;
     $('#intro-subtitle').textContent = C.texts.introSubtitle;
     $('#btn-start-label').textContent = C.texts.introCta;
@@ -183,7 +182,9 @@
     C.texts.introSteps.forEach((s, i) => {
       const step = h('span', 'intro-step', `<span class="step-num">${i + 1}</span>${s}`);
       steps.appendChild(step);
-      if (i < C.texts.introSteps.length - 1) steps.appendChild(h('span', 'intro-step-sep', '›'));
+      if (i < C.texts.introSteps.length - 1) {
+        steps.appendChild(h('span', 'intro-step-sep', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>'));
+      }
     });
 
     $('#tracks-title').textContent = C.texts.tracksTitle;
@@ -333,14 +334,6 @@
   }
 
   function initHero() {
-    // שבבי המידע הצפים
-    C.hero.chips.forEach((chip, i) => {
-      const el = $('#hero-chip-' + (i + 1));
-      if (!el) return;
-      el.innerHTML = (chip.dot ? '<span class="chip-pulse"></span>' : '') + chip.text;
-      if (chip.mono) el.classList.add('mono');
-    });
-
     if (C.hero.ART_READY && C.hero.art) {
       // דמות ה־Nano Banana מחליפה את הקומפוזיציה ההולוגרפית
       const portal = $('#hero-portal');
@@ -367,7 +360,6 @@
     if (reducedMotion || !window.matchMedia('(pointer: fine)').matches) return;
     const visual = $('#hero-visual');
     const portal = $('#hero-portal');
-    const chips = [$('#hero-chip-1'), $('#hero-chip-2'), $('#hero-chip-3')];
     let raf = null;
 
     $('#screen-intro').addEventListener('pointermove', (e) => {
@@ -378,9 +370,6 @@
         const dx = (e.clientX - (r.left + r.width / 2)) / window.innerWidth;
         const dy = (e.clientY - (r.top + r.height / 2)) / window.innerHeight;
         portal.style.transform = `translate(${dx * -8}px, ${dy * -6}px)`;
-        chips.forEach((c, i) => {
-          if (c) c.style.translate = `${dx * (10 + i * 5)}px ${dy * (8 + i * 4)}px`;
-        });
       });
     });
   }
