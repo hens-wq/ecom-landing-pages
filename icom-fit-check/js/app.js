@@ -180,7 +180,7 @@
 
     const steps = $('#intro-steps');
     C.texts.introSteps.forEach((s, i) => {
-      const step = h('span', 'intro-step', `<span class="step-num">${i + 1}</span>${s}`);
+      const step = h('span', 'intro-step', s);
       steps.appendChild(step);
       if (i < C.texts.introSteps.length - 1) {
         steps.appendChild(h('span', 'intro-step-sep', '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>'));
@@ -421,10 +421,14 @@
         img.src = track.art;
       }
 
+      const info = h('div', 'track-info');
+      info.append(
+        h('div', 'track-name', track.name),
+        h('div', 'track-salary', `<span>${C.texts.salaryLabel}</span> ${track.salary}`)
+      );
       card.append(
         icon,
-        h('div', 'track-name', track.name),
-        h('div', 'track-salary', `<span>${C.texts.salaryLabel}</span> ${track.salary}`),
+        info,
         h('span', 'track-check', '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>')
       );
 
