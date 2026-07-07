@@ -86,6 +86,7 @@
       <div class="screen-inner game">
         <div class="game-header">
           <div class="game-chip" id="game-chip"></div>
+          <div class="game-progress" id="game-progress"></div>
           <div class="game-rounds" id="game-rounds" aria-hidden="true"></div>
         </div>
         <div class="game-timer" aria-hidden="true"><div class="game-timer-fill" id="game-timer-fill"></div></div>
@@ -97,7 +98,7 @@
       <!-- שכבת הוראות המשחק — מוצגת לפני הספירה לאחור -->
       <div class="game-overlay" id="game-intro" aria-hidden="true">
         <div class="game-overlay-card">
-          <div class="game-overlay-icon" aria-hidden="true">🎮</div>
+          <div class="game-overlay-icon" id="game-intro-icon" aria-hidden="true">🎮</div>
           <h3 class="game-overlay-title" id="game-intro-title"></h3>
           <p class="game-overlay-text" id="game-intro-text"></p>
           <button class="btn btn--primary btn--xl" id="game-intro-btn" type="button"></button>
@@ -129,6 +130,30 @@
       </div>
     </section>
 
+    <!-- ============ מסך 5: יועץ לימודים ============ -->
+    <section class="screen" id="screen-advisor" aria-labelledby="advisor-title">
+      <div class="screen-inner advisor">
+        <h2 class="section-title" id="advisor-title"></h2>
+        <p class="advisor-intro" id="advisor-intro"></p>
+        <div class="advisor-points" id="advisor-points"></div>
+        <p class="advisor-lead" id="advisor-lead"></p>
+        <div class="advisor-questions" id="advisor-questions"></div>
+        <button class="btn btn--primary btn--xl" id="btn-advisor-submit" type="button" disabled></button>
+      </div>
+    </section>
+
+    <!-- ============ מסך 6: תודה ============ -->
+    <section class="screen" id="screen-thanks" aria-labelledby="thanks-title">
+      <canvas id="thanks-confetti" aria-hidden="true"></canvas>
+      <div class="screen-inner thanks">
+        <div class="result-check" aria-hidden="true">
+          <svg viewBox="0 0 52 52" width="34" height="34"><circle class="check-circle" cx="26" cy="26" r="24" fill="none"/><path class="check-mark" fill="none" d="M14 27l8 8 16-17"/></svg>
+        </div>
+        <h2 class="section-title" id="thanks-title"></h2>
+        <p class="thanks-text" id="thanks-text"></p>
+      </div>
+    </section>
+
     <!-- ============ מסך 4: תוצאה ============ -->
     <section class="screen" id="screen-result" aria-labelledby="result-title">
       <canvas id="confetti-canvas" aria-hidden="true"></canvas>
@@ -156,11 +181,12 @@
           </div>
         </div>
 
-        <div class="result-track-chip" id="result-track-chip"></div>
+        <h3 class="result-course" id="result-course"></h3>
         <p class="result-line" id="result-line"></p>
         <p class="result-disclaimer" id="result-disclaimer"></p>
 
-        <button class="btn btn--primary btn--xl" id="btn-again" type="button"></button>
+        <button class="btn btn--primary btn--xl" id="btn-advisor" type="button"></button>
+        <button class="btn btn--ghost" id="btn-again" type="button"></button>
       </div>
     </section>
 

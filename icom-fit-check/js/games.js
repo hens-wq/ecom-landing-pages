@@ -73,7 +73,7 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'איזו סיסמה הכי קשה לפריצה?',
+          question: 'איזו סיסמה נחשבת לחזקה ביותר?',
           options: [
             { html: 'Dg#8kQ!2v', mono: true, correct: true, action: 'cyber_strong_pw' },
             { html: '123456', mono: true, correct: false, action: 'cyber_weak_pw1' },
@@ -81,7 +81,7 @@
           ],
         },
         {
-          question: 'איזו הודעה היא ניסיון פישינג?',
+          question: 'איזו הודעה נראית כמו ניסיון גניבה?',
           options: [
             { html: '"החשבון שלך נחסם! היכנס מיד: bank-secure4u.co"', correct: true, action: 'cyber_phishing' },
             { html: '"ההזמנה שלך יצאה למשלוח, מספר מעקב 4412"', correct: false, action: 'cyber_legit1' },
@@ -91,9 +91,9 @@
         {
           question: 'מצאתם פרצת אבטחה בשרת של החברה. מה הצעד הראשון?',
           options: [
-            { html: 'מתעדים ומדווחים מיד לצוות האבטחה', correct: true, action: 'cyber_report' },
-            { html: 'בודקים כמה רחוק אפשר להיכנס', correct: false, action: 'cyber_exploit' },
-            { html: 'מתעלמים — לא הבעיה שלי', correct: false, action: 'cyber_ignore' },
+            { html: 'מדווחים מיד לצוות האבטחה ופועלים לפי הנהלים', correct: true, action: 'cyber_report' },
+            { html: 'מתעלמים – זו לא אחריותי', correct: false, action: 'cyber_ignore' },
+            { html: 'מנסים לטפל לבד בלי לדווח לאף אחד', correct: false, action: 'cyber_solo' },
           ],
         },
       ];
@@ -112,27 +112,27 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'המודל למד: תפוח ← פרי · מלפפון ← ירק.<br>מה הוא יגיד על בננה?',
+          question: 'מודל AI אומן לזהות עצמים בתמונות שצולמו ביום, אבל מתקשה בתמונות לילה. מה הסיבה הסבירה ביותר?',
           options: [
-            { html: 'פרי', correct: true, action: 'ai_fruit' },
-            { html: 'ירק', correct: false, action: 'ai_veg' },
-            { html: 'רהיט', correct: false, action: 'ai_furniture' },
+            { html: 'המודל קיבל דוגמאות שלא היו מגוונות מספיק', correct: true, action: 'ai_data_diversity' },
+            { html: 'המחשב שעליו הוא פועל איטי מדי', correct: false, action: 'ai_slow_pc' },
+            { html: 'צריך להציג לו כל תמונה פעמיים', correct: false, action: 'ai_twice' },
           ],
         },
         {
-          question: 'המודל קיבל: 2←4 · 3←6 · 5←10.<br>איזה חוק הוא למד?',
+          question: 'מערכת AI סיכמה מסמך, אך הוסיפה פרט שלא הופיע בו. מה נכון לעשות?',
+          options: [
+            { html: 'לבדוק את התשובה מול המסמך ולבקש ממנה להסתמך רק עליו', correct: true, action: 'ai_verify' },
+            { html: 'לסמוך עליה כי התשובה נוסחה בביטחון', correct: false, action: 'ai_trust' },
+            { html: 'לבקש ממנה לכתוב תשובה ארוכה יותר', correct: false, action: 'ai_longer' },
+          ],
+        },
+        {
+          question: 'המודל קיבל את הדוגמאות: 2 הופך ל־4, 3 ל־6 ו־5 ל־10. איזה חוק הוא למד?',
           options: [
             { html: 'כפול 2', correct: true, action: 'ai_double' },
             { html: 'ועוד 2', correct: false, action: 'ai_plus2' },
             { html: 'מספר אקראי', correct: false, action: 'ai_random' },
-          ],
-        },
-        {
-          question: 'רוצים לאמן מודל שמזהה חתולים. איזה דאטה הכי טוב?',
-          options: [
-            { html: '10,000 תמונות מגוונות של חתולים', correct: true, action: 'ai_good_data' },
-            { html: 'תמונה אחת של חתול', correct: false, action: 'ai_one_image' },
-            { html: '10,000 תמונות של כלבים', correct: false, action: 'ai_wrong_data' },
           ],
         },
       ];

@@ -1189,7 +1189,7 @@ img, svg { display: block; max-width: 100%; }
   animation: fade-up 0.6s var(--ease-out) 0.8s both;
 }
 
-#btn-again { margin-top: 26px; animation: fade-up 0.6s var(--ease-out) 0.9s both; }
+
 
 /* ---------- מסכים נמוכים (מקלדת פתוחה / מכשירים קטנים) ---------- */
 
@@ -1408,7 +1408,7 @@ img, svg { display: block; max-width: 100%; }
 }
 .game-overlay-icon { font-size: 2.1rem; line-height: 1; }
 .game-overlay-title { font-size: 1.4rem; font-weight: 800; }
-.game-overlay-text { font-size: 0.95rem; color: var(--text-dim); line-height: 1.65; max-width: 34ch; }
+.game-overlay-text { font-size: 0.95rem; color: var(--text); line-height: 1.65; max-width: 36ch; }
 .game-overlay .btn { margin-top: 8px; }
 
 /* ---------- רכיבי שאלות ---------- */
@@ -1483,6 +1483,253 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .round-dot.miss { background: #FF8A8A; box-shadow: 0 0 8px rgba(255,138,138,0.55); }
+
+
+/* ---------- מונה שאלות "1 מתוך 3" ---------- */
+
+.game-progress {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--glass);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.round-dot.speed { border: 1px solid rgba(255,255,255,0.25); }
+
+/* ---------- סיבוב המהירות ---------- */
+
+.speed-arena {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: min(300px, 36vh);
+  min-height: 210px;
+  border: 1.5px dashed color-mix(in srgb, var(--tc, #34D1C3) 40%, transparent);
+  border-radius: var(--radius-m);
+  background: rgba(255,255,255,0.02);
+  overflow: hidden;
+}
+
+.speed-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: opacity 0.3s;
+}
+.speed-intro strong {
+  font-size: 1.3rem;
+  font-weight: 900;
+  background: linear-gradient(120deg, #fff, var(--teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.speed-intro span { font-size: 0.88rem; color: var(--text); }
+.speed-intro.hide { opacity: 0; pointer-events: none; }
+
+.speed-target {
+  position: absolute;
+  width: 66px; height: 66px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  color: #04140B;
+  background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--tc, #34D1C3) 85%, white) 35%, var(--tc, #34D1C3));
+  box-shadow: 0 0 28px var(--tc, #34D1C3), 0 0 60px color-mix(in srgb, var(--tc, #34D1C3) 40%, transparent);
+  animation: target-pop 0.25s var(--ease-spring);
+  touch-action: manipulation;
+}
+.speed-target.hit { animation: target-hit 0.4s var(--ease-out) forwards; pointer-events: none; }
+
+@keyframes target-pop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+@keyframes target-hit {
+  to { transform: scale(1.5); opacity: 0; }
+}
+
+.speed-ms {
+  position: absolute;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--green);
+  text-shadow: 0 0 12px rgba(133,237,114,0.6);
+  animation: ms-rise 0.5s var(--ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes ms-rise {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(-26px); opacity: 0; }
+}
+
+/* ---------- מסך תוצאה: שם הקורס + תמונת "עברתי" ---------- */
+
+.result-course {
+  margin-top: 18px;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--tc, #34D1C3) 60%, transparent);
+  animation: fade-up 0.6s var(--ease-out) 0.6s both;
+}
+
+.result-figure {
+  width: 132px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--teal) 60%, transparent);
+  box-shadow: 0 0 34px rgba(52,209,195,0.35), 0 14px 40px rgba(0,0,0,0.5);
+  margin-bottom: 12px;
+  animation: hit-pop 0.5s var(--ease-spring) 0.15s both;
+}
+.result-figure img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+
+/* ---------- עמוד יועץ הלימודים ---------- */
+
+.advisor { max-width: 560px; }
+
+.advisor-intro {
+  margin-top: 12px;
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.advisor-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 430px;
+  margin-top: 16px;
+}
+.advisor-point {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: start;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--glass);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+}
+.advisor-point-ico {
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #04140B;
+  background: linear-gradient(135deg, var(--teal), var(--green));
+  box-shadow: 0 0 12px rgba(133,237,114,0.4);
+}
+
+.advisor-lead {
+  margin-top: 22px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 40ch;
+}
+
+.advisor-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 460px;
+  margin-top: 18px;
+}
+
+.adv-q { text-align: start; }
+.adv-q-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+.adv-q-num {
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--purple), var(--teal));
+}
+
+.adv-opts { display: flex; flex-direction: column; gap: 8px; }
+.adv-opts--grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+.adv-opt {
+  padding: 12px 14px;
+  border-radius: var(--radius-s);
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.4;
+  transition: transform 0.15s, border-color 0.2s, background 0.2s, box-shadow 0.25s;
+  touch-action: manipulation;
+}
+@media (hover: hover) { .adv-opt:hover { border-color: rgba(52,209,195,0.5); } }
+.adv-opt:active { transform: scale(0.97); }
+.adv-opt.selected {
+  border-color: var(--green);
+  background: rgba(133,237,114,0.1);
+  box-shadow: 0 0 18px rgba(133,237,114,0.25);
+}
+
+#btn-advisor-submit { margin-top: 26px; }
+#btn-advisor-submit:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ---------- דף תודה ---------- */
+
+#thanks-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.thanks { position: relative; z-index: 3; }
+.thanks .section-title { margin-top: 16px; }
+.thanks-text {
+  margin-top: 14px;
+  font-size: 1.02rem;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 36ch;
+}
+
+/* כפתורי מסך התוצאה */
+#btn-advisor { margin-top: 24px; animation: fade-up 0.6s var(--ease-out) 0.9s both; }
+#btn-again.btn--ghost { animation: fade-up 0.6s var(--ease-out) 1s both; }
 
 /* ---------- Reduced Motion ---------- */
 

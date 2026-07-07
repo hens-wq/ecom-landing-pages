@@ -21,6 +21,10 @@ const Analytics = {
     GAME_RETRY: 'fit_game_retry',          // ניסיון נוסף אחרי טיימאאוט
     GAME_COMPLETE: 'fit_game_complete',    // השלמת משחק
     RESULT_SHOWN: 'fit_result_shown',      // הצגת תוצאה
+    ADVISOR_CLICK: 'fit_advisor_click',    // לחיצה על "תפנו אותי ליועץ לימודים"
+    ADVISOR_SHOWN: 'fit_advisor_shown',    // הצגת עמוד היועץ
+    ADVISOR_SUBMIT: 'fit_advisor_submit',  // שליחת שאלון היועץ
+    THANKS_SHOWN: 'fit_thanks_shown',      // הצגת דף התודה
     WHATSAPP_CLICK: 'fit_whatsapp_click',  // לחיצה לחזרה לוואטסאפ
   },
 

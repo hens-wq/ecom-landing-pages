@@ -192,7 +192,15 @@
     $('#result-title').textContent = C.texts.resultTitle;
     $('#score-label').textContent = C.texts.resultScoreLabel;
     $('#result-disclaimer').textContent = C.texts.resultDisclaimer;
+    $('#btn-advisor').textContent = C.texts.resultAdvisorCta;
     $('#btn-again').textContent = C.texts.resultCta;
+
+    $('#advisor-title').textContent = C.advisor.title;
+    $('#advisor-intro').textContent = C.advisor.intro;
+    $('#advisor-lead').textContent = C.advisor.lead;
+    $('#btn-advisor-submit').textContent = C.advisor.cta;
+    $('#thanks-title').textContent = C.thanks.title;
+    $('#thanks-text').textContent = C.thanks.text;
 
     $('#game-intro-btn').textContent = C.texts.gameIntroCta;
     $('#game-timeout-title').textContent = C.texts.timeoutTitle;
@@ -472,6 +480,8 @@
     const roundsEl = $('#game-rounds');
     roundsEl.innerHTML = '';
     for (let i = 0; i < gameDef.rounds; i++) roundsEl.appendChild(h('span', 'round-dot' + (i === 0 ? ' current' : '')));
+    roundsEl.appendChild(h('span', 'round-dot speed')); // נקודת סיבוב המהירות
+    $('#game-progress').textContent = '1 מתוך ' + gameDef.rounds;
 
     $('#game-stage').innerHTML = '';
     $('#game-feedback').className = 'game-feedback';
@@ -487,6 +497,7 @@
     goTo('screen-game');
 
     // מסך הוראות לפני הספירה לאחור
+    $('#game-intro-icon').innerHTML = track.gameIcon || '🎮';
     $('#game-intro-title').textContent = track.gameTitle;
     $('#game-intro-text').textContent = track.gameInstruction;
     $('#game-intro').classList.add('show');
@@ -613,11 +624,12 @@
         setTimeout(() => {
           if (runtime.finished) return;
           if (isLast) {
-            finishGame();
+            runSpeedRound();
           } else {
             runtime.round++;
             runtime.answered = false;
             if (dots[runtime.round]) dots[runtime.round].classList.add('current');
+            $('#game-progress').textContent = (runtime.round + 1) + ' מתוך ' + gameDef.rounds;
             cleanupRound();
             stage.innerHTML = '';
             feedbackEl.className = 'game-feedback';
@@ -627,6 +639,68 @@
         }, correct ? 900 : 1400);
       },
     };
+
+    /* סיבוב מהירות: 3 מטרות זוהרות מופיעות בזו אחר זו — פוגעים כמה שיותר מהר */
+    function runSpeedRound() {
+      cleanupRound();
+      stage.innerHTML = '';
+      feedbackEl.className = 'game-feedback';
+      $('#game-progress').textContent = C.texts.speedRound.label;
+      const speedDot = dots[gameDef.rounds];
+      if (speedDot) speedDot.classList.add('current');
+
+      const arena = h('div', 'speed-arena');
+      arena.style.setProperty('--tc', track.color);
+      const intro = h('div', 'speed-intro',
+        `<strong>${C.texts.speedRound.title}</strong><span>${C.texts.speedRound.instruction}</span>`);
+      arena.appendChild(intro);
+      stage.appendChild(arena);
+      Sound.tick();
+
+      const rts = [];
+      let idx = 0;
+      const timeouts = [];
+      const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
+      runtime.cleanups.push(() => timeouts.forEach(clearTimeout));
+
+      function spawn() {
+        if (runtime.finished) return;
+        const target = h('button', 'speed-target', '⚡');
+        target.type = 'button';
+        target.dataset.key = '1';
+        target.style.left = (8 + Math.random() * 62) + '%';
+        target.style.top = (12 + Math.random() * 55) + '%';
+        const t0 = performance.now();
+        target.addEventListener('click', () => {
+          if (runtime.finished || target.classList.contains('hit')) return;
+          const rt = Math.round(performance.now() - t0);
+          rts.push(rt);
+          session.attempts.push({ round: 'speed', correct: true, action: 'speed_hit_' + (idx + 1), rtMs: rt });
+          Sound.tick();
+          vibrate(10);
+          target.classList.add('hit');
+          const ms = h('span', 'speed-ms', rt + 'ms');
+          ms.style.left = target.style.left;
+          ms.style.top = target.style.top;
+          arena.appendChild(ms);
+          later(() => { target.remove(); ms.remove(); }, 500);
+          idx++;
+          if (idx < 3) {
+            later(spawn, 260);
+          } else {
+            const avg = Math.round(rts.reduce((s, x) => s + x, 0) / rts.length);
+            if (speedDot) { speedDot.classList.remove('current'); speedDot.classList.add('done'); }
+            showFeedback('good', `${C.texts.speedRound.doneText} ממוצע: ${avg} אלפיות שנייה`);
+            Sound.good();
+            vibrate([14, 40, 14]);
+            later(finishGame, 1200);
+          }
+        });
+        arena.appendChild(target);
+      }
+
+      later(() => { intro.classList.add('hide'); later(spawn, 280); }, 1200);
+    }
 
     function finishGame() {
       if (runtime.finished) return;
@@ -732,10 +806,20 @@
   function showResult(track) {
     session.score = computeScore();
 
-    const chip = $('#result-track-chip');
-    chip.innerHTML = `<span class="chip-dot"></span>${track.name}`;
-    chip.style.setProperty('--chip-color', track.color);
+    $('#result-course').textContent = `${C.texts.resultCoursePrefix} ${track.name}`;
+    $('#result-course').style.setProperty('--tc', track.color);
     $('#result-line').textContent = track.resultLine;
+
+    // תמונת "עברתי!" (Nano Banana) — נטענת פעם אחת כשהנכס זמין
+    if (C.RESULT_ART && C.RESULT_ART.ready && !$('#result-figure')) {
+      const fig = h('div', 'result-figure');
+      fig.id = 'result-figure';
+      const img = new Image();
+      img.alt = '';
+      img.onload = () => fig.appendChild(img);
+      img.src = C.RESULT_ART.src;
+      $('#result-title').before(fig);
+    }
 
     goTo('screen-result');
     Sound.win();
@@ -926,6 +1010,14 @@
       goTo('screen-tracks');
     });
 
+    $('#btn-advisor').addEventListener('click', () => {
+      Sound.click();
+      A.track(A.events.ADVISOR_CLICK, { track: session ? session.track : null });
+      showAdvisor();
+    });
+
+    $('#btn-advisor-submit').addEventListener('click', submitAdvisor);
+
     const soundBtn = $('#sound-toggle');
     let saved = null;
     try { saved = localStorage.getItem(C.storage.soundKey); } catch (e) { /* אין אחסון */ }
@@ -946,6 +1038,119 @@
   }
 
   /* ============================================================
+     עמוד יועץ הלימודים + דף תודה
+     ============================================================ */
+
+  const advisorAnswers = {};
+
+  function buildAdvisor() {
+    // נקודות "על המכללה"
+    const points = $('#advisor-points');
+    C.advisor.about.forEach((p) => {
+      points.appendChild(h('div', 'advisor-point',
+        `<span class="advisor-point-ico">✓</span><span>${p}</span>`));
+    });
+
+    // ויזואל הצלחה (כשהנכס זמין)
+    if (C.advisor.art && C.advisor.art.ready) {
+      const fig = h('div', 'result-figure advisor-art');
+      const img = new Image();
+      img.alt = '';
+      img.onload = () => fig.appendChild(img);
+      img.src = C.advisor.art.src;
+      $('#advisor-title').before(fig);
+    }
+
+    // שלוש השאלות
+    const wrap = $('#advisor-questions');
+    C.advisor.questions.forEach((qDef, qi) => {
+      const block = h('div', 'adv-q');
+      block.appendChild(h('div', 'adv-q-text', `<span class="adv-q-num">${qi + 1}</span>${qDef.q}`));
+      const opts = h('div', 'adv-opts' + (qDef.options === 'tracks' ? ' adv-opts--grid' : ''));
+      const options = qDef.options === 'tracks' ? C.tracks.map((t) => t.name) : qDef.options;
+      options.forEach((opt) => {
+        const btn = h('button', 'adv-opt', opt);
+        btn.type = 'button';
+        btn.addEventListener('click', () => {
+          opts.querySelectorAll('.adv-opt').forEach((o) => o.classList.remove('selected'));
+          btn.classList.add('selected');
+          advisorAnswers[qDef.key] = opt;
+          Sound.click();
+          $('#btn-advisor-submit').disabled =
+            Object.keys(advisorAnswers).length < C.advisor.questions.length;
+        });
+        opts.appendChild(btn);
+      });
+      block.appendChild(opts);
+      wrap.appendChild(block);
+    });
+  }
+
+  function showAdvisor() {
+    goTo('screen-advisor');
+    A.track(A.events.ADVISOR_SHOWN || 'fit_advisor_shown', { track: session ? session.track : null });
+  }
+
+  function submitAdvisor() {
+    Sound.win();
+    vibrate([20, 50, 20]);
+    A.track(A.events.ADVISOR_SUBMIT, { ...advisorAnswers, track: session ? session.track : null });
+    try {
+      localStorage.setItem(C.storage.advisorKey, JSON.stringify({
+        ...advisorAnswers,
+        track: session ? session.track : null,
+        score: session ? session.score : null,
+        submittedAt: new Date().toISOString(),
+      }));
+    } catch (e) { /* אין אחסון */ }
+    // שליחה עתידית ל־Webhook כולל תשובות היועץ
+    if (session) sendAssessmentResult({ ...buildPayload(), advisor: { ...advisorAnswers } });
+    goTo('screen-thanks');
+    A.track(A.events.THANKS_SHOWN);
+    if (!reducedMotion) setTimeout(launchThanksConfetti, 300);
+  }
+
+  function launchThanksConfetti() {
+    const canvas = $('#thanks-confetti');
+    if (!canvas) return;
+    // שימוש חוזר באנימציית הקונפטי של מסך התוצאה
+    const parent = canvas.parentElement.getBoundingClientRect();
+    const ctx2d = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = parent.width * dpr;
+    canvas.height = parent.height * dpr;
+    ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const colors = [C.brand.purple, C.brand.teal, C.brand.green, '#FFFFFF'];
+    const parts = Array.from({ length: 90 }, () => ({
+      x: parent.width / 2 + (Math.random() - 0.5) * 120,
+      y: parent.height * 0.25,
+      vx: (Math.random() - 0.5) * 8,
+      vy: -4 - Math.random() * 6,
+      s: 4 + Math.random() * 5,
+      c: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.25,
+    }));
+    const t0 = performance.now();
+    (function frame(now) {
+      const t = (now - t0) / 1000;
+      ctx2d.clearRect(0, 0, parent.width, parent.height);
+      if (t > 2.4) return;
+      for (const p of parts) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.rot += p.vr;
+        ctx2d.save();
+        ctx2d.translate(p.x, p.y);
+        ctx2d.rotate(p.rot);
+        ctx2d.globalAlpha = Math.max(0, 1 - t / 2.2);
+        ctx2d.fillStyle = p.c;
+        ctx2d.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+        ctx2d.restore();
+      }
+      requestAnimationFrame(frame);
+    })(performance.now());
+  }
+
+  /* ============================================================
      הפעלה
      ============================================================ */
 
@@ -961,6 +1166,7 @@
     initTexts();
     initHero();
     buildTrackCards();
+    buildAdvisor();
     initEvents();
     initKeyboard();
     initParticles();
