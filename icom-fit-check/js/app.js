@@ -195,10 +195,6 @@
     $('#btn-advisor').textContent = C.texts.resultAdvisorCta;
     $('#btn-again').textContent = C.texts.resultCta;
 
-    $('#advisor-title').textContent = C.advisor.title;
-    $('#advisor-intro').textContent = C.advisor.intro;
-    $('#advisor-lead').textContent = C.advisor.lead;
-    $('#btn-advisor-submit').textContent = C.advisor.cta;
     $('#thanks-title').textContent = C.thanks.title;
     $('#thanks-text').textContent = C.thanks.text;
 
@@ -496,11 +492,35 @@
     prepareGameScreen(track, gameDef);
     goTo('screen-game');
 
-    // מסך הוראות לפני הספירה לאחור
+    // מסך הוראות: נשאר על המסך מספר שניות קבוע ורק אז המשחק מתחיל
     $('#game-intro-icon').innerHTML = track.gameIcon || '🎮';
     $('#game-intro-title').textContent = track.gameTitle;
     $('#game-intro-text').textContent = track.gameInstruction;
     $('#game-intro').classList.add('show');
+    startIntroHold(track);
+  }
+
+  let introHoldTimer = null;
+
+  function startIntroHold(track) {
+    const btn = $('#game-intro-btn');
+    const cta = track.gameCta || C.texts.gameIntroCta;
+    let left = C.timing.introHoldSeconds;
+    btn.disabled = true;
+    btn.innerHTML = `${cta} <span class="intro-count">${left}</span>`;
+    clearInterval(introHoldTimer);
+    introHoldTimer = setInterval(() => {
+      left--;
+      if (left > 0) {
+        btn.innerHTML = `${cta} <span class="intro-count">${left}</span>`;
+        Sound.tick();
+      } else {
+        clearInterval(introHoldTimer);
+        btn.textContent = cta;
+        $('#game-intro').classList.remove('show');
+        beginPlay();
+      }
+    }, 1000);
   }
 
   function beginPlay() {
@@ -604,27 +624,29 @@
         session.attempts.push({ round: runtime.round, correct, action, rtMs });
 
         const dot = dots[runtime.round];
-        if (correct) {
-          session.correctCount++;
-          Sound.good();
-          vibrate([14, 40, 14]);
-          showFeedback('good', text);
-          document.body.classList.add('flash-good');
-          setTimeout(() => document.body.classList.remove('flash-good'), 520);
-          if (dot) { dot.classList.remove('current'); dot.classList.add('done'); }
-        } else {
+        if (!correct) {
+          // טעות: פידבק "הזדמנות נוספת" — נשארים באותה שאלה
+          runtime.answered = false;
           Sound.bad();
           vibrate(28);
           showFeedback('bad', text);
-          if (dot) { dot.classList.remove('current'); dot.classList.add('miss'); }
+          return;
         }
 
+        session.correctCount++;
+        Sound.good();
+        vibrate([14, 40, 14]);
+        showFeedback('good', text);
+        document.body.classList.add('flash-good');
+        setTimeout(() => document.body.classList.remove('flash-good'), 520);
+        if (dot) { dot.classList.remove('current'); dot.classList.add('done'); }
+
         const isLast = runtime.round >= gameDef.rounds - 1;
-        // בטעות נותנים רגע נוסף לראות את התשובה הנכונה שנחשפה
         setTimeout(() => {
           if (runtime.finished) return;
           if (isLast) {
-            runSpeedRound();
+            if (gameDef.finalMission) runFinalMission();
+            else runSpeedRound();
           } else {
             runtime.round++;
             runtime.answered = false;
@@ -636,9 +658,40 @@
             runtime.roundStart = performance.now();
             gameDef.renderRound(stage, ctx);
           }
-        }, correct ? 900 : 1400);
+        }, 900);
       },
     };
+
+    /* משימת סיום ייעודית של הקורס (games.js) */
+    function runFinalMission() {
+      cleanupRound();
+      stage.innerHTML = '';
+      feedbackEl.className = 'game-feedback';
+      $('#game-progress').textContent = C.texts.missionLabel;
+      if (gameDef.finalMission.title) $('#game-title').textContent = gameDef.finalMission.title;
+      if (gameDef.finalMission.sub) $('#game-instruction').textContent = gameDef.finalMission.sub;
+      const missionDot = dots[gameDef.rounds];
+      if (missionDot) missionDot.classList.add('current');
+      const mStart = performance.now();
+
+      const mctx = {
+        h,
+        track,
+        onCleanup(fn) { runtime.cleanups.push(fn); },
+        feedback(kind, text) { showFeedback(kind, text); if (kind === 'bad') { Sound.bad(); vibrate(24); } },
+        complete({ correct, action, text }) {
+          if (runtime.finished) return;
+          session.attempts.push({ round: 'mission', correct, action, rtMs: Math.round(performance.now() - mStart) });
+          if (correct) session.correctCount++;
+          if (missionDot) { missionDot.classList.remove('current'); missionDot.classList.add('done'); }
+          showFeedback('good', text);
+          Sound.good();
+          vibrate([14, 40, 14]);
+          setTimeout(finishGame, 1300);
+        },
+      };
+      gameDef.finalMission.render(stage, mctx);
+    }
 
     /* סיבוב מהירות: 3 מטרות זוהרות מופיעות בזו אחר זו — פוגעים כמה שיותר מהר */
     function runSpeedRound() {
@@ -819,6 +872,19 @@
       img.onload = () => fig.appendChild(img);
       img.src = C.RESULT_ART.src;
       $('#result-title').before(fig);
+    }
+
+    // כפתור ראשי לפי הגדרת הקורס: וואטסאפ (QA) או יועץ לימודים
+    const waBtn = $('#btn-whatsapp');
+    const advBtn = $('#btn-advisor');
+    if (track.resultMode === 'whatsapp') {
+      waBtn.hidden = false;
+      advBtn.hidden = true;
+      $('#btn-whatsapp-label').textContent = track.resultWhatsappCta || 'להמשך התהליך בוואטסאפ';
+      waBtn.href = C.WHATSAPP_RETURN_URL;
+    } else {
+      waBtn.hidden = true;
+      advBtn.hidden = false;
     }
 
     goTo('screen-result');
@@ -1016,7 +1082,9 @@
       showAdvisor();
     });
 
-    $('#btn-advisor-submit').addEventListener('click', submitAdvisor);
+    $('#btn-whatsapp').addEventListener('click', () => {
+      A.track(A.events.WHATSAPP_CLICK, { track: session ? session.track : null, score: session ? session.score : null });
+    });
 
     const soundBtn = $('#sound-toggle');
     let saved = null;
@@ -1038,57 +1106,95 @@
   }
 
   /* ============================================================
-     עמוד יועץ הלימודים + דף תודה
+     אשף יועץ הלימודים — שלב אחד בכל מסך + דף תודה
      ============================================================ */
 
   const advisorAnswers = {};
+  let advisorStep = 0;
+
+  function advisorGoTo(step) {
+    advisorStep = step;
+    const steps = document.querySelectorAll('.adv-step');
+    steps.forEach((s, i) => s.classList.toggle('active', i === step));
+    const prog = $('#adv-progress');
+    if (step >= 1 && step <= C.advisor.questions.length) {
+      prog.hidden = false;
+      prog.textContent = `שאלה ${step} מתוך ${C.advisor.questions.length}`;
+    } else {
+      prog.hidden = true;
+    }
+    $('#screen-advisor').scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
 
   function buildAdvisor() {
-    // נקודות "על המכללה"
-    const points = $('#advisor-points');
-    C.advisor.about.forEach((p) => {
-      points.appendChild(h('div', 'advisor-point',
-        `<span class="advisor-point-ico">✓</span><span>${p}</span>`));
-    });
+    const wrap = $('#adv-steps');
 
-    // ויזואל הצלחה (כשהנכס זמין)
+    /* --- שלב פתיחה --- */
+    const intro = h('div', 'adv-step adv-step--intro');
     if (C.advisor.art && C.advisor.art.ready) {
       const fig = h('div', 'result-figure advisor-art');
       const img = new Image();
       img.alt = '';
       img.onload = () => fig.appendChild(img);
       img.src = C.advisor.art.src;
-      $('#advisor-title').before(fig);
+      intro.appendChild(fig);
     }
+    intro.appendChild(h('h2', 'section-title', C.advisor.introTitle));
+    intro.appendChild(h('p', 'adv-text', C.advisor.introText));
+    const points = h('div', 'advisor-points');
+    C.advisor.about.forEach((p) => {
+      points.appendChild(h('div', 'advisor-point', `<span class="advisor-point-ico">✓</span><span>${p}</span>`));
+    });
+    intro.appendChild(points);
+    const contBtn = h('button', 'btn btn--primary btn--xl', C.advisor.introCta);
+    contBtn.type = 'button';
+    contBtn.id = 'adv-continue';
+    contBtn.addEventListener('click', () => { Sound.click(); advisorGoTo(1); });
+    intro.appendChild(contBtn);
+    wrap.appendChild(intro);
 
-    // שלוש השאלות
-    const wrap = $('#advisor-questions');
+    /* --- שלבי השאלות: שאלה אחת בכל מסך --- */
     C.advisor.questions.forEach((qDef, qi) => {
-      const block = h('div', 'adv-q');
-      block.appendChild(h('div', 'adv-q-text', `<span class="adv-q-num">${qi + 1}</span>${qDef.q}`));
-      const opts = h('div', 'adv-opts' + (qDef.options === 'tracks' ? ' adv-opts--grid' : ''));
-      const options = qDef.options === 'tracks' ? C.tracks.map((t) => t.name) : qDef.options;
+      const step = h('div', 'adv-step');
+      const card = h('div', 'adv-card');
+      card.appendChild(h('h3', 'adv-q-title', qDef.q));
+      if (qDef.sub) card.appendChild(h('p', 'adv-q-sub', qDef.sub));
+
+      const isCourses = qDef.options === 'tracks';
+      const opts = h('div', 'adv-opts' + (isCourses ? ' adv-opts--grid' : ''));
+      const options = isCourses ? C.tracks.map((t) => t.name) : qDef.options;
       options.forEach((opt) => {
         const btn = h('button', 'adv-opt', opt);
         btn.type = 'button';
         btn.addEventListener('click', () => {
+          if (btn.classList.contains('selected')) return;
           opts.querySelectorAll('.adv-opt').forEach((o) => o.classList.remove('selected'));
           btn.classList.add('selected');
           advisorAnswers[qDef.key] = opt;
           Sound.click();
-          $('#btn-advisor-submit').disabled =
-            Object.keys(advisorAnswers).length < C.advisor.questions.length;
+          vibrate(10);
+          // הדגשה קצרה ואז מעבר אוטומטי לשלב הבא
+          setTimeout(() => {
+            if (qi < C.advisor.questions.length - 1) advisorGoTo(qi + 2);
+            else submitAdvisor();
+          }, 320);
         });
         opts.appendChild(btn);
       });
-      block.appendChild(opts);
-      wrap.appendChild(block);
+      card.appendChild(opts);
+      step.appendChild(card);
+      wrap.appendChild(step);
     });
   }
 
   function showAdvisor() {
+    // איפוס בחירות קודמות
+    Object.keys(advisorAnswers).forEach((k) => delete advisorAnswers[k]);
+    document.querySelectorAll('.adv-opt.selected').forEach((o) => o.classList.remove('selected'));
+    advisorGoTo(0);
     goTo('screen-advisor');
-    A.track(A.events.ADVISOR_SHOWN || 'fit_advisor_shown', { track: session ? session.track : null });
+    A.track(A.events.ADVISOR_SHOWN, { track: session ? session.track : null });
   }
 
   function submitAdvisor() {
@@ -1103,51 +1209,9 @@
         submittedAt: new Date().toISOString(),
       }));
     } catch (e) { /* אין אחסון */ }
-    // שליחה עתידית ל־Webhook כולל תשובות היועץ
     if (session) sendAssessmentResult({ ...buildPayload(), advisor: { ...advisorAnswers } });
     goTo('screen-thanks');
     A.track(A.events.THANKS_SHOWN);
-    if (!reducedMotion) setTimeout(launchThanksConfetti, 300);
-  }
-
-  function launchThanksConfetti() {
-    const canvas = $('#thanks-confetti');
-    if (!canvas) return;
-    // שימוש חוזר באנימציית הקונפטי של מסך התוצאה
-    const parent = canvas.parentElement.getBoundingClientRect();
-    const ctx2d = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = parent.width * dpr;
-    canvas.height = parent.height * dpr;
-    ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const colors = [C.brand.purple, C.brand.teal, C.brand.green, '#FFFFFF'];
-    const parts = Array.from({ length: 90 }, () => ({
-      x: parent.width / 2 + (Math.random() - 0.5) * 120,
-      y: parent.height * 0.25,
-      vx: (Math.random() - 0.5) * 8,
-      vy: -4 - Math.random() * 6,
-      s: 4 + Math.random() * 5,
-      c: colors[Math.floor(Math.random() * colors.length)],
-      rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.25,
-    }));
-    const t0 = performance.now();
-    (function frame(now) {
-      const t = (now - t0) / 1000;
-      ctx2d.clearRect(0, 0, parent.width, parent.height);
-      if (t > 2.4) return;
-      for (const p of parts) {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.rot += p.vr;
-        ctx2d.save();
-        ctx2d.translate(p.x, p.y);
-        ctx2d.rotate(p.rot);
-        ctx2d.globalAlpha = Math.max(0, 1 - t / 2.2);
-        ctx2d.fillStyle = p.c;
-        ctx2d.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
-        ctx2d.restore();
-      }
-      requestAnimationFrame(frame);
-    })(performance.now());
   }
 
   /* ============================================================
