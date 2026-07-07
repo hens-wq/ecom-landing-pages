@@ -421,12 +421,11 @@
       }
 
       const info = h('div', 'track-info');
-      const nameRow = h('div', 'track-name-row');
-      nameRow.append(
+      info.append(
         h('div', 'track-name', track.name),
+        h('div', 'track-desc', track.desc),
         h('div', 'track-salary', `<span>${C.texts.salaryLabel}</span> ${track.salary}`)
       );
-      info.append(nameRow, h('div', 'track-desc', track.desc));
       card.append(
         icon,
         info,
