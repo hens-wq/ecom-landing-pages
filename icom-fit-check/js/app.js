@@ -176,7 +176,6 @@
     $('#intro-title').textContent = C.texts.introTitle;
     $('#intro-subtitle').textContent = C.texts.introSubtitle;
     $('#btn-start-label').textContent = C.texts.introCta;
-    $('#intro-hint').textContent = '⏱ ' + C.texts.introHint;
 
     const steps = $('#intro-steps');
     C.texts.introSteps.forEach((s, i) => {
@@ -422,10 +421,12 @@
       }
 
       const info = h('div', 'track-info');
-      info.append(
+      const nameRow = h('div', 'track-name-row');
+      nameRow.append(
         h('div', 'track-name', track.name),
         h('div', 'track-salary', `<span>${C.texts.salaryLabel}</span> ${track.salary}`)
       );
+      info.append(nameRow, h('div', 'track-desc', track.desc));
       card.append(
         icon,
         info,
