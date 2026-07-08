@@ -88,18 +88,28 @@
   const GOOD = ['חשיבה מדויקת! 🎯', 'החלטה נכונה!', 'מדויק!', 'יפה מאוד!'];
   const g = () => GOOD[Math.floor(Math.random() * GOOD.length)];
 
-  /* טיימר קטן למשימות סיום — פס שמתרוקן; מחזיר עצירה */
+  /* טיימר קטן למשימות סיום — פס שמתרוקן + מספר שניות פועם; מחזיר עצירה */
   function missionTimer(mctx, stage, seconds, onExpire) {
+    const wrap = mctx.h('div', 'mission-timer-wrap');
+    const num = mctx.h('div', 'mission-timer-num', String(seconds));
     const bar = mctx.h('div', 'mission-timer', '<div class="mission-timer-fill"></div>');
-    stage.appendChild(bar);
+    wrap.append(num, bar);
+    stage.appendChild(wrap);
     const fill = bar.querySelector('.mission-timer-fill');
     const t0 = performance.now();
     let raf = null;
     let stopped = false;
+    let lastShown = seconds;
     (function frame(now) {
       if (stopped) return;
       const left = 1 - (now - t0) / (seconds * 1000);
       fill.style.transform = `scaleX(${Math.max(0, left)})`;
+      const secLeft = Math.max(0, Math.ceil(left * seconds));
+      if (secLeft !== lastShown) {
+        lastShown = secLeft;
+        num.textContent = String(secLeft);
+        num.classList.toggle('low', secLeft <= 3);
+      }
       if (left <= 0) { onExpire(); return; }
       raf = requestAnimationFrame(frame);
     })(performance.now());
@@ -449,9 +459,15 @@
      ============================================================ */
 
   function buildBugScreen(ctx, stage, data, { onBug, onWrong }) {
+    const wrap = ctx.h('div', 'qa-scan-wrap');
+    wrap.appendChild(ctx.h('div', 'qa-hunt-hint', '🔍 סרקו את המסך ולחצו על השורה עם התקלה'));
+
     const mock = ctx.h('div', 'qa-mock');
-    mock.appendChild(ctx.h('div', 'qa-mock-titlebar', '<span></span><span></span><span></span>'));
+    const titlebar = ctx.h('div', 'qa-mock-titlebar', '<span></span><span></span><span></span>');
+    titlebar.appendChild(ctx.h('div', 'qa-mock-url', '🔒 shop.ecom-college.co.il'));
+    mock.appendChild(titlebar);
     mock.appendChild(ctx.h('div', 'qa-mock-title', data.title));
+    const rows = [];
     data.elements.forEach((elDef) => {
       const el = ctx.h('button', 'qa-el');
       el.type = 'button';
@@ -470,8 +486,38 @@
         }
       });
       mock.appendChild(el);
+      rows.push(el);
     });
-    stage.appendChild(mock);
+    mock.appendChild(ctx.h('div', 'qa-bug-badge', '🐛'));
+    wrap.appendChild(mock);
+
+    // עדשת סריקה עוקבת אחר האצבע/עכבר ומדגישה את השורה שמתחתיה — הופכת את
+    // הציד לתנועה פעילה על המסך במקום בחירה סטטית מרשימה
+    const lens = ctx.h('div', 'qa-lens');
+    wrap.appendChild(lens);
+    let lensActive = false;
+    function moveLens(clientX, clientY) {
+      const r = wrap.getBoundingClientRect();
+      lens.style.left = (clientX - r.left) + 'px';
+      lens.style.top = (clientY - r.top) + 'px';
+      if (!lensActive) { lensActive = true; lens.classList.add('show'); }
+      rows.forEach((row) => {
+        const rr = row.getBoundingClientRect();
+        const over = clientY >= rr.top && clientY <= rr.bottom && !row.disabled;
+        row.classList.toggle('scanning', over);
+      });
+    }
+    function clearScan() { rows.forEach((row) => row.classList.remove('scanning')); }
+    mock.addEventListener('pointermove', (e) => moveLens(e.clientX, e.clientY));
+    mock.addEventListener('pointerleave', clearScan);
+    mock.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (t) moveLens(t.clientX, t.clientY);
+    }, { passive: true });
+    ctx.onCleanup(clearScan);
+
+    stage.appendChild(wrap);
+    buildStageAmbient(ctx, stage);
     return mock;
   }
 

@@ -23,11 +23,11 @@ const CONFIG = {
   // רקע האווירה הגלובלי (ערפילית + מעגלים מודפסים)
   AMBIENT_BG: 'assets/img/bg-ambient.jpg',
 
-  // תמונת מסך התוצאה — כבויה כרגע (הדמות מוצגת בגדול מתחת לשאלות במקום כאווטאר קטן)
+  // תמונת מסך התוצאה — כבויה
   RESULT_ART: { ready: false, src: 'assets/img/student-1.jpg' },
 
-  // תמונת הסטודנטית המוצגת בגדול מתחת לכל שאלה (גם במשחקים וגם באשף היועץ)
-  QUESTION_ART: { ready: true, images: ['assets/img/student-1.jpg'] },
+  // תמונת הסטודנטית מתחת לשאלות — כבויה, חוזרים לטבעת הדקורטיבית
+  QUESTION_ART: { ready: false, images: ['assets/img/student-1.jpg'] },
 
   /* ---------- דמות ה־Hero במסך הפתיחה ---------- */
 

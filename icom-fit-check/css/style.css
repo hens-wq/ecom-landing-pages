@@ -858,7 +858,28 @@ img, svg { display: block; max-width: 100%; }
 
 /* ========== משחק QA: מצא את הבאג ========== */
 
+.qa-scan-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qa-hunt-hint {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--teal);
+  background: rgba(52,209,195,0.1);
+  border: 1px solid rgba(52,209,195,0.3);
+  border-radius: 999px;
+  padding: 7px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
 .qa-mock {
+  position: relative;
   width: 100%;
   max-width: 340px;
   border-radius: var(--radius-m);
@@ -870,9 +891,11 @@ img, svg { display: block; max-width: 100%; }
   gap: 12px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  cursor: none;
 }
 .qa-mock-titlebar {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-bottom: 4px;
 }
@@ -880,7 +903,46 @@ img, svg { display: block; max-width: 100%; }
   width: 10px; height: 10px;
   border-radius: 50%;
   background: rgba(255,255,255,0.14);
+  flex-shrink: 0;
 }
+.qa-mock-url {
+  margin-right: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-family: monospace;
+  direction: ltr;
+}
+
+.qa-bug-badge {
+  position: absolute;
+  top: -14px;
+  left: -10px;
+  font-size: 1.3rem;
+  filter: drop-shadow(0 0 8px rgba(255,122,122,0.5));
+  animation: qa-bug-float 2.2s ease-in-out infinite;
+}
+@keyframes qa-bug-float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-5px) rotate(6deg); }
+}
+
+.qa-lens {
+  position: absolute;
+  width: 84px;
+  height: 84px;
+  margin-left: -42px;
+  margin-top: -42px;
+  border-radius: 50%;
+  border: 2px solid rgba(52,209,195,0.55);
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.12), rgba(52,209,195,0.05) 60%, transparent 75%);
+  box-shadow: 0 0 24px rgba(52,209,195,0.35), inset 0 0 18px rgba(52,209,195,0.2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+.qa-lens.show { opacity: 1; }
 
 .qa-el {
   border-radius: 10px;
@@ -891,11 +953,16 @@ img, svg { display: block; max-width: 100%; }
   font-weight: 500;
   text-align: right;
   color: var(--text);
-  transition: transform 0.15s, border-color 0.2s;
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.15s;
   touch-action: manipulation;
 }
 .qa-el:active { transform: scale(0.97); }
 @media (hover: hover) { .qa-el:hover { border-color: rgba(52,209,195,0.45); } }
+.qa-el.scanning {
+  border-color: var(--teal);
+  box-shadow: 0 0 16px rgba(52,209,195,0.4);
+  transform: scale(1.02);
+}
 
 .qa-el.qa-btn-el {
   text-align: center;
@@ -1996,11 +2063,35 @@ img, svg { display: block; max-width: 100%; }
 
 /* ---------- משימת סיום: טיימר (הכותרת/תת-הכותרת מוצגות דרך game-title/game-instruction הקבועים) ---------- */
 
-.mission-timer {
+.mission-timer-wrap {
   width: 100%;
   max-width: 340px;
-  height: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 16px;
+}
+.mission-timer-num {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 0 10px rgba(133,237,114,0.4));
+  transition: color 0.2s;
+}
+.mission-timer-num.low {
+  color: #ff7a7a;
+  filter: drop-shadow(0 0 10px rgba(255,122,122,0.5));
+  animation: mission-num-pulse 0.6s ease infinite;
+}
+@keyframes mission-num-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+.mission-timer {
+  width: 100%;
+  height: 4px;
   border-radius: 999px;
   background: rgba(255,255,255,0.08);
   overflow: hidden;
