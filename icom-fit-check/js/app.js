@@ -1102,6 +1102,23 @@
       });
       card.appendChild(opts);
       step.appendChild(card);
+
+      const art = C.QUESTION_ART;
+      if (art && art.ready && art.images && art.images.length) {
+        const amb = h('div', 'adv-step-figure');
+        const img = new Image();
+        img.alt = '';
+        img.className = 'stage-figure-img';
+        img.decoding = 'async';
+        img.onload = () => {
+          amb.appendChild(img);
+          // הוספת התמונה יכולה להזיז את גובה השלב אחרי שכבר גללנו לראש המסך
+          if (step.classList.contains('active')) window.scrollTo(0, 0);
+        };
+        img.src = art.images[qi % art.images.length];
+        step.appendChild(amb);
+      }
+
       wrap.appendChild(step);
     });
   }

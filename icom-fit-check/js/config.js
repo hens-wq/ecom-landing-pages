@@ -23,11 +23,11 @@ const CONFIG = {
   // רקע האווירה הגלובלי (ערפילית + מעגלים מודפסים)
   AMBIENT_BG: 'assets/img/bg-ambient.jpg',
 
-  // תמונת מסך התוצאה (סטודנטית עם אגודל למעלה)
-  RESULT_ART: { ready: true, src: 'assets/img/student-1.jpg' },
+  // תמונת מסך התוצאה — כבויה כרגע (הדמות מוצגת בגדול מתחת לשאלות במקום כאווטאר קטן)
+  RESULT_ART: { ready: false, src: 'assets/img/student-1.jpg' },
 
-  // תמונות סטודנטים המוצגות מתחת לשאלות (מתחלפות בין הסבבים)
-  QUESTION_ART: { ready: true, images: ['assets/img/student-2.jpg', 'assets/img/student-1.jpg'] },
+  // תמונת הסטודנטית המוצגת בגדול מתחת לכל שאלה (גם במשחקים וגם באשף היועץ)
+  QUESTION_ART: { ready: true, images: ['assets/img/student-1.jpg'] },
 
   /* ---------- דמות ה־Hero במסך הפתיחה ---------- */
 
@@ -212,7 +212,8 @@ const CONFIG = {
 
   advisor: {
     // ויזואל הצלחה (Nano Banana) — הדליקו כשהקובץ בתיקייה
-    art: { ready: true, src: 'assets/img/student-1.jpg' },
+    // כבוי — הדמות מוצגת בגדול בכל שלב שאלה של האשף במקום כאווטאר קטן בפתיחה
+    art: { ready: false, src: 'assets/img/student-1.jpg' },
     welcomeTitle: 'ברוכים הבאים למכללת Ecom',
     introText: 'עברת בהצלחה את בדיקת ההתאמה. נשארו רק 3 שאלות קצרות שיעזרו לנו להכיר אותך טוב יותר.',
     aboutBoxTitle: 'מכללת Ecom מובילה את תחום לימודי ההייטק בישראל!',

@@ -1704,8 +1704,8 @@ img, svg { display: block; max-width: 100%; }
 .stage-figure-img {
   position: relative;
   z-index: 1;
-  max-height: 200px;
-  max-width: 72%;
+  max-height: 290px;
+  max-width: 88%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1933,6 +1933,19 @@ img, svg { display: block; max-width: 100%; }
   border-color: var(--green);
   background: rgba(133,237,114,0.1);
   box-shadow: 0 0 18px rgba(133,237,114,0.25);
+}
+
+/* תמונת הסטודנטית מתחת לשאלות האשף — אותו טיפול כמו .stage-ambient במשחק */
+.adv-step-figure {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* אותה סיבה כמו .stage-ambient: מונע את המלבן הדהוי סביב תמונה עם mix-blend-mode */
+  background: var(--bg);
 }
 
 /* ---------- דף תודה ---------- */
