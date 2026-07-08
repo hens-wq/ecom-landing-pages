@@ -30,6 +30,25 @@
 
   const retry = () => C.texts.retryFeedback[Math.floor(Math.random() * C.texts.retryFeedback.length)];
 
+  /* ---------- אלמנט תחתון מתחת לשאלה: תמונת סטודנט/ית אם קיימת, אחרת טבעת דקורטיבית ---------- */
+
+  function buildStageAmbient(ctx, stage) {
+    const amb = ctx.h('div', 'stage-ambient');
+    const art = C.QUESTION_ART;
+    if (art && art.ready && art.images && art.images.length) {
+      const src = art.images[ctx.round % art.images.length];
+      const img = new Image();
+      img.alt = '';
+      img.className = 'stage-figure-img';
+      img.decoding = 'async';
+      img.onload = () => amb.appendChild(img);
+      img.src = src;
+    } else {
+      amb.innerHTML = '<span class="stage-ambient-ring"></span>';
+    }
+    stage.appendChild(amb);
+  }
+
   /* ---------- שאלה עם אפשרויות — טעות מקבלת הזדמנות נוספת ---------- */
 
   function buildQuestion(ctx, stage, { question, sub, options, goodText }) {
@@ -62,7 +81,7 @@
     });
     card.appendChild(grid);
     stage.appendChild(card);
-    stage.appendChild(ctx.h('div', 'stage-ambient', '<span class="stage-ambient-ring"></span>'));
+    buildStageAmbient(ctx, stage);
     return grid;
   }
 
@@ -852,7 +871,7 @@
       });
       card.appendChild(grid);
       stage.appendChild(card);
-      stage.appendChild(ctx.h('div', 'stage-ambient', '<span class="stage-ambient-ring"></span>'));
+      buildStageAmbient(ctx, stage);
     },
     finalMission: {
       title: 'משימת סיום: בנו את המסך',

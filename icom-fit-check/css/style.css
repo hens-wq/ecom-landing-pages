@@ -1652,6 +1652,12 @@ img, svg { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
+  /* .screen--active מגדיר opacity/transform לצורך אנימציית המעבר, מה שיוצר
+     שכבת קומפוזיציה מבודדת. בלי רקע מפורש כאן, mix-blend-mode על התמונה
+     מתערבב מול "כלום" בתוך אותה שכבה במקום מול רקע הדף — וזה חושף מלבן
+     דהוי מסביב לתמונה. הרקע כאן זהה לרקע הבסיס של הדף, כך שההבדל היחיד
+     הוא איבוד הילת האורורה העדינה באזור הזה בלבד — לא בכל המסך. */
+  background: var(--bg);
 }
 .stage-ambient::before,
 .stage-ambient::after {
@@ -1695,6 +1701,23 @@ img, svg { display: block; max-width: 100%; }
   border: 1px dashed color-mix(in srgb, var(--tc2, var(--teal)) 60%, transparent);
   animation: spin 9s linear infinite;
 }
+.stage-figure-img {
+  position: relative;
+  z-index: 1;
+  max-height: 200px;
+  max-width: 72%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  /* התמונה מגיעה על רקע שחור מלא — מיזוג screen ממיס אותו לתוך הרקע הכהה.
+     המסכה חיונית: כשהתמונה מקוננת בתוך אלמנטים נוספים, הדפדפן לא תמיד
+     מבטל את השחור לגמרי עד קצה המלבן המדויק — המסכה מרככת בדיוק את הקצוות. */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 14px 28px rgba(0,0,0,0.5));
+  -webkit-mask-image: radial-gradient(ellipse 88% 94% at 50% 50%, black 78%, transparent 97%);
+  mask-image: radial-gradient(ellipse 88% 94% at 50% 50%, black 78%, transparent 97%);
+}
+
 @keyframes ambient-ring-pulse {
   0%, 100% { opacity: 0.55; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.04); }
