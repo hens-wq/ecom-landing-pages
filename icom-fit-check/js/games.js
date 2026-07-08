@@ -33,8 +33,9 @@
   /* ---------- שאלה עם אפשרויות — טעות מקבלת הזדמנות נוספת ---------- */
 
   function buildQuestion(ctx, stage, { question, sub, options, goodText }) {
-    if (question) stage.appendChild(ctx.h('div', 'game-q', question));
-    if (sub) stage.appendChild(ctx.h('div', 'game-q-sub', sub));
+    const card = ctx.h('div', 'qcard');
+    if (question) card.appendChild(ctx.h('div', 'game-q', question));
+    if (sub) card.appendChild(ctx.h('div', 'game-q-sub', sub));
     const grid = ctx.h('div', 'option-grid cols-1');
     let solved = false;
 
@@ -59,7 +60,9 @@
       });
       grid.appendChild(btn);
     });
-    stage.appendChild(grid);
+    card.appendChild(grid);
+    stage.appendChild(card);
+    stage.appendChild(ctx.h('div', 'stage-ambient', '<span class="stage-ambient-ring"></span>'));
     return grid;
   }
 
@@ -120,6 +123,119 @@
       ];
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
+    finalMission: {
+      title: 'משימת סיום: סגרו את הפרצה',
+      sub: 'קו הסריקה נע בין השרתים. לחצו בדיוק כשהוא מגיע לשרת הפגיע.',
+      render(stage, mctx) {
+        const SPEEDS = [1700, 1300, 1000]; // ms לחצי מעבר — מהיר יותר בכל סבב
+        let round = 0;
+        let attempts = 0;
+        let vulnIndex = -1;
+        let running = false;
+        let rafId = null;
+        let t0 = 0;
+        let roundStart = 0;
+
+        const wrap = mctx.h('div', 'scan-wrap');
+        const track2 = mctx.h('div', 'scan-track');
+        const nodes = [0, 1, 2].map((i) => {
+          const n = mctx.h('div', 'scan-node');
+          n.innerHTML = `<span class="scan-node-ico">🖥️</span><span class="scan-node-label">שרת ${['א', 'ב', 'ג'][i]}</span>`;
+          track2.appendChild(n);
+          return n;
+        });
+        const beam = mctx.h('div', 'scan-beam');
+        track2.appendChild(beam);
+        wrap.appendChild(track2);
+        const tapBtn = mctx.h('button', 'btn btn--primary scan-tap-btn', 'לחצו כאן! 🎯');
+        tapBtn.type = 'button';
+        wrap.appendChild(tapBtn);
+        stage.appendChild(wrap);
+
+        const timeouts = [];
+        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
+        mctx.onCleanup(() => { running = false; if (rafId) cancelAnimationFrame(rafId); timeouts.forEach(clearTimeout); });
+
+        function pickVuln() {
+          vulnIndex = Math.floor(Math.random() * 3);
+          nodes.forEach((n, i) => n.classList.toggle('vuln', i === vulnIndex));
+        }
+
+        function currentPos(now) {
+          const dur = SPEEDS[round];
+          const elapsed = (now - t0) % (dur * 2);
+          const tt = elapsed / dur;
+          return tt <= 1 ? tt * 2 : (2 - tt) * 2; // גל משולש: 0 → 2 → 0
+        }
+
+        function paintBeam(now) {
+          const pos = currentPos(now);
+          beam.style.transform = `translateX(${pos * 100}%)`;
+          if (running) rafId = requestAnimationFrame(paintBeam);
+        }
+
+        function stopBeam() { running = false; if (rafId) cancelAnimationFrame(rafId); }
+
+        function startRound() {
+          mctx.progress(`סבב ${round + 1} מתוך 3`);
+          attempts = 0;
+          tapBtn.disabled = false;
+          beam.style.transition = '';
+          pickVuln();
+          t0 = performance.now();
+          roundStart = performance.now();
+          running = true;
+          rafId = requestAnimationFrame(paintBeam);
+        }
+
+        function nextOrFinish() {
+          round++;
+          nodes.forEach((n) => n.classList.remove('vuln'));
+          if (round >= 3) mctx.complete({ text: 'כל האיומים נוטרלו — תגובה מהירה ומדויקת' });
+          else later(startRound, 500);
+        }
+
+        function finishRound(correct, action) {
+          stopBeam();
+          tapBtn.disabled = true;
+          const rtMs = Math.round(performance.now() - roundStart);
+          mctx.round({ correct, action, rtMs });
+          later(nextOrFinish, 500);
+        }
+
+        function demoCorrectTiming(cb) {
+          stopBeam();
+          beam.style.transition = 'transform 0.4s ease';
+          beam.style.transform = `translateX(${vulnIndex * 100}%)`;
+          nodes[vulnIndex].classList.add('scan-hit-demo');
+          later(() => {
+            nodes[vulnIndex].classList.remove('scan-hit-demo');
+            cb();
+          }, 900);
+        }
+
+        tapBtn.addEventListener('click', () => {
+          if (!running) return;
+          const pos = currentPos(performance.now());
+          const hit = Math.abs(pos - vulnIndex) < 0.42;
+          if (hit) {
+            mctx.feedback('good', 'הפרצה נסגרה!');
+            if (navigator.vibrate) navigator.vibrate([14, 40, 14]);
+            finishRound(true, 'cyber_scan_hit');
+          } else {
+            attempts++;
+            if (attempts < 2) {
+              mctx.feedback('bad', 'כמעט! נסו שוב');
+            } else {
+              mctx.feedback('bad', 'כמעט! הנה התזמון הנכון');
+              demoCorrectTiming(() => finishRound(false, 'cyber_scan_miss'));
+            }
+          }
+        });
+
+        startRound();
+      },
+    },
   };
 
   /* ============================================================
@@ -156,6 +272,145 @@
         },
       ];
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: 'חשיבה של מודל! 🧠' });
+    },
+    finalMission: {
+      title: 'משימת סיום: אמנו את המודל',
+      sub: 'המודל למד משתי קבוצות של דוגמאות. גררו כל כרטיס לקבוצה שאליה הוא הכי מתאים.',
+      render(stage, mctx) {
+        const ROUNDS = [
+          { shape: 'round', group: 0 },
+          { shape: 'angular', group: 1 },
+          { shape: 'round2', group: 0 },
+        ];
+        let round = 0;
+        let attempts = 0;
+        let locked = false;
+        let roundStart = 0;
+
+        const wrap = mctx.h('div', 'ai-sort-wrap');
+        const groupsRow = mctx.h('div', 'ai-groups');
+        const groupA = mctx.h('button', 'ai-group', '<span class="ai-group-shapes"><i class="ai-shape shape-round"></i><i class="ai-shape shape-round2"></i></span><span class="ai-group-label">קבוצה 1</span>');
+        groupA.type = 'button';
+        const groupB = mctx.h('button', 'ai-group', '<span class="ai-group-shapes"><i class="ai-shape shape-angular"></i><i class="ai-shape shape-angular2"></i></span><span class="ai-group-label">קבוצה 2</span>');
+        groupB.type = 'button';
+        groupsRow.append(groupA, groupB);
+        const card = mctx.h('div', 'ai-card');
+        wrap.append(groupsRow, card);
+        stage.appendChild(wrap);
+
+        const timeouts = [];
+        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
+        mctx.onCleanup(() => timeouts.forEach(clearTimeout));
+
+        function paintCard() {
+          card.className = 'ai-card shape-' + ROUNDS[round].shape;
+          card.style.transition = '';
+          card.style.transform = '';
+          card.style.opacity = '';
+        }
+
+        function startRound() {
+          mctx.progress(`סבב ${round + 1} מתוך 3`);
+          attempts = 0;
+          locked = false;
+          paintCard();
+          roundStart = performance.now();
+        }
+
+        function nextOrFinish() {
+          round++;
+          if (round >= 3) mctx.complete({ text: 'זיהיתם דפוסים ואימנתם את המודל בהצלחה' });
+          else later(startRound, 500);
+        }
+
+        function finishRound(correct, action) {
+          locked = true;
+          const rtMs = Math.round(performance.now() - roundStart);
+          mctx.round({ correct, action, rtMs });
+          later(nextOrFinish, 550);
+        }
+
+        function flyTo(group, cb) {
+          const gr = group.getBoundingClientRect();
+          const cr = card.getBoundingClientRect();
+          card.style.transition = 'transform 0.4s ease, opacity 0.25s 0.25s';
+          card.style.transform = `translate(${gr.left + gr.width / 2 - (cr.left + cr.width / 2)}px, ${gr.top + gr.height / 2 - (cr.top + cr.height / 2)}px) scale(0.5)`;
+          later(() => (card.style.opacity = '0'), 280);
+          group.classList.add('reveal');
+          later(() => { group.classList.remove('reveal'); cb(); }, 550);
+        }
+
+        function assign(groupIdx) {
+          if (locked) return;
+          const def = ROUNDS[round];
+          const correct = groupIdx === def.group;
+          const group = groupIdx === 0 ? groupA : groupB;
+          if (correct) {
+            locked = true;
+            mctx.feedback('good', 'המודל למד נכון');
+            if (navigator.vibrate) navigator.vibrate([14, 40, 14]);
+            flyTo(group, () => finishRound(true, 'ai_sort_' + def.shape));
+          } else {
+            attempts++;
+            if (attempts < 2) {
+              mctx.feedback('bad', 'כמעט! בדקו לאיזו קבוצה הוא דומה יותר');
+              card.classList.add('shake');
+              later(() => card.classList.remove('shake'), 400);
+            } else {
+              locked = true;
+              mctx.feedback('bad', 'כמעט! בדקו לאיזו קבוצה הוא דומה יותר');
+              const correctGroup = def.group === 0 ? groupA : groupB;
+              flyTo(correctGroup, () => finishRound(false, 'ai_sort_wrong_' + def.shape));
+            }
+          }
+        }
+
+        groupA.addEventListener('click', () => assign(0));
+        groupB.addEventListener('click', () => assign(1));
+
+        // גרירה עם Pointer Events
+        card.addEventListener('pointerdown', (e) => {
+          if (locked) return;
+          let dragging = true;
+          card.setPointerCapture(e.pointerId);
+          card.classList.add('dragging');
+          const base = card.getBoundingClientRect();
+          const ox = e.clientX - (base.left + base.width / 2);
+          const oy = e.clientY - (base.top + base.height / 2);
+          const move = (ev) => {
+            if (!dragging) return;
+            card.style.transform = `translate(${ev.clientX - (base.left + base.width / 2) - ox}px, ${ev.clientY - (base.top + base.height / 2) - oy}px)`;
+          };
+          const up = (ev) => {
+            dragging = false;
+            card.classList.remove('dragging');
+            card.removeEventListener('pointermove', move);
+            card.removeEventListener('pointerup', up);
+            card.style.pointerEvents = 'none';
+            const under = document.elementFromPoint(ev.clientX, ev.clientY);
+            card.style.pointerEvents = '';
+            const grp = under && under.closest('.ai-group');
+            if (grp) { assign(grp === groupA ? 0 : 1); return; }
+            card.style.transition = 'transform 0.3s ease';
+            card.style.transform = 'translate(0, 0)';
+          };
+          card.addEventListener('pointermove', move);
+          card.addEventListener('pointerup', up);
+        });
+
+        // Swipe ימינה/שמאלה — אלטרנטיבה נוחה במגע
+        let touchStartX = null;
+        card.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        card.addEventListener('touchend', (e) => {
+          if (touchStartX == null || locked) return;
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          touchStartX = null;
+          if (Math.abs(dx) < 40) return;
+          assign(dx > 0 ? 1 : 0);
+        });
+
+        startRound();
+      },
     },
   };
 
@@ -220,46 +475,81 @@
     },
   ];
 
-  const QA_GOOD = ['זיהוי מעולה! 🐞', 'באג אותר!', 'חשיבה חדה!'];
-
   const qaGame = {
     rounds: 2,
     renderRound(stage, ctx) {
-      const data = QA_MISSIONS[ctx.round % 2]; // שני השלבים הראשונים
-      stage.appendChild(ctx.h('div', 'game-q', 'איפה הבאג? לחצו על השורה הבעייתית'));
-      buildBugScreen(ctx, stage, data, {
-        onBug: (elDef) => ctx.answer({ correct: true, action: elDef.action, text: QA_GOOD[Math.floor(Math.random() * QA_GOOD.length)] }),
-        onWrong: () => ctx.answer({ correct: false, action: 'qa_wrong_element', text: retry() }),
-      });
+      const rounds = [
+        {
+          question: 'טופס דורש סיסמה של לפחות 8 תווים, אבל מאפשר להמשיך עם סיסמה של 5 תווים. מה מצאתם?',
+          options: [
+            { html: 'באג בבדיקת הסיסמה', correct: true, action: 'qa_pw_bug' },
+            { html: 'פעולה תקינה של המערכת', correct: false, action: 'qa_pw_fine' },
+            { html: 'בעיה בצבע של הכפתור', correct: false, action: 'qa_pw_color' },
+          ],
+        },
+        {
+          question: 'איזה דיווח יעזור למפתח להבין ולתקן תקלה במהירות?',
+          options: [
+            { html: '"זה לא עובד"', correct: false, action: 'qa_report_vague' },
+            { html: 'תיאור התקלה, השלבים שגרמו לה ומה היה אמור לקרות', correct: true, action: 'qa_report_good' },
+            { html: 'צילום מסך בלבד ללא הסבר', correct: false, action: 'qa_report_shot' },
+          ],
+        },
+      ];
+      buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
       title: 'משימת סיום: מצאו את הבאג',
-      sub: 'יש לכם כמה שניות לזהות את הטעות במסך שלפניכם. לחצו על השורה הבעייתית.',
+      sub: 'בכל מסך מסתתרת טעות אחת. לחצו עליה לפני שהזמן נגמר.',
       render(stage, mctx) {
-        // וריאציה אקראית מתוך שלוש
-        const data = QA_MISSIONS[Math.floor(Math.random() * QA_MISSIONS.length)];
+        let round = 0;
 
-        let done = false;
-        const stopTimer = missionTimer(mctx, stage, 9, () => {
-          if (done) return;
-          done = true;
-          // הזמן נגמר — חושפים את הבאג וממשיכים בעדינות
-          const idx = data.elements.findIndex((e) => e.bug);
-          const rows = stage.querySelectorAll('.qa-el');
-          rows.forEach((r) => (r.disabled = true));
-          if (rows[idx]) rows[idx].classList.add('found');
-          mctx.complete({ correct: false, action: 'qa_mission_timeout', text: 'הזמן נגמר — הנה הבאג! ממשיכים לתוצאה' });
-        });
+        function startRound() {
+          mctx.progress(`סבב ${round + 1} מתוך 3`);
+          stage.innerHTML = '';
+          const data = QA_MISSIONS[round];
+          let attempts = 0;
+          const roundStart = performance.now();
 
-        buildBugScreen(mctx, stage, data, {
-          onBug: (elDef) => {
-            if (done) return;
-            done = true;
+          const stopTimer = missionTimer(mctx, stage, 8, () => finishRound(false, 'qa_bug_timeout'));
+
+          function reveal() {
+            const idx = data.elements.findIndex((e) => e.bug);
+            const rows = stage.querySelectorAll('.qa-el');
+            rows.forEach((r) => (r.disabled = true));
+            if (rows[idx]) rows[idx].classList.add('found');
+          }
+
+          function finishRound(correct, action) {
             stopTimer();
-            mctx.complete({ correct: true, action: elDef.action, text: QA_GOOD[Math.floor(Math.random() * QA_GOOD.length)] });
-          },
-          onWrong: () => { if (!done) mctx.feedback('bad', retry()); },
-        });
+            const rtMs = Math.round(performance.now() - roundStart);
+            mctx.round({ correct, action, rtMs });
+            round++;
+            setTimeout(() => {
+              if (round >= 3) mctx.complete({ text: 'מצאתם את התקלות ושמתם לב לפרטים הקטנים' });
+              else startRound();
+            }, 700);
+          }
+
+          buildBugScreen(mctx, stage, data, {
+            onBug: (elDef) => {
+              mctx.feedback('good', 'באג אותר!');
+              finishRound(true, elDef.action);
+            },
+            onWrong: () => {
+              attempts++;
+              if (attempts < 2) {
+                mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
+              } else {
+                reveal();
+                mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
+                finishRound(false, 'qa_bug_wrong_twice');
+              }
+            },
+          });
+        }
+
+        startRound();
       },
     },
   };
@@ -540,7 +830,8 @@
   const uxuiGame = {
     rounds: 1,
     renderRound(stage, ctx) {
-      stage.appendChild(ctx.h('div', 'game-q', 'משתמש נכנס לאפליקציה כדי לקבוע פגישה במהירות. איזה מסך יעזור לו להשלים את הפעולה בצורה הקלה ביותר?'));
+      const card = ctx.h('div', 'qcard');
+      card.appendChild(ctx.h('div', 'game-q', 'משתמש נכנס לאפליקציה כדי לקבוע פגישה במהירות. איזה מסך יעזור לו להשלים את הפעולה בצורה הקלה ביותר?'));
       const grid = ctx.h('div', 'mini-grid');
       let solved = false;
 
@@ -568,7 +859,9 @@
         });
         grid.appendChild(btn);
       });
-      stage.appendChild(grid);
+      card.appendChild(grid);
+      stage.appendChild(card);
+      stage.appendChild(ctx.h('div', 'stage-ambient', '<span class="stage-ambient-ring"></span>'));
     },
     finalMission: {
       title: 'משימת סיום: בנו את המסך',
