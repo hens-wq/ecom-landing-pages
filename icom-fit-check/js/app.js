@@ -471,7 +471,8 @@
     $('#game-chip').innerHTML = `<span class="chip-dot"></span>${track.name}`;
     $('#game-chip').style.setProperty('--chip-color', track.color);
     $('#game-title').textContent = track.gameTitle;
-    $('#game-instruction').textContent = track.gameInstruction;
+    // ההוראה הכללית כבר הוצגה במסך הפתיחה שלפני המשחק — כאן לא חוזרים עליה
+    $('#game-instruction').textContent = '';
     $('#game-stage').style.setProperty('--tc', track.color);
     $('#game-stage').style.setProperty('--tc2', track.color2 || track.color);
 
@@ -647,7 +648,6 @@
       feedbackEl.className = 'game-feedback';
       $('#game-progress').textContent = C.texts.missionLabel;
       if (gameDef.finalMission.title) $('#game-title').textContent = gameDef.finalMission.title;
-      if (gameDef.finalMission.sub) $('#game-instruction').textContent = gameDef.finalMission.sub;
       const missionDot = dots[gameDef.rounds];
       if (missionDot) missionDot.classList.add('current');
       const mStart = performance.now();
@@ -1055,7 +1055,6 @@
       intro.appendChild(fig);
     }
     intro.appendChild(h('h2', 'adv-welcome-title', C.advisor.welcomeTitle));
-    intro.appendChild(h('p', 'adv-lead', C.advisor.introLead));
     intro.appendChild(h('p', 'adv-text', C.advisor.introText));
     const aboutBox = h('div', 'adv-about-box');
     aboutBox.appendChild(h('div', 'adv-about-title', C.advisor.aboutBoxTitle));

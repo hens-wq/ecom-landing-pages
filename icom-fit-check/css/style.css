@@ -720,6 +720,7 @@ img, svg { display: block; max-width: 100%; }
   line-height: 1.55;
   max-width: 42ch;
 }
+.game-instruction:empty { display: none; margin-top: 0; }
 
 .game-stage {
   width: 100%;
@@ -1589,14 +1590,30 @@ img, svg { display: block; max-width: 100%; }
 .ai-group-shapes { display: flex; gap: 8px; }
 .ai-group-label { font-size: 0.8rem; font-weight: 700; color: var(--text); }
 
-.ai-shape { width: 26px; height: 26px; }
-.ai-shape.shape-round { border-radius: 50%; background: linear-gradient(135deg, var(--teal), #8FEAE0); }
-.ai-shape.shape-round2 { border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%; background: linear-gradient(135deg, var(--teal), #8FEAE0); }
-.ai-shape.shape-angular { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg, var(--purple), #B08CFF); }
-.ai-shape.shape-angular2 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); background: linear-gradient(135deg, var(--purple), #B08CFF); }
+/* צורות ההיכר: בכל סבב מאפיין אחד מבדיל בין הקבוצות (לא רק צבע/צורה זהים).
+   הכללים חלים גם על האייקונים הקטנים (.ai-vshape) וגם על הכרטיס הנגרר (.ai-card). */
+.ai-vshape {
+  display: inline-block;
+  width: 24px; height: 24px;
+  position: relative;
+}
+.v-circle { border-radius: 50%; background: linear-gradient(135deg, var(--teal), #8FEAE0); }
+.v-circle.v-marked::after {
+  content: '';
+  position: absolute;
+  inset: 34%;
+  border-radius: 50%;
+  background: #04140B;
+}
+.v-square { border-radius: 6px; background: linear-gradient(135deg, var(--purple), #B08CFF); }
+.v-square.v-outline { background: transparent; border: 3px solid var(--purple); }
+.v-triangle { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg, var(--green), #C9F7BE); }
+.ai-vshape.v-triangle.v-big { width: 30px; height: 30px; }
+.ai-vshape.v-triangle.v-small { width: 15px; height: 15px; }
 
 .ai-card {
   width: 74px; height: 74px;
+  position: relative;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -1605,11 +1622,9 @@ img, svg { display: block; max-width: 100%; }
   filter: drop-shadow(0 10px 22px rgba(0,0,0,0.4));
 }
 .ai-card.dragging { cursor: grabbing; z-index: 5; }
-.ai-card.shape-round { border-radius: 50%; background: linear-gradient(135deg, var(--teal), #8FEAE0); }
-.ai-card.shape-round2 { border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%; background: linear-gradient(135deg, var(--teal), #8FEAE0); }
-.ai-card.shape-angular { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg, var(--purple), #B08CFF); }
-.ai-card.shape-angular2 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); background: linear-gradient(135deg, var(--purple), #B08CFF); }
 .ai-card.shake { animation: shake 0.4s ease; }
+.ai-card.v-triangle.v-big { width: 84px; height: 84px; }
+.ai-card.v-triangle.v-small { width: 46px; height: 46px; }
 
 /* ---------- כרטיס שאלה זוהר + אלמנט רקע עדין למילוי חלל ריק ---------- */
 

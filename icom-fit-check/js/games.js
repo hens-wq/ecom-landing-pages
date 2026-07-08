@@ -275,23 +275,29 @@
     },
     finalMission: {
       title: 'משימת סיום: אמנו את המודל',
-      sub: 'המודל למד משתי קבוצות של דוגמאות. גררו כל כרטיס לקבוצה שאליה הוא הכי מתאים.',
       render(stage, mctx) {
+        // בכל סבב חוק שונה מבדיל בין הקבוצות — לא רק צבע/צורה זהים,
+        // אלא מאפיין שצריך לשים לב אליו מתוך הדוגמאות (עיגול עם/בלי נקודה,
+        // ריבוע מלא/קווי מתאר, משולש גדול/קטן)
         const ROUNDS = [
-          { shape: 'round', group: 0 },
-          { shape: 'angular', group: 1 },
-          { shape: 'round2', group: 0 },
+          { base: 'v-circle', posMod: 'v-marked', negMod: '' },
+          { base: 'v-square', posMod: 'v-filled', negMod: 'v-outline' },
+          { base: 'v-triangle', posMod: 'v-big', negMod: 'v-small' },
         ];
         let round = 0;
         let attempts = 0;
         let locked = false;
         let roundStart = 0;
+        let cardIsPos = true;
+
+        const shapeHTML = (def, isPos) => `<i class="ai-vshape ${def.base} ${isPos ? def.posMod : def.negMod}"></i>`;
+        const exampleSet = (def, isPos) => Array.from({ length: 3 }, () => shapeHTML(def, isPos)).join('');
 
         const wrap = mctx.h('div', 'ai-sort-wrap');
         const groupsRow = mctx.h('div', 'ai-groups');
-        const groupA = mctx.h('button', 'ai-group', '<span class="ai-group-shapes"><i class="ai-shape shape-round"></i><i class="ai-shape shape-round2"></i></span><span class="ai-group-label">קבוצה 1</span>');
+        const groupA = mctx.h('button', 'ai-group');
         groupA.type = 'button';
-        const groupB = mctx.h('button', 'ai-group', '<span class="ai-group-shapes"><i class="ai-shape shape-angular"></i><i class="ai-shape shape-angular2"></i></span><span class="ai-group-label">קבוצה 2</span>');
+        const groupB = mctx.h('button', 'ai-group');
         groupB.type = 'button';
         groupsRow.append(groupA, groupB);
         const card = mctx.h('div', 'ai-card');
@@ -302,8 +308,12 @@
         const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
         mctx.onCleanup(() => timeouts.forEach(clearTimeout));
 
-        function paintCard() {
-          card.className = 'ai-card shape-' + ROUNDS[round].shape;
+        function paintRound() {
+          const def = ROUNDS[round];
+          groupA.innerHTML = `<span class="ai-group-shapes">${exampleSet(def, true)}</span><span class="ai-group-label">קבוצה 1</span>`;
+          groupB.innerHTML = `<span class="ai-group-shapes">${exampleSet(def, false)}</span><span class="ai-group-label">קבוצה 2</span>`;
+          cardIsPos = Math.random() < 0.5;
+          card.className = `ai-card ${def.base} ${cardIsPos ? def.posMod : def.negMod}`;
           card.style.transition = '';
           card.style.transform = '';
           card.style.opacity = '';
@@ -313,7 +323,7 @@
           mctx.progress(`סבב ${round + 1} מתוך 3`);
           attempts = 0;
           locked = false;
-          paintCard();
+          paintRound();
           roundStart = performance.now();
         }
 
@@ -343,13 +353,14 @@
         function assign(groupIdx) {
           if (locked) return;
           const def = ROUNDS[round];
-          const correct = groupIdx === def.group;
+          const correctIdx = cardIsPos ? 0 : 1;
+          const correct = groupIdx === correctIdx;
           const group = groupIdx === 0 ? groupA : groupB;
           if (correct) {
             locked = true;
             mctx.feedback('good', 'המודל למד נכון');
             if (navigator.vibrate) navigator.vibrate([14, 40, 14]);
-            flyTo(group, () => finishRound(true, 'ai_sort_' + def.shape));
+            flyTo(group, () => finishRound(true, 'ai_sort_' + def.base));
           } else {
             attempts++;
             if (attempts < 2) {
@@ -359,8 +370,8 @@
             } else {
               locked = true;
               mctx.feedback('bad', 'כמעט! בדקו לאיזו קבוצה הוא דומה יותר');
-              const correctGroup = def.group === 0 ? groupA : groupB;
-              flyTo(correctGroup, () => finishRound(false, 'ai_sort_wrong_' + def.shape));
+              const correctGroup = correctIdx === 0 ? groupA : groupB;
+              flyTo(correctGroup, () => finishRound(false, 'ai_sort_wrong_' + def.base));
             }
           }
         }
@@ -500,56 +511,36 @@
     },
     finalMission: {
       title: 'משימת סיום: מצאו את הבאג',
-      sub: 'בכל מסך מסתתרת טעות אחת. לחצו עליה לפני שהזמן נגמר.',
       render(stage, mctx) {
-        let round = 0;
+        const data = QA_MISSIONS[Math.floor(Math.random() * QA_MISSIONS.length)];
+        let attempts = 0;
 
-        function startRound() {
-          mctx.progress(`סבב ${round + 1} מתוך 3`);
-          stage.innerHTML = '';
-          const data = QA_MISSIONS[round];
-          let attempts = 0;
-          const roundStart = performance.now();
+        const stopTimer = missionTimer(mctx, stage, 8, () => finish(false, 'qa_bug_timeout'));
 
-          const stopTimer = missionTimer(mctx, stage, 8, () => finishRound(false, 'qa_bug_timeout'));
-
-          function reveal() {
-            const idx = data.elements.findIndex((e) => e.bug);
-            const rows = stage.querySelectorAll('.qa-el');
-            rows.forEach((r) => (r.disabled = true));
-            if (rows[idx]) rows[idx].classList.add('found');
-          }
-
-          function finishRound(correct, action) {
-            stopTimer();
-            const rtMs = Math.round(performance.now() - roundStart);
-            mctx.round({ correct, action, rtMs });
-            round++;
-            setTimeout(() => {
-              if (round >= 3) mctx.complete({ text: 'מצאתם את התקלות ושמתם לב לפרטים הקטנים' });
-              else startRound();
-            }, 700);
-          }
-
-          buildBugScreen(mctx, stage, data, {
-            onBug: (elDef) => {
-              mctx.feedback('good', 'באג אותר!');
-              finishRound(true, elDef.action);
-            },
-            onWrong: () => {
-              attempts++;
-              if (attempts < 2) {
-                mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
-              } else {
-                reveal();
-                mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
-                finishRound(false, 'qa_bug_wrong_twice');
-              }
-            },
-          });
+        function reveal() {
+          const idx = data.elements.findIndex((e) => e.bug);
+          const rows = stage.querySelectorAll('.qa-el');
+          rows.forEach((r) => (r.disabled = true));
+          if (rows[idx]) rows[idx].classList.add('found');
         }
 
-        startRound();
+        function finish(correct, action) {
+          stopTimer();
+          mctx.complete({ correct, action, text: 'מצאתם את התקלה ושמתם לב לפרטים הקטנים' });
+        }
+
+        buildBugScreen(mctx, stage, data, {
+          onBug: (elDef) => finish(true, elDef.action),
+          onWrong: () => {
+            attempts++;
+            if (attempts < 2) {
+              mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
+            } else {
+              reveal();
+              finish(false, 'qa_bug_wrong_twice');
+            }
+          },
+        });
       },
     },
   };
