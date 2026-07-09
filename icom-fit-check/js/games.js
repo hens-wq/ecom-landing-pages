@@ -1,23 +1,26 @@
 /* ============================================================
-   מנוע המשחקים — אתגר ייעודי לכל אחד משבעת הקורסים
+   מנוע המשחקים — לכל אחד משבעת הקורסים: 2 שאלות + משחק סיום קצר
    ------------------------------------------------------------
-   כל משחק מוגדר כאובייקט:
-     rounds        — מספר שאלות
+   כל קורס מוגדר כאובייקט:
+     rounds        — מספר שאלות (תמיד 2)
      renderRound   — בונה את השאלה הנוכחית בתוך ה־stage
-     finalMission  — (אופציונלי) משימת סיום אינטראקטיבית במקום
-                     סיבוב המהירות הגנרי. render(stage, mctx).
+     finalMission  — משחק הסיום האינטראקטיבי: 3 סבבים קצרים.
+                     render(stage, mctx).
    חוקי המשחק:
-   - טעות לא מקדמת ולא חושפת את התשובה: המשתמש מקבל
+   - טעות בשאלה לא מקדמת ולא חושפת את התשובה: המשתמש מקבל
      "הזדמנות נוספת" (האפשרות השגויה ננעלת) עד שעונים נכון.
    - הדיווח: ctx.answer({correct, action, text}).
-   - משימת סיום: mctx.complete({correct, action, text}) מסיימת,
-     mctx.feedback(kind, text) לפידבק ביניים.
+   - משחק סיום: mctx.round({correct, action, rtMs}) לכל סבב,
+     mctx.complete({text}) בסיום, mctx.feedback(kind, text) לפידבק.
+   - אי אפשר להיתקע: אחרי שתי החטאות הסבב מסתיים אוטומטית
+     או שהמטרה נשארת זמינה עד הצלחה.
    ============================================================ */
 
 (function () {
   'use strict';
 
   const C = window.CONFIG;
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -29,6 +32,14 @@
   }
 
   const retry = () => C.texts.retryFeedback[Math.floor(Math.random() * C.texts.retryFeedback.length)];
+  const buzz = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
+
+  /* טיימרים עם ניקוי אוטומטי כשעוזבים את המסך */
+  function makeLater(mctx) {
+    const ids = [];
+    mctx.onCleanup(() => ids.forEach(clearTimeout));
+    return (fn, ms) => ids.push(setTimeout(fn, ms));
+  }
 
   /* ---------- אלמנט תחתון מתחת לשאלה: תמונת סטודנט/ית אם קיימת, אחרת טבעת דקורטיבית ---------- */
 
@@ -88,41 +99,12 @@
   const GOOD = ['חשיבה מדויקת! 🎯', 'החלטה נכונה!', 'מדויק!', 'יפה מאוד!'];
   const g = () => GOOD[Math.floor(Math.random() * GOOD.length)];
 
-  /* טיימר קטן למשימות סיום — פס שמתרוקן + מספר שניות פועם; מחזיר עצירה */
-  function missionTimer(mctx, stage, seconds, onExpire) {
-    const wrap = mctx.h('div', 'mission-timer-wrap');
-    const num = mctx.h('div', 'mission-timer-num', String(seconds));
-    const bar = mctx.h('div', 'mission-timer', '<div class="mission-timer-fill"></div>');
-    wrap.append(num, bar);
-    stage.appendChild(wrap);
-    const fill = bar.querySelector('.mission-timer-fill');
-    const t0 = performance.now();
-    let raf = null;
-    let stopped = false;
-    let lastShown = seconds;
-    (function frame(now) {
-      if (stopped) return;
-      const left = 1 - (now - t0) / (seconds * 1000);
-      fill.style.transform = `scaleX(${Math.max(0, left)})`;
-      const secLeft = Math.max(0, Math.ceil(left * seconds));
-      if (secLeft !== lastShown) {
-        lastShown = secLeft;
-        num.textContent = String(secLeft);
-        num.classList.toggle('low', secLeft <= 3);
-      }
-      if (left <= 0) { onExpire(); return; }
-      raf = requestAnimationFrame(frame);
-    })(performance.now());
-    mctx.onCleanup(() => { stopped = true; cancelAnimationFrame(raf); });
-    return () => { stopped = true; cancelAnimationFrame(raf); };
-  }
-
   /* ============================================================
-     סייבר — 3 שאלות (משימת הסיום: סיבוב המהירות הגנרי)
+     סייבר — 2 שאלות + "חסמו את האיום"
      ============================================================ */
 
   const cyberGame = {
-    rounds: 3,
+    rounds: 2,
     renderRound(stage, ctx) {
       const rounds = [
         {
@@ -141,126 +123,125 @@
             { html: '"תזכורת: פגישה מחר בשעה 10:00"', correct: false, action: 'cyber_legit2' },
           ],
         },
-        {
-          question: 'מצאתם פרצת אבטחה בשרת של החברה. מה הצעד הראשון?',
-          options: [
-            { html: 'מדווחים מיד לצוות האבטחה ופועלים לפי הנהלים', correct: true, action: 'cyber_report' },
-            { html: 'מתעלמים – זו לא אחריותי', correct: false, action: 'cyber_ignore' },
-            { html: 'מנסים לטפל לבד בלי לדווח לאף אחד', correct: false, action: 'cyber_solo' },
-          ],
-        },
       ];
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
-      title: 'משימת סיום: סגרו את הפרצה',
-      sub: 'קו הסריקה נע בין השרתים. לחצו בדיוק כשהוא מגיע לשרת הפגיע.',
+      title: 'חסמו את האיום',
+      sub: 'לחצו על האיום לפני שהוא מגיע למערכת',
       render(stage, mctx) {
-        const SPEEDS = [1700, 1300, 1000]; // ms לחצי מעבר — מהיר יותר בכל סבב
+        const later = makeLater(mctx);
+        // משך התנועה עד המערכת — מהיר יותר בכל סבב
+        const DURATIONS = reducedMotion ? [3400, 3000, 2600] : [2600, 2200, 1800];
+        const SIDES = shuffle(['top', 'right', 'left']);
         let round = 0;
         let attempts = 0;
-        let vulnIndex = -1;
-        let running = false;
-        let rafId = null;
-        let t0 = 0;
         let roundStart = 0;
+        let rafId = null;
+        let moving = false;
 
-        const wrap = mctx.h('div', 'scan-wrap');
-        const track2 = mctx.h('div', 'scan-track');
-        const nodes = [0, 1, 2].map((i) => {
-          const n = mctx.h('div', 'scan-node');
-          n.innerHTML = `<span class="scan-node-ico">🖥️</span><span class="scan-node-label">שרת ${['א', 'ב', 'ג'][i]}</span>`;
-          track2.appendChild(n);
-          return n;
+        const arena = mctx.h('div', 'g-arena cyb-arena');
+        const core = mctx.h('div', 'cyb-core', '🛡️');
+        const threat = mctx.h('button', 'cyb-threat', '👾');
+        threat.type = 'button';
+        threat.setAttribute('aria-label', 'איום');
+        arena.append(core, threat);
+        stage.appendChild(arena);
+        mctx.onCleanup(() => { moving = false; if (rafId) cancelAnimationFrame(rafId); });
+
+        function spawnPoint(side, rect) {
+          const m = 36; // חצי גודל האיום
+          if (side === 'top') return { x: rect.width * (0.2 + Math.random() * 0.6), y: -m };
+          if (side === 'right') return { x: rect.width + m, y: rect.height * (0.15 + Math.random() * 0.5) };
+          return { x: -m, y: rect.height * (0.15 + Math.random() * 0.5) };
+        }
+
+        function burst() {
+          for (let i = 0; i < 7; i++) {
+            const s = mctx.h('span', 'cyb-spark');
+            const ang = (i / 7) * Math.PI * 2;
+            s.style.left = threat.style.left;
+            s.style.top = threat.style.top;
+            s.style.setProperty('--dx', Math.cos(ang) * 46 + 'px');
+            s.style.setProperty('--dy', Math.sin(ang) * 46 + 'px');
+            arena.appendChild(s);
+            later(() => s.remove(), 550);
+          }
+        }
+
+        function launch() {
+          const rect = arena.getBoundingClientRect();
+          const from = spawnPoint(SIDES[round % SIDES.length], rect);
+          const to = { x: rect.width / 2, y: rect.height / 2 };
+          const dur = DURATIONS[round];
+          const t0 = performance.now();
+          threat.classList.remove('hit');
+          threat.style.opacity = '1';
+          threat.disabled = false;
+          moving = true;
+          (function step(now) {
+            if (!moving) return;
+            const t = Math.min(1, (now - t0) / dur);
+            threat.style.left = from.x + (to.x - from.x) * t + 'px';
+            threat.style.top = from.y + (to.y - from.y) * t + 'px';
+            if (t >= 1) { onReachCore(); return; }
+            rafId = requestAnimationFrame(step);
+          })(t0);
+        }
+
+        function onReachCore() {
+          moving = false;
+          attempts++;
+          if (attempts < 2) {
+            core.classList.add('danger');
+            later(() => core.classList.remove('danger'), 350);
+            mctx.feedback('bad', 'כמעט! נסו שוב');
+            buzz(24);
+            threat.style.opacity = '0';
+            later(launch, 550);
+          } else {
+            // חסימה אוטומטית אחרי שתי החטאות — ממשיכים הלאה
+            threat.disabled = true;
+            core.classList.add('glow');
+            burst();
+            threat.classList.add('hit');
+            mctx.feedback('good', 'האיום נחסם');
+            finishRound(false, 'cyber_block_auto');
+          }
+        }
+
+        threat.addEventListener('pointerdown', () => {
+          if (!moving || threat.disabled) return;
+          moving = false;
+          if (rafId) cancelAnimationFrame(rafId);
+          threat.disabled = true;
+          if (!reducedMotion) burst();
+          threat.classList.add('hit');
+          core.classList.add('glow');
+          mctx.feedback('good', 'האיום נחסם');
+          buzz([14, 40, 14]);
+          finishRound(true, 'cyber_block_hit');
         });
-        const beam = mctx.h('div', 'scan-beam');
-        track2.appendChild(beam);
-        wrap.appendChild(track2);
-        const tapBtn = mctx.h('button', 'btn btn--primary scan-tap-btn', 'לחצו כאן! 🎯');
-        tapBtn.type = 'button';
-        wrap.appendChild(tapBtn);
-        stage.appendChild(wrap);
-
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => { running = false; if (rafId) cancelAnimationFrame(rafId); timeouts.forEach(clearTimeout); });
-
-        function pickVuln() {
-          vulnIndex = Math.floor(Math.random() * 3);
-          nodes.forEach((n, i) => n.classList.toggle('vuln', i === vulnIndex));
-        }
-
-        function currentPos(now) {
-          const dur = SPEEDS[round];
-          const elapsed = (now - t0) % (dur * 2);
-          const tt = elapsed / dur;
-          return tt <= 1 ? tt * 2 : (2 - tt) * 2; // גל משולש: 0 → 2 → 0
-        }
-
-        function paintBeam(now) {
-          const pos = currentPos(now);
-          beam.style.transform = `translateX(${pos * 100}%)`;
-          if (running) rafId = requestAnimationFrame(paintBeam);
-        }
-
-        function stopBeam() { running = false; if (rafId) cancelAnimationFrame(rafId); }
-
-        function startRound() {
-          mctx.progress(`סבב ${round + 1} מתוך 3`);
-          attempts = 0;
-          tapBtn.disabled = false;
-          beam.style.transition = '';
-          pickVuln();
-          t0 = performance.now();
-          roundStart = performance.now();
-          running = true;
-          rafId = requestAnimationFrame(paintBeam);
-        }
-
-        function nextOrFinish() {
-          round++;
-          nodes.forEach((n) => n.classList.remove('vuln'));
-          if (round >= 3) mctx.complete({ text: 'כל האיומים נוטרלו — תגובה מהירה ומדויקת' });
-          else later(startRound, 500);
-        }
 
         function finishRound(correct, action) {
-          stopBeam();
-          tapBtn.disabled = true;
-          const rtMs = Math.round(performance.now() - roundStart);
-          mctx.round({ correct, action, rtMs });
-          later(nextOrFinish, 500);
-        }
-
-        function demoCorrectTiming(cb) {
-          stopBeam();
-          beam.style.transition = 'transform 0.4s ease';
-          beam.style.transform = `translateX(${vulnIndex * 100}%)`;
-          nodes[vulnIndex].classList.add('scan-hit-demo');
+          mctx.round({ correct, action, rtMs: Math.round(performance.now() - roundStart) });
           later(() => {
-            nodes[vulnIndex].classList.remove('scan-hit-demo');
-            cb();
-          }, 900);
+            core.classList.remove('glow');
+            round++;
+            if (round >= 3) {
+              mctx.complete({ text: 'כל האיומים נוטרלו' });
+            } else {
+              startRound();
+            }
+          }, 650);
         }
 
-        tapBtn.addEventListener('click', () => {
-          if (!running) return;
-          const pos = currentPos(performance.now());
-          const hit = Math.abs(pos - vulnIndex) < 0.42;
-          if (hit) {
-            mctx.feedback('good', 'הפרצה נסגרה!');
-            if (navigator.vibrate) navigator.vibrate([14, 40, 14]);
-            finishRound(true, 'cyber_scan_hit');
-          } else {
-            attempts++;
-            if (attempts < 2) {
-              mctx.feedback('bad', 'כמעט! נסו שוב');
-            } else {
-              mctx.feedback('bad', 'כמעט! הנה התזמון הנכון');
-              demoCorrectTiming(() => finishRound(false, 'cyber_scan_miss'));
-            }
-          }
-        });
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          attempts = 0;
+          roundStart = performance.now();
+          launch();
+        }
 
         startRound();
       },
@@ -268,11 +249,11 @@
   };
 
   /* ============================================================
-     AI — 3 שאלות (משימת הסיום: סיבוב המהירות הגנרי)
+     AI — 2 שאלות + "הזינו את המודל"
      ============================================================ */
 
   const aiGame = {
-    rounds: 3,
+    rounds: 2,
     renderRound(stage, ctx) {
       const rounds = [
         {
@@ -286,168 +267,93 @@
         {
           question: 'מערכת AI סיכמה מסמך, אך הוסיפה פרט שלא הופיע בו. מה נכון לעשות?',
           options: [
-            { html: 'לבדוק את התשובה מול המסמך ולבקש ממנה להסתמך רק עליו', correct: true, action: 'ai_verify' },
             { html: 'לסמוך עליה כי התשובה נוסחה בביטחון', correct: false, action: 'ai_trust' },
+            { html: 'לבדוק את התשובה מול המסמך ולבקש ממנה להסתמך רק עליו', correct: true, action: 'ai_verify' },
             { html: 'לבקש ממנה לכתוב תשובה ארוכה יותר', correct: false, action: 'ai_longer' },
-          ],
-        },
-        {
-          question: 'המודל קיבל את הדוגמאות: 2 הופך ל־4, 3 ל־6 ו־5 ל־10. איזה חוק הוא למד?',
-          options: [
-            { html: 'כפול 2', correct: true, action: 'ai_double' },
-            { html: 'ועוד 2', correct: false, action: 'ai_plus2' },
-            { html: 'מספר אקראי', correct: false, action: 'ai_random' },
           ],
         },
       ];
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: 'חשיבה של מודל! 🧠' });
     },
     finalMission: {
-      title: 'משימת סיום: אמנו את המודל',
+      title: 'הזינו את המודל',
+      sub: 'לחצו על חלקיקי הדאטה הזוהרים',
       render(stage, mctx) {
-        // בכל סבב חוק שונה מבדיל בין הקבוצות — לא רק צבע/צורה זהים,
-        // אלא מאפיין שצריך לשים לב אליו מתוך הדוגמאות (עיגול עם/בלי נקודה,
-        // ריבוע מלא/קווי מתאר, משולש גדול/קטן)
-        const ROUNDS = [
-          { base: 'v-circle', posMod: 'v-marked', negMod: '' },
-          { base: 'v-square', posMod: 'v-filled', negMod: 'v-outline' },
-          { base: 'v-triangle', posMod: 'v-big', negMod: 'v-small' },
+        const later = makeLater(mctx);
+        // נקודות מיקום בטוחות סביב הכדור המרכזי (באחוזים מגודל הזירה)
+        const SPOTS = [
+          { x: 18, y: 22 }, { x: 78, y: 18 }, { x: 15, y: 68 },
+          { x: 80, y: 66 }, { x: 50, y: 10 }, { x: 30, y: 82 }, { x: 70, y: 84 },
         ];
         let round = 0;
-        let attempts = 0;
-        let locked = false;
         let roundStart = 0;
-        let cardIsPos = true;
+        let locked = false;
+        let lastSpot = -1;
 
-        const shapeHTML = (def, isPos) => `<i class="ai-vshape ${def.base} ${isPos ? def.posMod : def.negMod}"></i>`;
-        const exampleSet = (def, isPos) => Array.from({ length: 3 }, () => shapeHTML(def, isPos)).join('');
+        const arena = mctx.h('div', 'g-arena aif-arena');
+        const core = mctx.h('div', 'aif-core', '<span class="aif-core-ico">🧠</span>');
+        arena.appendChild(core);
+        stage.appendChild(arena);
 
-        const wrap = mctx.h('div', 'ai-sort-wrap');
-        const groupsRow = mctx.h('div', 'ai-groups');
-        const groupA = mctx.h('button', 'ai-group');
-        groupA.type = 'button';
-        const groupB = mctx.h('button', 'ai-group');
-        groupB.type = 'button';
-        groupsRow.append(groupA, groupB);
-        const card = mctx.h('div', 'ai-card');
-        wrap.append(groupsRow, card);
-        stage.appendChild(wrap);
+        function pickSpots(count) {
+          const pool = shuffle(SPOTS.map((_, i) => i).filter((i) => i !== lastSpot));
+          return pool.slice(0, count);
+        }
 
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => timeouts.forEach(clearTimeout));
-
-        function paintRound() {
-          const def = ROUNDS[round];
-          groupA.innerHTML = `<span class="ai-group-shapes">${exampleSet(def, true)}</span><span class="ai-group-label">קבוצה 1</span>`;
-          groupB.innerHTML = `<span class="ai-group-shapes">${exampleSet(def, false)}</span><span class="ai-group-label">קבוצה 2</span>`;
-          cardIsPos = Math.random() < 0.5;
-          card.className = `ai-card ${def.base} ${cardIsPos ? def.posMod : def.negMod}`;
-          card.style.transition = '';
-          card.style.transform = '';
-          card.style.opacity = '';
+        function flyToCore(p, cb) {
+          const ar = arena.getBoundingClientRect();
+          const pr = p.getBoundingClientRect();
+          const dx = ar.left + ar.width / 2 - (pr.left + pr.width / 2);
+          const dy = ar.top + ar.height / 2 - (pr.top + pr.height / 2);
+          p.style.transition = reducedMotion ? 'opacity 0.2s' : 'transform 0.45s cubic-bezier(0.3,0,0.4,1), opacity 0.2s 0.3s';
+          p.style.transform = `translate(${dx}px, ${dy}px) scale(0.25)`;
+          p.style.opacity = '0';
+          later(cb, reducedMotion ? 220 : 480);
         }
 
         function startRound() {
-          mctx.progress(`סבב ${round + 1} מתוך 3`);
-          attempts = 0;
+          mctx.progress(`${round + 1} מתוך 3`);
           locked = false;
-          paintRound();
+          arena.querySelectorAll('.aif-particle').forEach((p) => p.remove());
+          const isMulti = round === 2;
+          const idxs = pickSpots(isMulti ? 3 : 1);
+          const brightIdx = idxs[0];
+          lastSpot = brightIdx;
+          idxs.forEach((spotIdx) => {
+            const spot = SPOTS[spotIdx];
+            const bright = spotIdx === brightIdx;
+            const p = mctx.h('button', 'aif-particle' + (bright ? ' bright' : ' dim'), '✦');
+            p.type = 'button';
+            p.setAttribute('aria-label', bright ? 'חלקיק דאטה זוהר' : 'חלקיק דאטה');
+            p.style.left = spot.x + '%';
+            p.style.top = spot.y + '%';
+            p.addEventListener('pointerdown', () => {
+              if (locked) return;
+              if (!bright) {
+                // חלקיק עמום — לא נכון, רק ננער קלות. אי אפשר להיתקע.
+                p.classList.add('nudge');
+                later(() => p.classList.remove('nudge'), 350);
+                return;
+              }
+              locked = true;
+              buzz([14, 40, 14]);
+              flyToCore(p, () => {
+                core.classList.add('lvl-' + (round + 1));
+                core.classList.add('pulse');
+                later(() => core.classList.remove('pulse'), 450);
+                mctx.feedback('good', 'המודל קיבל דאטה חדש');
+                mctx.round({ correct: true, action: 'ai_feed_hit', rtMs: Math.round(performance.now() - roundStart) });
+                later(() => {
+                  round++;
+                  if (round >= 3) mctx.complete({ text: 'המודל אומן בהצלחה' });
+                  else startRound();
+                }, 600);
+              });
+            });
+            arena.appendChild(p);
+          });
           roundStart = performance.now();
         }
-
-        function nextOrFinish() {
-          round++;
-          if (round >= 3) mctx.complete({ text: 'זיהיתם דפוסים ואימנתם את המודל בהצלחה' });
-          else later(startRound, 500);
-        }
-
-        function finishRound(correct, action) {
-          locked = true;
-          const rtMs = Math.round(performance.now() - roundStart);
-          mctx.round({ correct, action, rtMs });
-          later(nextOrFinish, 550);
-        }
-
-        function flyTo(group, cb) {
-          const gr = group.getBoundingClientRect();
-          const cr = card.getBoundingClientRect();
-          card.style.transition = 'transform 0.4s ease, opacity 0.25s 0.25s';
-          card.style.transform = `translate(${gr.left + gr.width / 2 - (cr.left + cr.width / 2)}px, ${gr.top + gr.height / 2 - (cr.top + cr.height / 2)}px) scale(0.5)`;
-          later(() => (card.style.opacity = '0'), 280);
-          group.classList.add('reveal');
-          later(() => { group.classList.remove('reveal'); cb(); }, 550);
-        }
-
-        function assign(groupIdx) {
-          if (locked) return;
-          const def = ROUNDS[round];
-          const correctIdx = cardIsPos ? 0 : 1;
-          const correct = groupIdx === correctIdx;
-          const group = groupIdx === 0 ? groupA : groupB;
-          if (correct) {
-            locked = true;
-            mctx.feedback('good', 'המודל למד נכון');
-            if (navigator.vibrate) navigator.vibrate([14, 40, 14]);
-            flyTo(group, () => finishRound(true, 'ai_sort_' + def.base));
-          } else {
-            attempts++;
-            if (attempts < 2) {
-              mctx.feedback('bad', 'כמעט! בדקו לאיזו קבוצה הוא דומה יותר');
-              card.classList.add('shake');
-              later(() => card.classList.remove('shake'), 400);
-            } else {
-              locked = true;
-              mctx.feedback('bad', 'כמעט! בדקו לאיזו קבוצה הוא דומה יותר');
-              const correctGroup = correctIdx === 0 ? groupA : groupB;
-              flyTo(correctGroup, () => finishRound(false, 'ai_sort_wrong_' + def.base));
-            }
-          }
-        }
-
-        groupA.addEventListener('click', () => assign(0));
-        groupB.addEventListener('click', () => assign(1));
-
-        // גרירה עם Pointer Events
-        card.addEventListener('pointerdown', (e) => {
-          if (locked) return;
-          let dragging = true;
-          card.setPointerCapture(e.pointerId);
-          card.classList.add('dragging');
-          const base = card.getBoundingClientRect();
-          const ox = e.clientX - (base.left + base.width / 2);
-          const oy = e.clientY - (base.top + base.height / 2);
-          const move = (ev) => {
-            if (!dragging) return;
-            card.style.transform = `translate(${ev.clientX - (base.left + base.width / 2) - ox}px, ${ev.clientY - (base.top + base.height / 2) - oy}px)`;
-          };
-          const up = (ev) => {
-            dragging = false;
-            card.classList.remove('dragging');
-            card.removeEventListener('pointermove', move);
-            card.removeEventListener('pointerup', up);
-            card.style.pointerEvents = 'none';
-            const under = document.elementFromPoint(ev.clientX, ev.clientY);
-            card.style.pointerEvents = '';
-            const grp = under && under.closest('.ai-group');
-            if (grp) { assign(grp === groupA ? 0 : 1); return; }
-            card.style.transition = 'transform 0.3s ease';
-            card.style.transform = 'translate(0, 0)';
-          };
-          card.addEventListener('pointermove', move);
-          card.addEventListener('pointerup', up);
-        });
-
-        // Swipe ימינה/שמאלה — אלטרנטיבה נוחה במגע
-        let touchStartX = null;
-        card.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
-        card.addEventListener('touchend', (e) => {
-          if (touchStartX == null || locked) return;
-          const dx = e.changedTouches[0].clientX - touchStartX;
-          touchStartX = null;
-          if (Math.abs(dx) < 40) return;
-          assign(dx > 0 ? 1 : 0);
-        });
 
         startRound();
       },
@@ -455,101 +361,8 @@
   };
 
   /* ============================================================
-     QA — 2 שלבי באגים + משימת סיום: "מצאו את הבאג" עם טיימר
+     QA — 2 שאלות + "תפסו את הבאג"
      ============================================================ */
-
-  function buildBugScreen(ctx, stage, data, { onBug, onWrong }) {
-    const wrap = ctx.h('div', 'qa-scan-wrap');
-    wrap.appendChild(ctx.h('div', 'qa-hunt-hint', '🔍 סרקו את המסך ולחצו על השורה עם התקלה'));
-
-    const mock = ctx.h('div', 'qa-mock');
-    const titlebar = ctx.h('div', 'qa-mock-titlebar', '<span></span><span></span><span></span>');
-    titlebar.appendChild(ctx.h('div', 'qa-mock-url', '🔒 shop.ecom-college.co.il'));
-    mock.appendChild(titlebar);
-    mock.appendChild(ctx.h('div', 'qa-mock-title', data.title));
-    const rows = [];
-    data.elements.forEach((elDef) => {
-      const el = ctx.h('button', 'qa-el');
-      el.type = 'button';
-      el.innerHTML = elDef.html;
-      el.addEventListener('click', () => {
-        if (el.disabled) return;
-        if (elDef.bug) {
-          mock.querySelectorAll('.qa-el').forEach((btn) => (btn.disabled = true));
-          el.classList.add('found');
-          if (elDef.fix) el.innerHTML = elDef.fix + ' <span class="qa-fixed">✓ תוקן</span>';
-          onBug(elDef);
-        } else {
-          el.disabled = true;
-          el.classList.add('wrong-el');
-          onWrong();
-        }
-      });
-      mock.appendChild(el);
-      rows.push(el);
-    });
-    mock.appendChild(ctx.h('div', 'qa-bug-badge', '🐛'));
-    wrap.appendChild(mock);
-
-    // עדשת סריקה עוקבת אחר האצבע/עכבר ומדגישה את השורה שמתחתיה — הופכת את
-    // הציד לתנועה פעילה על המסך במקום בחירה סטטית מרשימה
-    const lens = ctx.h('div', 'qa-lens');
-    wrap.appendChild(lens);
-    let lensActive = false;
-    function moveLens(clientX, clientY) {
-      const r = wrap.getBoundingClientRect();
-      lens.style.left = (clientX - r.left) + 'px';
-      lens.style.top = (clientY - r.top) + 'px';
-      if (!lensActive) { lensActive = true; lens.classList.add('show'); }
-      rows.forEach((row) => {
-        const rr = row.getBoundingClientRect();
-        const over = clientY >= rr.top && clientY <= rr.bottom && !row.disabled;
-        row.classList.toggle('scanning', over);
-      });
-    }
-    function clearScan() { rows.forEach((row) => row.classList.remove('scanning')); }
-    mock.addEventListener('pointermove', (e) => moveLens(e.clientX, e.clientY));
-    mock.addEventListener('pointerleave', clearScan);
-    mock.addEventListener('touchmove', (e) => {
-      const t = e.touches[0];
-      if (t) moveLens(t.clientX, t.clientY);
-    }, { passive: true });
-    ctx.onCleanup(clearScan);
-
-    stage.appendChild(wrap);
-    buildStageAmbient(ctx, stage);
-    return mock;
-  }
-
-  const QA_MISSIONS = [
-    {
-      title: 'סיכום הזמנה',
-      elements: [
-        { html: '2 × חולצה — 50 ש"ח ליחידה' },
-        { html: 'משלוח — 20 ש"ח' },
-        { html: 'סה"כ לתשלום: 140 ש"ח', bug: true, action: 'qa_wrong_total', fix: 'סה"כ לתשלום: 120 ש"ח' },
-        { html: 'תשלום מאובטח בכרטיס אשראי' },
-      ],
-    },
-    {
-      title: 'פרטים אישיים',
-      elements: [
-        { html: 'שם מלא: דנה לוי' },
-        { html: 'אימייל: dana@gmail.com' },
-        { html: 'תאריך לידה: 31.02.1999', bug: true, action: 'qa_impossible_date', fix: 'תאריך לידה: 28.02.1999' },
-        { html: 'טלפון: 050-1234567' },
-      ],
-    },
-    {
-      title: 'טופס הרשמה',
-      elements: [
-        { html: 'שם משתמש: dana88' },
-        { html: 'אימייל: dana@gmail.com' },
-        { html: 'טלפון: abc12345', bug: true, action: 'qa_invalid_phone', fix: 'טלפון: 050-1234567' },
-        { html: 'כפתור שליחה פעיל' },
-      ],
-    },
-  ];
 
   const qaGame = {
     rounds: 2,
@@ -575,43 +388,96 @@
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
-      title: 'משימת סיום: מצאו את הבאג',
+      title: 'תפסו את הבאג',
+      sub: 'לחצו על הבאג ברגע שהוא מופיע',
       render(stage, mctx) {
-        const data = QA_MISSIONS[Math.floor(Math.random() * QA_MISSIONS.length)];
+        const later = makeLater(mctx);
+        // מיקומי הופעה בתוך המסך המדומה (באחוזים) — שונה בכל סבב
+        const SPOT_SETS = shuffle([
+          { x: 22, y: 30 }, { x: 74, y: 26 }, { x: 30, y: 72 },
+          { x: 70, y: 68 }, { x: 50, y: 46 },
+        ]);
+        const WINDOWS = reducedMotion ? [3000, 2800, 2600] : [2300, 2000, 1900];
+        let round = 0;
         let attempts = 0;
+        let roundStart = 0;
+        let hideTimer = null;
+        let solvedRound = false;
 
-        const stopTimer = missionTimer(mctx, stage, 8, () => finish(false, 'qa_bug_timeout'));
+        const mock = mctx.h('div', 'qa-mock qa-hunt');
+        const titlebar = mctx.h('div', 'qa-mock-titlebar', '<span></span><span></span><span></span>');
+        titlebar.appendChild(mctx.h('div', 'qa-mock-url', '🔒 shop.ecom-college.co.il'));
+        mock.appendChild(titlebar);
+        // שלד של דף — שורות תוכן דקורטיביות בלבד
+        mock.appendChild(mctx.h('div', 'qa-skel wide'));
+        mock.appendChild(mctx.h('div', 'qa-skel'));
+        mock.appendChild(mctx.h('div', 'qa-skel'));
+        mock.appendChild(mctx.h('div', 'qa-skel short'));
+        mock.appendChild(mctx.h('div', 'qa-skel cta'));
+        const bug = mctx.h('button', 'qa-bug', '🐛');
+        bug.type = 'button';
+        bug.setAttribute('aria-label', 'באג');
+        mock.appendChild(bug);
+        stage.appendChild(mock);
+        mctx.onCleanup(() => { if (hideTimer) clearTimeout(hideTimer); });
 
-        function reveal() {
-          const idx = data.elements.findIndex((e) => e.bug);
-          const rows = stage.querySelectorAll('.qa-el');
-          rows.forEach((r) => (r.disabled = true));
-          if (rows[idx]) rows[idx].classList.add('found');
+        function showBug(persist) {
+          const spot = SPOT_SETS[(round + attempts) % SPOT_SETS.length];
+          bug.style.left = spot.x + '%';
+          bug.style.top = spot.y + '%';
+          bug.classList.remove('pop');
+          bug.classList.add('show');
+          bug.classList.toggle('drift', round === 2 && !reducedMotion);
+          bug.disabled = false;
+          if (!persist) {
+            hideTimer = setTimeout(() => {
+              bug.classList.remove('show', 'drift');
+              bug.disabled = true;
+              attempts++;
+              mctx.feedback('bad', 'הבאג ברח — נסו שוב');
+              buzz(24);
+              // אחרי החטאה נוספת הבאג נשאר גלוי עד שלוחצים עליו
+              later(() => showBug(attempts >= 2), 500);
+            }, WINDOWS[round]);
+          }
         }
 
-        function finish(correct, action) {
-          stopTimer();
-          mctx.complete({ correct, action, text: 'מצאתם את התקלה ושמתם לב לפרטים הקטנים' });
-        }
-
-        buildBugScreen(mctx, stage, data, {
-          onBug: (elDef) => finish(true, elDef.action),
-          onWrong: () => {
-            attempts++;
-            if (attempts < 2) {
-              mctx.feedback('bad', 'כמעט — חפשו נתון שלא יכול להיות תקין');
+        bug.addEventListener('pointerdown', () => {
+          if (bug.disabled || solvedRound) return;
+          solvedRound = true;
+          if (hideTimer) clearTimeout(hideTimer);
+          bug.disabled = true;
+          bug.classList.remove('drift');
+          bug.classList.add('pop');
+          mctx.feedback('good', 'הבאג אותר');
+          buzz([14, 40, 14]);
+          mctx.round({ correct: attempts < 2, action: attempts < 2 ? 'qa_bug_caught' : 'qa_bug_caught_late', rtMs: Math.round(performance.now() - roundStart) });
+          later(() => {
+            bug.classList.remove('show', 'pop');
+            round++;
+            if (round >= 3) {
+              mctx.complete({ text: 'כל הבאגים נמצאו' });
             } else {
-              reveal();
-              finish(false, 'qa_bug_wrong_twice');
+              startRound();
             }
-          },
+          }, 650);
         });
+
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          attempts = 0;
+          solvedRound = false;
+          roundStart = performance.now();
+          later(() => showBug(false), 400 + Math.random() * 500);
+        }
+
+        startRound();
       },
     },
   };
 
   /* ============================================================
-     פיתוח Full Stack — לוגיקה כללית + משימת "תכננו את הדרך"
+     פיתוח Full Stack — 2 שאלות + "חברו את המערכת"
      ============================================================ */
 
   const fullstackGame = {
@@ -621,16 +487,16 @@
         {
           question: 'המערכת מתחילה במספר 3, מוסיפה 2 ואז מכפילה את התוצאה ב־2. מה התוצאה הסופית?',
           options: [
-            { html: '10', correct: true, action: 'fs_math_10' },
             { html: '8', correct: false, action: 'fs_math_8' },
+            { html: '10', correct: true, action: 'fs_math_10' },
             { html: '12', correct: false, action: 'fs_math_12' },
           ],
         },
         {
           question: 'כפתור "המשך" פועל רק אם הוזנו גם אימייל תקין וגם סיסמה של לפחות 8 תווים. האימייל תקין, אבל הסיסמה כוללת 6 תווים. מה יקרה?',
           options: [
-            { html: 'הכפתור יישאר לא פעיל', correct: true, action: 'fs_cond_disabled' },
             { html: 'הכפתור יפעל', correct: false, action: 'fs_cond_active' },
+            { html: 'הכפתור יישאר לא פעיל', correct: true, action: 'fs_cond_disabled' },
             { html: 'המערכת תמחק את האימייל', correct: false, action: 'fs_cond_delete' },
           ],
         },
@@ -638,116 +504,150 @@
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
-      title: 'משימת סיום: תכננו את הדרך',
-      sub: 'בחרו את הפקודות בסדר הנכון והובילו את הדמות אל היעד',
+      title: 'חברו את המערכת',
+      sub: 'החליקו לאורך הקו הזוהר וחברו בין הרכיבים',
       render(stage, mctx) {
-        const SIZE = 3;
-        const start = { r: 0, c: 0 };          // פינה שמאלית-עליונה (פיזית)
-        const target = { r: 2, c: 2 };         // פינה ימנית-תחתונה
-        const correctPath = ['right', 'right', 'down', 'down'];
+        const later = makeLater(mctx);
+        const VW = 320, VH = 190; // מערכת קואורדינטות של ה־SVG
+        const ROUNDS = [
+          { d: 'M 44 95 L 276 95', a: { x: 44, y: 95, ico: '🖥️', label: 'מסך' }, b: { x: 276, y: 95, ico: '🗄️', label: 'שרת' } },
+          { d: 'M 44 45 L 276 45 L 276 148', a: { x: 44, y: 45, ico: '🗄️', label: 'שרת' }, b: { x: 276, y: 148, ico: '🛢️', label: 'מסד נתונים' } },
+          { d: 'M 44 145 Q 160 15 276 145', a: { x: 44, y: 145, ico: '📱', label: 'אפליקציה' }, b: { x: 276, y: 145, ico: '☁️', label: 'ענן' } },
+        ];
+        const TOL = 52;          // סובלנות נדיבה למרחק מהקו (בפיקסלים על המסך)
+        let round = 0;
+        let roundStart = 0;
+        let attempts = 0;
+        let locked = false;
+        let points = [];         // נקודות הדגימה של המסלול בקואורדינטות מסך
+        let progressIdx = 0;
+        let totalLen = 0;
+        let tracing = false;
 
-        const wrap = mctx.h('div', 'path-wrap');
-        const grid = mctx.h('div', 'path-grid');
-        for (let r = 0; r < SIZE; r++) {
-          for (let c = 0; c < SIZE; c++) {
-            const cell = mctx.h('div', 'path-cell');
-            if (r === target.r && c === target.c) { cell.classList.add('target'); cell.textContent = '🎯'; }
-            grid.appendChild(cell);
+        const arena = mctx.h('div', 'g-arena fsc-arena');
+        arena.innerHTML = `
+          <svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="none" aria-hidden="true">
+            <path class="fsc-path-base" d=""></path>
+            <path class="fsc-path-lit" d=""></path>
+          </svg>`;
+        const basePath = arena.querySelector('.fsc-path-base');
+        const litPath = arena.querySelector('.fsc-path-lit');
+        const compA = mctx.h('button', 'fsc-comp');
+        const compB = mctx.h('button', 'fsc-comp');
+        compA.type = 'button';
+        compB.type = 'button';
+        arena.append(compA, compB);
+        stage.appendChild(arena);
+
+        function samplePath() {
+          totalLen = basePath.getTotalLength();
+          const rect = arena.getBoundingClientRect();
+          const sx = rect.width / VW, sy = rect.height / VH;
+          points = [];
+          const N = 60;
+          for (let i = 0; i <= N; i++) {
+            const pt = basePath.getPointAtLength((totalLen * i) / N);
+            points.push({ x: rect.left + pt.x * sx, y: rect.top + pt.y * sy });
           }
         }
-        const char = mctx.h('div', 'path-char', '🤖');
-        grid.appendChild(char);
-        wrap.appendChild(grid);
 
-        const seq = mctx.h('div', 'path-seq');
-        const cmds = mctx.h('div', 'path-cmds');
-        const ARROWS = { up: '↑', down: '↓', left: '←', right: '→' };
-        const chosen = [];
-
-        function placeChar(r, c) {
-          char.style.transform = `translate(${c * 100}%, ${r * 100}%)`;
-        }
-        placeChar(start.r, start.c);
-
-        function refreshSeq() {
-          seq.innerHTML = '';
-          chosen.forEach((d) => seq.appendChild(mctx.h('span', 'seq-chip', ARROWS[d])));
-          if (!chosen.length) seq.appendChild(mctx.h('span', 'seq-chip empty', 'בחרו פקודות…'));
-          runBtn.disabled = chosen.length === 0;
-          undoBtn.disabled = chosen.length === 0;
-          Object.values(arrowBtns).forEach((b) => (b.disabled = chosen.length >= 4 || locked));
+        function paintProgress() {
+          const shown = totalLen * (progressIdx / (points.length - 1));
+          litPath.style.strokeDasharray = totalLen;
+          litPath.style.strokeDashoffset = totalLen - shown;
         }
 
-        let locked = false;
-        const arrowBtns = {};
-        ['up', 'down', 'right', 'left'].forEach((dir) => {
-          const b = mctx.h('button', 'cmd-btn', ARROWS[dir]);
-          b.type = 'button';
-          b.setAttribute('aria-label', dir);
-          b.addEventListener('click', () => {
-            if (locked || chosen.length >= 4) return;
-            chosen.push(dir);
-            refreshSeq();
-          });
-          arrowBtns[dir] = b;
-          cmds.appendChild(b);
-        });
-
-        const actions = mctx.h('div', 'path-actions');
-        const undoBtn = mctx.h('button', 'cmd-btn undo', '⌫');
-        undoBtn.type = 'button';
-        undoBtn.addEventListener('click', () => { if (!locked) { chosen.pop(); refreshSeq(); } });
-        const runBtn = mctx.h('button', 'cmd-btn run', '▶ הפעלה');
-        runBtn.type = 'button';
-        actions.append(undoBtn, runBtn);
-
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => timeouts.forEach(clearTimeout));
-
-        function animatePath(path, from, cb) {
-          let pos = { ...from };
-          placeChar(pos.r, pos.c);
-          path.forEach((dir, i) => {
-            later(() => {
-              if (dir === 'up') pos.r = Math.max(0, pos.r - 1);
-              if (dir === 'down') pos.r = Math.min(SIZE - 1, pos.r + 1);
-              if (dir === 'left') pos.c = Math.max(0, pos.c - 1);
-              if (dir === 'right') pos.c = Math.min(SIZE - 1, pos.c + 1);
-              placeChar(pos.r, pos.c);
-              if (i === path.length - 1) later(() => cb(pos), 340);
-            }, 340 * (i + 1));
-          });
+        function placeComp(el, def) {
+          el.innerHTML = `<span class="fsc-ico">${def.ico}</span><span class="fsc-label">${def.label}</span>`;
+          el.style.left = (def.x / VW) * 100 + '%';
+          el.style.top = (def.y / VH) * 100 + '%';
+          el.classList.remove('lit');
         }
 
-        runBtn.addEventListener('click', () => {
-          if (locked || !chosen.length) return;
+        function completeRound(action) {
+          if (locked) return;
           locked = true;
-          refreshSeq();
-          runBtn.disabled = true;
-          animatePath(chosen, start, (end) => {
-            if (end.r === target.r && end.c === target.c) {
-              mctx.complete({ correct: true, action: 'fs_path_' + chosen.join('_'), text: 'רצף נכון! חשיבה לוגית מעולה 🤖' });
-            } else {
-              mctx.feedback('bad', 'כמעט! בואו נראה את המסלול הנכון');
-              later(() => {
-                animatePath(correctPath, start, () => {
-                  mctx.complete({ correct: false, action: 'fs_path_wrong', text: 'זה המסלול הנכון — ממשיכים לתוצאה' });
-                });
-              }, 900);
-            }
-          });
-        });
+          tracing = false;
+          progressIdx = points.length - 1;
+          litPath.style.transition = 'stroke-dashoffset 0.45s ease';
+          paintProgress();
+          compA.classList.add('lit');
+          compB.classList.add('lit');
+          mctx.feedback('good', 'החיבור הושלם');
+          buzz([14, 40, 14]);
+          mctx.round({ correct: true, action, rtMs: Math.round(performance.now() - roundStart) });
+          later(() => {
+            round++;
+            if (round >= 3) mctx.complete({ text: 'כל חלקי המערכת מחוברים' });
+            else startRound();
+          }, 800);
+        }
 
-        wrap.append(seq, cmds, actions);
-        stage.appendChild(wrap);
-        refreshSeq();
+        function nearIdx(x, y, fromIdx) {
+          // מחפשים את הנקודה הקרובה בהמשך המסלול, עם קפיצה קדימה מותרת
+          const maxAhead = Math.min(points.length - 1, fromIdx + 7);
+          for (let i = maxAhead; i >= fromIdx; i--) {
+            const dx = points[i].x - x, dy = points[i].y - y;
+            if (dx * dx + dy * dy <= TOL * TOL) return i;
+          }
+          return -1;
+        }
+
+        arena.addEventListener('pointerdown', (e) => {
+          if (locked) return;
+          const idx = nearIdx(e.clientX, e.clientY, 0);
+          if (idx >= 0 && idx <= 8) {
+            tracing = true;
+            progressIdx = Math.max(progressIdx, idx);
+            paintProgress();
+          }
+        });
+        arena.addEventListener('pointermove', (e) => {
+          if (!tracing || locked) return;
+          const idx = nearIdx(e.clientX, e.clientY, progressIdx);
+          if (idx > progressIdx) {
+            progressIdx = idx;
+            litPath.style.transition = '';
+            paintProgress();
+            if (progressIdx >= points.length - 3) completeRound('fs_connect_trace');
+          }
+        });
+        const stopTrace = () => {
+          if (!tracing || locked) return;
+          tracing = false;
+          if (progressIdx < points.length - 3) attempts++;
+          // ההתקדמות נשמרת — אפשר להמשיך מאותה נקודה או להשלים בלחיצה
+        };
+        arena.addEventListener('pointerup', stopTrace);
+        arena.addEventListener('pointercancel', stopTrace);
+
+        // Fallback בלחיצה: הקשה על אחד הרכיבים משלימה את החיבור
+        [compA, compB].forEach((el) => el.addEventListener('click', () => {
+          if (!locked) completeRound('fs_connect_tap');
+        }));
+
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          locked = false;
+          attempts = 0;
+          progressIdx = 0;
+          const def = ROUNDS[round];
+          basePath.setAttribute('d', def.d);
+          litPath.setAttribute('d', def.d);
+          litPath.style.transition = '';
+          placeComp(compA, def.a);
+          placeComp(compB, def.b);
+          requestAnimationFrame(() => { samplePath(); paintProgress(); });
+          roundStart = performance.now();
+        }
+
+        startRound();
       },
     },
   };
 
   /* ============================================================
-     שיווק דיגיטלי ודאטה — החלטות + משימת "לאן מעבירים את התקציב?"
+     שיווק דיגיטלי ודאטה — 2 שאלות + "תפסו את השיא"
      ============================================================ */
 
   const marketingGame = {
@@ -757,16 +657,16 @@
         {
           question: 'מודעה א׳ קיבלה 1,000 קליקים והביאה 20 רכישות. מודעה ב׳ קיבלה 600 קליקים והביאה 30 רכישות. איזו מודעה יעילה יותר?',
           options: [
-            { html: 'מודעה ב׳ – כי הפכה יותר גולשים ללקוחות', correct: true, action: 'mk_conversion' },
-            { html: 'מודעה א׳ – כי קיבלה יותר קליקים', correct: false, action: 'mk_clicks' },
+            { html: 'מודעה א׳, כי קיבלה יותר קליקים', correct: false, action: 'mk_clicks' },
+            { html: 'מודעה ב׳, כי הפכה יותר גולשים ללקוחות', correct: true, action: 'mk_conversion' },
             { html: 'שתיהן יעילות באותה מידה', correct: false, action: 'mk_equal' },
           ],
         },
         {
-          question: 'עסק משיק אפליקציה חדשה לאימוני כושר בבית. עם איזה קהל הכי הגיוני להתחיל?',
+          question: 'עסק משיק אפליקציה לאימוני כושר בבית. עם איזה קהל הכי הגיוני להתחיל?',
           options: [
-            { html: 'אנשים שמתעניינים בכושר, בריאות ואימונים ביתיים', correct: true, action: 'mk_target_fit' },
             { html: 'כל האנשים בישראל', correct: false, action: 'mk_everyone' },
+            { html: 'אנשים שמתעניינים בכושר, בריאות ואימונים ביתיים', correct: true, action: 'mk_target_fit' },
             { html: 'אנשים שמתעניינים בגינון ובישול', correct: false, action: 'mk_wrong_aud' },
           ],
         },
@@ -774,378 +674,362 @@
       buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
-      title: 'משימת סיום: לאן מעבירים את התקציב?',
-      sub: 'בדקו את התוצאות וגררו את תקציב ההמשך לקמפיין שהכי כדאי לחזק (אפשר גם בלחיצה)',
+      title: 'תפסו את השיא',
+      sub: 'לחצו כשהמד מגיע לאזור הירוק',
       render(stage, mctx) {
-        const CAMPS = [
-          { id: 'A', clicks: '1,000 קליקים', leads: '20 לידים', cpl: 'עלות לליד: 80 ₪', correct: false },
-          { id: 'B', clicks: '600 קליקים', leads: '30 לידים', cpl: 'עלות לליד: 45 ₪', correct: true },
-          { id: 'C', clicks: '400 קליקים', leads: '12 לידים', cpl: 'עלות לליד: 65 ₪', correct: false },
+        const later = makeLater(mctx);
+        const ROUNDS = [
+          { zone: { left: 55, width: 30 }, sweep: 1500 },
+          { zone: { left: 14, width: 30 }, sweep: 1250 },
+          { zone: { left: 60, width: 28 }, sweep: 1050 },
         ];
+        let round = 0;
+        let attempts = 0;
+        let roundStart = 0;
+        let rafId = null;
+        let running = false;
+        let t0 = 0;
+        let sweep = 0;
+        let zone = null;
 
-        const grid = mctx.h('div', 'camp-grid');
-        const cardEls = {};
-        CAMPS.forEach((c) => {
-          const card = mctx.h('button', 'camp-card');
-          card.type = 'button';
-          card.innerHTML = `<strong>קמפיין ${c.id}</strong><span>${c.clicks}</span><span>${c.leads}</span><em>${c.cpl}</em>`;
-          cardEls[c.id] = card;
-          grid.appendChild(card);
-        });
-        stage.appendChild(grid);
+        const wrap = mctx.h('div', 'mk-wrap');
+        const meter = mctx.h('div', 'mk-meter');
+        const zoneEl = mctx.h('div', 'mk-zone');
+        const pointer = mctx.h('div', 'mk-pointer');
+        meter.append(zoneEl, pointer);
+        const tapBtn = mctx.h('button', 'btn btn--primary mk-tap-btn', 'לחצו! 🎯');
+        tapBtn.type = 'button';
+        wrap.append(meter, tapBtn);
+        stage.appendChild(wrap);
+        mctx.onCleanup(() => { running = false; if (rafId) cancelAnimationFrame(rafId); });
 
-        const token = mctx.h('div', 'budget-token', '💰 תקציב המשך');
-        stage.appendChild(token);
+        function pos(now) {
+          const el = (now - t0) % (sweep * 2);
+          const t = el / sweep;
+          return (t <= 1 ? t : 2 - t) * 100;
+        }
 
-        let done = false;
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => timeouts.forEach(clearTimeout));
+        function paint(now) {
+          pointer.style.left = pos(now) + '%';
+          if (running) rafId = requestAnimationFrame(paint);
+        }
 
-        function assign(campId) {
-          if (done) return;
-          done = true;
-          const camp = CAMPS.find((c) => c.id === campId);
-          const card = cardEls[campId];
-          // אנימציית מעבר התקציב אל הכרטיס
-          const cr = card.getBoundingClientRect();
-          const tr = token.getBoundingClientRect();
-          token.style.transition = 'transform 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.3s 0.4s';
-          token.style.transform = `translate(${cr.left + cr.width / 2 - (tr.left + tr.width / 2)}px, ${cr.top + cr.height / 2 - (tr.top + tr.height / 2)}px) scale(0.6)`;
-          later(() => (token.style.opacity = '0'), 400);
-          card.classList.add('assigned');
+        function applyZone() {
+          zoneEl.style.left = zone.left + '%';
+          zoneEl.style.width = zone.width + '%';
+        }
 
-          if (camp.correct) {
-            later(() => mctx.complete({ correct: true, action: 'mk_budget_B', text: 'החלטה חכמה! זיהיתם את הקמפיין היעיל ביותר 📈' }), 550);
-          } else {
+        function tap() {
+          if (!running) return;
+          const p = pos(performance.now());
+          if (p >= zone.left && p <= zone.left + zone.width) {
+            running = false;
+            if (rafId) cancelAnimationFrame(rafId);
+            pointer.style.left = p + '%';
+            zoneEl.classList.add('hit');
+            mctx.feedback('good', 'תזמון מצוין');
+            buzz([14, 40, 14]);
+            mctx.round({ correct: attempts < 2, action: attempts < 2 ? 'mk_peak_hit' : 'mk_peak_hit_late', rtMs: Math.round(performance.now() - roundStart) });
             later(() => {
-              mctx.feedback('bad', 'כמעט! כדאי לבדוק גם כמה תוצאות התקבלו ומה הייתה העלות שלהן');
-              cardEls.B.classList.add('reveal');
-              later(() => mctx.complete({ correct: false, action: 'mk_budget_' + campId, text: 'קמפיין B הביא הכי הרבה לידים בעלות הנמוכה ביותר' }), 1600);
-            }, 550);
+              zoneEl.classList.remove('hit');
+              round++;
+              if (round >= 3) mctx.complete({ text: 'תפסתם את רגע השיא' });
+              else startRound();
+            }, 700);
+          } else {
+            attempts++;
+            mctx.feedback('bad', 'כמעט! נסו שוב');
+            buzz(24);
+            meter.classList.add('nudge');
+            later(() => meter.classList.remove('nudge'), 300);
+            if (attempts === 2) {
+              // מקלים: מאטים את המחוג ומרחיבים את האזור הירוק
+              sweep = Math.round(sweep * 1.6);
+              zone = { left: Math.max(4, zone.left - 8), width: Math.min(50, zone.width + 16) };
+              applyZone();
+              t0 = performance.now();
+            }
           }
         }
 
-        // לחיצה על כרטיס = הקצאה (Fallback נוח למובייל)
-        Object.entries(cardEls).forEach(([id, card]) => card.addEventListener('click', () => assign(id)));
+        tapBtn.addEventListener('pointerdown', tap);
+        meter.addEventListener('pointerdown', tap);
 
-        // גרירה עם Pointer Events
-        let dragging = false;
-        token.addEventListener('pointerdown', (e) => {
-          if (done) return;
-          dragging = true;
-          token.setPointerCapture(e.pointerId);
-          token.classList.add('dragging');
-          const base = token.getBoundingClientRect();
-          const ox = e.clientX - (base.left + base.width / 2);
-          const oy = e.clientY - (base.top + base.height / 2);
-          const move = (ev) => {
-            if (!dragging) return;
-            token.style.transform = `translate(${ev.clientX - (base.left + base.width / 2) - ox}px, ${ev.clientY - (base.top + base.height / 2) - oy}px)`;
-          };
-          const up = (ev) => {
-            dragging = false;
-            token.classList.remove('dragging');
-            token.removeEventListener('pointermove', move);
-            token.removeEventListener('pointerup', up);
-            token.style.pointerEvents = 'none';
-            const under = document.elementFromPoint(ev.clientX, ev.clientY);
-            token.style.pointerEvents = '';
-            const card = under && under.closest('.camp-card');
-            if (card) {
-              const id = Object.keys(cardEls).find((k) => cardEls[k] === card);
-              if (id) { assign(id); return; }
-            }
-            token.style.transition = 'transform 0.3s ease';
-            token.style.transform = 'translate(0, 0)';
-          };
-          token.addEventListener('pointermove', move);
-          token.addEventListener('pointerup', up);
-        });
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          attempts = 0;
+          const def = ROUNDS[round];
+          zone = { ...def.zone };
+          sweep = reducedMotion ? Math.round(def.sweep * 1.5) : def.sweep;
+          applyZone();
+          t0 = performance.now();
+          roundStart = performance.now();
+          running = true;
+          rafId = requestAnimationFrame(paint);
+        }
+
+        startRound();
       },
     },
   };
 
   /* ============================================================
-     עיצוב UX/UI — שאלת מסכים + משימת "בנו את המסך"
+     עיצוב UX/UI — 2 שאלות + "השלימו את המסך"
      ============================================================ */
-
-  function miniMock(mctx, variant) {
-    // תצוגות מיניאטוריות של מסכי מובייל, בנויות מבלוקים
-    if (variant === 1) {
-      return `<span class="mm-row"><i class="mm-btn"></i><i class="mm-btn"></i></span>
-              <span class="mm-row"><i class="mm-btn"></i><i class="mm-btn"></i></span>
-              <span class="mm-row"><i class="mm-btn"></i><i class="mm-btn"></i></span>`;
-    }
-    if (variant === 2) {
-      return `<i class="mm-title"></i><i class="mm-field"></i><i class="mm-field"></i><i class="mm-cta"></i>`;
-    }
-    return `<i class="mm-hero"></i><i class="mm-line"></i><i class="mm-line"></i><i class="mm-line short"></i><i class="mm-tiny-btn"></i>`;
-  }
 
   const uxuiGame = {
-    rounds: 1,
+    rounds: 2,
     renderRound(stage, ctx) {
-      const card = ctx.h('div', 'qcard');
-      card.appendChild(ctx.h('div', 'game-q', 'משתמש נכנס לאפליקציה כדי לקבוע פגישה במהירות. איזה מסך יעזור לו להשלים את הפעולה בצורה הקלה ביותר?'));
-      const grid = ctx.h('div', 'mini-grid');
-      let solved = false;
-
-      shuffle([
-        { v: 1, correct: false, action: 'ux_screen_buttons' },
-        { v: 2, correct: true, action: 'ux_screen_clear' },
-        { v: 3, correct: false, action: 'ux_screen_hero' },
-      ]).forEach((opt, i) => {
-        const btn = ctx.h('button', 'mini-mock');
-        btn.type = 'button';
-        btn.dataset.key = String(i + 1);
-        btn.innerHTML = `<span class="mm-label">מסך ${i + 1}</span><span class="mm-screen">${miniMock(ctx, opt.v)}</span>`;
-        btn.addEventListener('click', () => {
-          if (solved || btn.disabled) return;
-          if (opt.correct) {
-            solved = true;
-            grid.querySelectorAll('.mini-mock').forEach((b) => (b.disabled = true));
-            btn.classList.add('correct');
-            ctx.answer({ correct: true, action: opt.action, text: 'בחירה מצוינת — המסך מוביל את המשתמש ישירות למטרה ✨' });
-          } else {
-            btn.disabled = true;
-            btn.classList.add('wrong');
-            ctx.answer({ correct: false, action: opt.action, text: retry() });
-          }
-        });
-        grid.appendChild(btn);
-      });
-      card.appendChild(grid);
-      stage.appendChild(card);
-      buildStageAmbient(ctx, stage);
+      const rounds = [
+        {
+          question: 'באפליקציה לקביעת פגישה, איזה רכיב צריך להיות הבולט ביותר במסך?',
+          options: [
+            { html: 'הכפתור לקביעת הפגישה', correct: true, action: 'ux_cta_primary' },
+            { html: 'פסקה ארוכה על החברה', correct: false, action: 'ux_long_text' },
+            { html: 'תמונת רקע גדולה', correct: false, action: 'ux_big_bg' },
+          ],
+        },
+        {
+          question: 'טופס הרשמה כולל 12 שדות, אבל רק 4 מהם באמת נחוצים. מה ישפר את חוויית המשתמש?',
+          options: [
+            { html: 'להשאיר את כל 12 השדות', correct: false, action: 'ux_keep_12' },
+            { html: 'להציג רק את 4 השדות החיוניים', correct: true, action: 'ux_only_4' },
+            { html: 'להקטין את הטקסט כדי שהטופס ייראה קצר יותר', correct: false, action: 'ux_smaller_text' },
+          ],
+        },
+      ];
+      buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: g() });
     },
     finalMission: {
-      title: 'משימת סיום: בנו את המסך',
-      sub: 'בחרו וסדרו את הרכיבים החשובים ביותר למסך קביעת פגישה — לחיצה על רכיב מוסיפה אותו',
+      title: 'השלימו את המסך',
+      sub: 'גררו את הרכיב למקום המסומן',
       render(stage, mctx) {
-        const COMPS = [
-          { id: 'title', label: 'כותרת ברורה' },
-          { id: 'service', label: 'בחירת שירות' },
-          { id: 'time', label: 'בחירת מועד' },
-          { id: 'cta', label: 'כפתור קביעת פגישה' },
-          { id: 'banner', label: 'באנר פרסומי' },
-          { id: 'about', label: 'פסקה ארוכה על החברה' },
+        const later = makeLater(mctx);
+        const ROUNDS = [
+          { slot: 'top', pieceClass: 'p-title', pieceHTML: '<i class="uxp-mini-bar"></i> כותרת' },
+          { slot: 'mid', pieceClass: 'p-image', pieceHTML: '🖼️ תמונה' },
+          { slot: 'bottom', pieceClass: 'p-button', pieceHTML: '⬜ כפתור' },
         ];
-        const CORRECT = ['title', 'service', 'time', 'cta'];
+        let round = 0;
+        let attempts = 0;
+        let roundStart = 0;
+        let locked = false;
+        let selected = false;
 
-        const wrap = mctx.h('div', 'builder-wrap');
-        const phone = mctx.h('div', 'phone-frame');
-        const slots = [];
-        for (let i = 0; i < 4; i++) {
-          const s = mctx.h('button', 'ph-slot empty');
-          s.type = 'button';
-          s.textContent = 'אזור ' + (i + 1);
-          slots.push(s);
-          phone.appendChild(s);
-        }
-        const tray = mctx.h('div', 'comp-tray');
-        const chips = {};
-        shuffle(COMPS).forEach((cDef) => {
-          const chip = mctx.h('button', 'comp-chip', cDef.label);
-          chip.type = 'button';
-          chip.dataset.comp = cDef.id;
-          chips[cDef.id] = chip;
-          tray.appendChild(chip);
-        });
-        wrap.append(phone, tray);
+        const wrap = mctx.h('div', 'uxp-wrap');
+        const frame = mctx.h('div', 'uxp-frame');
+        const slotTop = mctx.h('button', 'uxp-slot s-top');
+        const slotMid = mctx.h('button', 'uxp-slot s-mid');
+        const slotBottom = mctx.h('button', 'uxp-slot s-bottom');
+        [slotTop, slotMid, slotBottom].forEach((s) => { s.type = 'button'; s.disabled = true; });
+        frame.append(
+          slotTop,
+          mctx.h('div', 'uxp-skel'),
+          slotMid,
+          mctx.h('div', 'uxp-skel short'),
+          slotBottom
+        );
+        const tray = mctx.h('div', 'uxp-tray');
+        wrap.append(frame, tray);
         stage.appendChild(wrap);
 
-        const placed = []; // מזהי רכיבים לפי סדר האזורים
-        let locked = false;
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => timeouts.forEach(clearTimeout));
+        const slotOf = { top: slotTop, mid: slotMid, bottom: slotBottom };
+        let piece = null;
+        let targetSlot = null;
 
-        function fillSlot(slot, compId) {
-          slot.classList.remove('empty');
-          slot.dataset.comp = compId;
-          slot.textContent = COMPS.find((c) => c.id === compId).label;
-        }
-        function emptySlot(slot) {
-          slot.classList.add('empty');
-          delete slot.dataset.comp;
-          slot.textContent = 'אזור ' + (slots.indexOf(slot) + 1);
-        }
-
-        function evaluate() {
+        function place() {
+          if (locked) return;
           locked = true;
-          Object.values(chips).forEach((c) => (c.disabled = true));
-          slots.forEach((s) => (s.disabled = true));
-          const ok = placed.length === 4 && placed.every((id, i) => id === CORRECT[i]);
-          if (ok) {
-            phone.classList.add('built-ok');
-            mctx.complete({ correct: true, action: 'ux_build_correct', text: 'מסך ברור וממוקד — היררכיה מצוינת ✨' });
-          } else {
-            mctx.feedback('bad', 'כמעט! בחוויית משתמש טובה נותנים עדיפות לפעולה המרכזית');
-            // סידור נכון באנימציה קצרה
-            later(() => {
-              slots.forEach((s, i) => {
-                later(() => { fillSlot(s, CORRECT[i]); s.classList.add('fixed'); }, i * 260);
-              });
-              later(() => {
-                phone.classList.add('built-ok');
-                mctx.complete({ correct: false, action: 'ux_build_fixed', text: 'זה הסדר המומלץ — ממשיכים לתוצאה' });
-              }, 4 * 260 + 500);
-            }, 1100);
-          }
+          targetSlot.classList.remove('open');
+          targetSlot.classList.add('filled', ROUNDS[round].pieceClass);
+          targetSlot.innerHTML = ROUNDS[round].pieceHTML;
+          targetSlot.disabled = true;
+          if (piece) { piece.remove(); piece = null; }
+          mctx.feedback('good', 'הרכיב במקום');
+          buzz([14, 40, 14]);
+          mctx.round({ correct: attempts < 2, action: 'ux_place_' + ROUNDS[round].slot, rtMs: Math.round(performance.now() - roundStart) });
+          later(() => {
+            round++;
+            if (round >= 3) {
+              frame.classList.add('done');
+              mctx.complete({ text: 'המסך הושלם' });
+            } else {
+              startRound();
+            }
+          }, 650);
         }
 
-        Object.entries(chips).forEach(([id, chip]) => {
-          chip.addEventListener('click', () => {
-            if (locked || chip.disabled) return;
-            const slot = slots.find((s) => s.classList.contains('empty'));
-            if (!slot) return;
-            chip.disabled = true;
-            fillSlot(slot, id);
-            placed[slots.indexOf(slot)] = id;
-            if (placed.filter(Boolean).length === 4) later(evaluate, 250);
+        function makePiece(def) {
+          const p = mctx.h('button', 'uxp-piece ' + def.pieceClass);
+          p.type = 'button';
+          p.innerHTML = def.pieceHTML;
+
+          // גרירה עם Pointer Events + Fallback בלחיצה
+          p.addEventListener('pointerdown', (e) => {
+            if (locked) return;
+            let moved = false;
+            p.setPointerCapture(e.pointerId);
+            p.classList.add('dragging');
+            const startX = e.clientX, startY = e.clientY;
+            const move = (ev) => {
+              const dx = ev.clientX - startX, dy = ev.clientY - startY;
+              if (Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+              p.style.transform = `translate(${dx}px, ${dy}px)`;
+            };
+            const up = (ev) => {
+              p.classList.remove('dragging');
+              p.removeEventListener('pointermove', move);
+              p.removeEventListener('pointerup', up);
+              p.removeEventListener('pointercancel', up);
+              if (!moved) {
+                // לחיצה קצרה — בחירת הרכיב; לחיצה על היעד תניח אותו
+                selected = !selected;
+                p.classList.toggle('selected', selected);
+                p.style.transform = '';
+                return;
+              }
+              const sr = targetSlot.getBoundingClientRect();
+              const pad = 34; // סובלנות נדיבה
+              if (ev.clientX >= sr.left - pad && ev.clientX <= sr.right + pad &&
+                  ev.clientY >= sr.top - pad && ev.clientY <= sr.bottom + pad) {
+                place();
+              } else {
+                attempts++;
+                p.style.transition = 'transform 0.3s ease';
+                p.style.transform = '';
+                later(() => (p.style.transition = ''), 320);
+              }
+            };
+            p.addEventListener('pointermove', move);
+            p.addEventListener('pointerup', up);
+            p.addEventListener('pointercancel', up);
           });
-        });
-        slots.forEach((slot) => {
-          slot.addEventListener('click', () => {
-            if (locked || slot.classList.contains('empty')) return;
-            const id = slot.dataset.comp;
-            placed[slots.indexOf(slot)] = undefined;
-            emptySlot(slot);
-            if (chips[id]) chips[id].disabled = false;
-          });
-        });
+          return p;
+        }
+
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          attempts = 0;
+          locked = false;
+          selected = false;
+          const def = ROUNDS[round];
+          targetSlot = slotOf[def.slot];
+          targetSlot.classList.add('open');
+          targetSlot.disabled = false;
+          targetSlot.innerHTML = '<span class="uxp-slot-hint">כאן</span>';
+          // לחיצה על היעד המסומן מניחה את הרכיב — Fallback שלא מצריך גרירה
+          targetSlot.onclick = () => { if (!locked) place(); };
+          tray.innerHTML = '';
+          piece = makePiece(def);
+          tray.appendChild(piece);
+          roundStart = performance.now();
+        }
+
+        startRound();
       },
     },
   };
 
   /* ============================================================
-     DevOps — שאלת Rollback ויזואלית + משימת "אזנו את העומס"
+     DevOps — 2 שאלות + "הפעילו את התהליך"
      ============================================================ */
 
-  function pipeNode(ctx, label, state, icon) {
-    const el = ctx.h('div', 'pipe-node ' + state);
-    el.innerHTML = `<span class="pipe-ico">${icon}</span><span>${label}</span>`;
-    return el;
-  }
-
   const devopsGame = {
-    rounds: 1,
+    rounds: 2,
     renderRound(stage, ctx) {
-      // התהליך: הכל ירוק עד ה-Deploy — ואז המערכת קרסה
-      const pipe = ctx.h('div', 'pipeline');
-      const nodes = [
-        pipeNode(ctx, 'Code', 'ok', '✓'),
-        pipeNode(ctx, 'Build', 'ok', '✓'),
-        pipeNode(ctx, 'Test', 'ok', '✓'),
-        pipeNode(ctx, 'Deploy', 'fail', '✕'),
+      const rounds = [
+        {
+          question: 'עדכון חדש עלה לאתר ומיד אחריו המערכת הפסיקה לעבוד. מה הפעולה ההגיונית הראשונה?',
+          options: [
+            { html: 'להחזיר זמנית את הגרסה הקודמת שעבדה', correct: true, action: 'devops_rollback' },
+            { html: 'להמשיך להעלות שינויים נוספים', correct: false, action: 'devops_push_more' },
+            { html: 'להמתין ולראות אם התקלה תסתדר לבד', correct: false, action: 'devops_wait' },
+          ],
+        },
+        {
+          question: 'האתר מקבל הרבה יותר מבקרים מהרגיל. מה יעזור לשמור עליו זמין?',
+          options: [
+            { html: 'לחלק את העומס בין כמה שרתים', correct: true, action: 'devops_balance' },
+            { html: 'לכבות את מערכת הניטור', correct: false, action: 'devops_no_monitor' },
+            { html: 'להמתין עד שהאתר יקרוס', correct: false, action: 'devops_wait_crash' },
+          ],
+        },
       ];
-      nodes.forEach((n, i) => {
-        pipe.appendChild(n);
-        if (i < nodes.length - 1) pipe.appendChild(ctx.h('div', 'pipe-link lit'));
-      });
-      stage.appendChild(pipe);
-
-      buildQuestion(ctx, stage, {
-        question: 'עדכון חדש עלה לאתר ומיד אחריו המערכת הפסיקה לעבוד. מה הפעולה ההגיונית הראשונה?',
-        options: [
-          { html: 'להחזיר זמנית את הגרסה הקודמת שעבדה', correct: true, action: 'devops_rollback' },
-          { html: 'להמשיך להעלות שינויים נוספים', correct: false, action: 'devops_push_more' },
-          { html: 'להמתין ולראות אם התקלה תסתדר לבד', correct: false, action: 'devops_wait' },
-        ],
-        goodText: 'קור רוח של DevOps! 🧊',
-      });
+      buildQuestion(ctx, stage, { ...rounds[ctx.round % rounds.length], goodText: 'קור רוח של DevOps! 🧊' });
     },
     finalMission: {
-      title: 'משימת סיום: אזנו את העומס',
-      sub: 'נתבו את הבקשות בין שני השרתים ושמרו על שניהם מחוץ לאזור האדום',
+      title: 'הפעילו את התהליך',
+      sub: 'לחצו על התחנה כשהיא נדלקת',
       render(stage, mctx) {
-        const wrap = mctx.h('div', 'srv-wrap');
-        const packetZone = mctx.h('div', 'packet-zone');
-        const servers = [0, 1].map((i) => {
-          const card = mctx.h('button', 'srv-card');
-          card.type = 'button';
-          card.dataset.key = String(i + 1);
-          card.innerHTML = `
-            <span class="srv-ico">🖥️</span>
-            <span class="srv-name">שרת ${i === 0 ? 'א' : 'ב'}</span>
-            <span class="srv-bar"><span class="srv-fill"></span></span>
-            <span class="srv-pct">0%</span>`;
-          return card;
-        });
-        wrap.append(servers[0], servers[1]);
-        stage.append(packetZone, wrap);
+        const later = makeLater(mctx);
+        const STATIONS = [
+          { id: 'code', label: 'Code', ico: '⌨️' },
+          { id: 'build', label: 'Build', ico: '🧱' },
+          { id: 'test', label: 'Test', ico: '🧪' },
+          { id: 'deploy', label: 'Deploy', ico: '🚀' },
+        ];
+        const SEQ = shuffle([0, 1, 2, 3]).slice(0, 3);
+        let round = 0;
+        let roundStart = 0;
+        let litIdx = -1;
+        let locked = true;
 
-        const load = [0, 0];
-        const TOTAL = 8;
-        let sent = 0;
-        let done = false;
-        let packet = null;
-        const timeouts = [];
-        const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
-        mctx.onCleanup(() => { done = true; timeouts.forEach(clearTimeout); });
-
-        function paint(i) {
-          const fill = servers[i].querySelector('.srv-fill');
-          const pct = servers[i].querySelector('.srv-pct');
-          fill.style.height = load[i] + '%';
-          pct.textContent = load[i] + '%';
-          const state = load[i] >= 85 ? 'red' : load[i] >= 60 ? 'yellow' : 'green';
-          servers[i].dataset.load = state;
-        }
-
-        function finish(ok) {
-          if (done) return;
-          done = true;
-          servers.forEach((s) => (s.disabled = true));
-          if (ok) {
-            mctx.complete({ correct: true, action: 'devops_balanced', text: 'המערכת נשארה יציבה — איזון מצוין 🖥️' });
-          } else {
-            mctx.feedback('bad', 'כמעט! חלוקה מאוזנת יותר שומרת על המערכת יציבה');
+        const pipe = mctx.h('div', 'dv-pipe');
+        const nodes = [];
+        const links = [];
+        STATIONS.forEach((s, i) => {
+          const n = mctx.h('button', 'dv-station');
+          n.type = 'button';
+          n.innerHTML = `<span class="dv-ico">${s.ico}</span><span class="dv-label">${s.label}</span>`;
+          n.addEventListener('pointerdown', () => {
+            if (locked) return;
+            if (i !== litIdx) {
+              // תחנה כבויה — ניעור קטן, בלי עונש. אי אפשר להיתקע.
+              n.classList.add('nudge');
+              later(() => n.classList.remove('nudge'), 300);
+              return;
+            }
+            locked = true;
+            n.classList.remove('lit');
+            n.classList.add('done');
+            // אנרגיה זורמת אל התחנה הבאה
+            if (!reducedMotion && links[i]) {
+              links[i].classList.add('flow');
+              later(() => links[i].classList.remove('flow'), 700);
+            }
+            mctx.feedback('good', 'השלב הושלם');
+            buzz([14, 40, 14]);
+            mctx.round({ correct: true, action: 'devops_step_' + STATIONS[i].id, rtMs: Math.round(performance.now() - roundStart) });
             later(() => {
-              load[0] = 55; load[1] = 55;
-              paint(0); paint(1);
-              later(() => mctx.complete({ correct: false, action: 'devops_overload', text: 'העומס אוזן — ממשיכים לתוצאה' }), 900);
-            }, 900);
+              round++;
+              if (round >= 3) mctx.complete({ text: 'התהליך הושלם בהצלחה' });
+              else startRound();
+            }, 700);
+          });
+          nodes.push(n);
+          pipe.appendChild(n);
+          if (i < STATIONS.length - 1) {
+            const link = mctx.h('div', 'dv-link');
+            links.push(link);
+            pipe.appendChild(link);
           }
-        }
+        });
+        stage.appendChild(pipe);
 
-        function spawnPacket() {
-          if (done) return;
-          if (sent >= TOTAL) {
-            finish(true);
-            return;
-          }
-          packetZone.innerHTML = '';
-          packet = mctx.h('div', 'packet', '📦 בקשה נכנסת — בחרו שרת');
-          packetZone.appendChild(packet);
-          // אם אין בחירה תוך 4 שניות — מנתבים אוטומטית לשרת הפנוי
+        function startRound() {
+          mctx.progress(`${round + 1} מתוך 3`);
+          nodes.forEach((n) => n.classList.remove('lit'));
+          litIdx = SEQ[round];
+          // הדלקה אחרי השהיה קצרה — כדי שיהיה רגע של ציפייה
+          locked = true;
           later(() => {
-            if (!done && packet && packet.isConnected) route(load[0] <= load[1] ? 0 : 1, true);
-          }, 4000);
+            nodes[litIdx].classList.add('lit');
+            locked = false;
+            roundStart = performance.now();
+          }, 450 + Math.random() * 400);
         }
 
-        function route(i, auto) {
-          if (done || !packet || !packet.isConnected) return;
-          const p = packet;
-          packet = null;
-          p.classList.add('fly-' + i);
-          later(() => p.remove(), 380);
-          sent++;
-          load[i] = Math.min(100, load[i] + 15);
-          paint(i);
-          servers[i].classList.add('pulse');
-          later(() => servers[i].classList.remove('pulse'), 300);
-          if (load[i] >= 85) {
-            finish(false);
-            return;
-          }
-          later(spawnPacket, auto ? 250 : 550);
-        }
-
-        servers.forEach((card, i) => card.addEventListener('click', () => route(i, false)));
-        paint(0); paint(1);
-        later(spawnPacket, 600);
+        startRound();
       },
     },
   };

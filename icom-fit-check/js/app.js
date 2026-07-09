@@ -480,7 +480,7 @@
     roundsEl.innerHTML = '';
     for (let i = 0; i < gameDef.rounds; i++) roundsEl.appendChild(h('span', 'round-dot' + (i === 0 ? ' current' : '')));
     roundsEl.appendChild(h('span', 'round-dot speed')); // נקודת משימת הסיום
-    $('#game-progress').textContent = '1 מתוך ' + gameDef.rounds;
+    $('#game-progress').textContent = 'שאלה 1 מתוך ' + gameDef.rounds;
 
     $('#game-stage').innerHTML = '';
     $('#game-feedback').className = 'game-feedback';
@@ -630,7 +630,7 @@
             runtime.round++;
             runtime.answered = false;
             if (dots[runtime.round]) dots[runtime.round].classList.add('current');
-            $('#game-progress').textContent = (runtime.round + 1) + ' מתוך ' + gameDef.rounds;
+            $('#game-progress').textContent = 'שאלה ' + (runtime.round + 1) + ' מתוך ' + gameDef.rounds;
             cleanupRound();
             stage.innerHTML = '';
             feedbackEl.className = 'game-feedback';
@@ -648,6 +648,8 @@
       feedbackEl.className = 'game-feedback';
       $('#game-progress').textContent = C.texts.missionLabel;
       if (gameDef.finalMission.title) $('#game-title').textContent = gameDef.finalMission.title;
+      // הוראת המשחק — שורה קצרה שמוצגת לפני הסבב הראשון ולאורך המשחק
+      $('#game-instruction').textContent = gameDef.finalMission.sub || '';
       const missionDot = dots[gameDef.rounds];
       if (missionDot) missionDot.classList.add('current');
       const mStart = performance.now();
@@ -679,7 +681,11 @@
           setTimeout(finishGame, 1300);
         },
       };
-      gameDef.finalMission.render(stage, mctx);
+      // רגע נשימה קצר: "משימת סיום" + כותרת + הוראה מוצגות לפני שהסבב הראשון מתחיל
+      const introDelay = setTimeout(() => {
+        if (!runtime.finished) gameDef.finalMission.render(stage, mctx);
+      }, 900);
+      runtime.cleanups.push(() => clearTimeout(introDelay));
     }
 
     function finishGame() {
