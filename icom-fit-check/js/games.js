@@ -257,19 +257,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'מודל AI אומן לזהות עצמים בתמונות שצולמו ביום, אבל מתקשה בתמונות לילה. מה הסיבה הסבירה ביותר?',
+          question: 'מה הדרך הטובה ביותר לקבל תשובה מדויקת מ־AI?',
           options: [
-            { html: 'המודל קיבל דוגמאות שלא היו מגוונות מספיק', correct: true, action: 'ai_data_diversity' },
-            { html: 'המחשב שעליו הוא פועל איטי מדי', correct: false, action: 'ai_slow_pc' },
-            { html: 'צריך להציג לו כל תמונה פעמיים', correct: false, action: 'ai_twice' },
+            { html: 'לשאול שאלה ברורה עם כל הפרטים', correct: true, action: 'ai_clear_prompt' },
+            { html: 'לכתוב כמה שפחות מילים', correct: false, action: 'ai_short_prompt' },
+            { html: 'לשלוח את אותה שאלה שוב ושוב', correct: false, action: 'ai_spam_prompt' },
           ],
         },
         {
-          question: 'מערכת AI סיכמה מסמך, אך הוסיפה פרט שלא הופיע בו. מה נכון לעשות?',
+          question: 'עוזר AI נתן לכם תשובה שנשמעת בטוחה, אבל משהו בה נראה מוזר. מה עושים?',
           options: [
-            { html: 'לסמוך עליה כי התשובה נוסחה בביטחון', correct: false, action: 'ai_trust' },
-            { html: 'לבדוק את התשובה מול המסמך ולבקש ממנה להסתמך רק עליו', correct: true, action: 'ai_verify' },
-            { html: 'לבקש ממנה לכתוב תשובה ארוכה יותר', correct: false, action: 'ai_longer' },
+            { html: 'בודקים את המידע לפני שמשתמשים בו', correct: true, action: 'ai_verify' },
+            { html: 'סומכים עליו בעיניים עצומות', correct: false, action: 'ai_trust' },
+            { html: 'מפסיקים להשתמש ב־AI לתמיד', correct: false, action: 'ai_quit' },
           ],
         },
       ];
@@ -369,19 +369,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'טופס דורש סיסמה של לפחות 8 תווים, אבל מאפשר להמשיך עם סיסמה של 5 תווים. מה מצאתם?',
+          question: 'לחצתם על כפתור "שלח" באפליקציה — ושום דבר לא קרה. מה מצאתם?',
           options: [
-            { html: 'באג בבדיקת הסיסמה', correct: true, action: 'qa_pw_bug' },
-            { html: 'פעולה תקינה של המערכת', correct: false, action: 'qa_pw_fine' },
-            { html: 'בעיה בצבע של הכפתור', correct: false, action: 'qa_pw_color' },
+            { html: 'באג שכדאי לדווח עליו', correct: true, action: 'qa_found_bug' },
+            { html: 'ככה זה אמור לעבוד', correct: false, action: 'qa_fine' },
+            { html: 'בעיה בצבע של הכפתור', correct: false, action: 'qa_color' },
           ],
         },
         {
-          question: 'איזה דיווח יעזור למפתח להבין ולתקן תקלה במהירות?',
+          question: 'מה הכי חשוב כשמדווחים על תקלה?',
           options: [
-            { html: '"זה לא עובד"', correct: false, action: 'qa_report_vague' },
-            { html: 'תיאור התקלה, השלבים שגרמו לה ומה היה אמור לקרות', correct: true, action: 'qa_report_good' },
-            { html: 'צילום מסך בלבד ללא הסבר', correct: false, action: 'qa_report_shot' },
+            { html: 'להסביר מה עשיתם ומה קרה', correct: true, action: 'qa_report_good' },
+            { html: 'לכתוב רק "זה לא עובד"', correct: false, action: 'qa_report_vague' },
+            { html: 'לא לדווח ולקוות לטוב', correct: false, action: 'qa_report_none' },
           ],
         },
       ];
@@ -485,19 +485,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'המערכת מתחילה במספר 3, מוסיפה 2 ואז מכפילה את התוצאה ב־2. מה התוצאה הסופית?',
+          question: 'מילאתם טופס הרשמה בלי כתובת אימייל, וכפתור "המשך" לא נלחץ. למה?',
           options: [
-            { html: '8', correct: false, action: 'fs_math_8' },
-            { html: '10', correct: true, action: 'fs_math_10' },
-            { html: '12', correct: false, action: 'fs_math_12' },
+            { html: 'המערכת בודקת שכל הפרטים מולאו', correct: true, action: 'fs_validation' },
+            { html: 'האתר קרס', correct: false, action: 'fs_crash' },
+            { html: 'העכבר מקולקל', correct: false, action: 'fs_mouse' },
           ],
         },
         {
-          question: 'כפתור "המשך" פועל רק אם הוזנו גם אימייל תקין וגם סיסמה של לפחות 8 תווים. האימייל תקין, אבל הסיסמה כוללת 6 תווים. מה יקרה?',
+          question: 'מכינים קפה: מרתיחים מים, מוסיפים קפה ואז מוזגים. מה קורה אם מדלגים על הרתחת המים?',
           options: [
-            { html: 'הכפתור יפעל', correct: false, action: 'fs_cond_active' },
-            { html: 'הכפתור יישאר לא פעיל', correct: true, action: 'fs_cond_disabled' },
-            { html: 'המערכת תמחק את האימייל', correct: false, action: 'fs_cond_delete' },
+            { html: 'הקפה לא יצא טוב — הסדר חשוב', correct: true, action: 'fs_order_matters' },
+            { html: 'שום דבר, הסדר לא משנה', correct: false, action: 'fs_order_none' },
+            { html: 'הכוס תישבר', correct: false, action: 'fs_cup_break' },
           ],
         },
       ];
@@ -655,19 +655,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'מודעה א׳ קיבלה 1,000 קליקים והביאה 20 רכישות. מודעה ב׳ קיבלה 600 קליקים והביאה 30 רכישות. איזו מודעה יעילה יותר?',
+          question: 'עסק חדש מוכר ציוד לחדר כושר. למי הכי כדאי לפרסם?',
           options: [
-            { html: 'מודעה א׳, כי קיבלה יותר קליקים', correct: false, action: 'mk_clicks' },
-            { html: 'מודעה ב׳, כי הפכה יותר גולשים ללקוחות', correct: true, action: 'mk_conversion' },
-            { html: 'שתיהן יעילות באותה מידה', correct: false, action: 'mk_equal' },
+            { html: 'לאנשים שמתאמנים ואוהבים ספורט', correct: true, action: 'mk_target_fit' },
+            { html: 'לכל מי שיש טלפון', correct: false, action: 'mk_everyone' },
+            { html: 'לאנשים שאוהבים בישול', correct: false, action: 'mk_wrong_aud' },
           ],
         },
         {
-          question: 'עסק משיק אפליקציה לאימוני כושר בבית. עם איזה קהל הכי הגיוני להתחיל?',
+          question: 'פרסמתם שתי מודעות: אחת מביאה המון לקוחות והשנייה כלום. מה עושים?',
           options: [
-            { html: 'כל האנשים בישראל', correct: false, action: 'mk_everyone' },
-            { html: 'אנשים שמתעניינים בכושר, בריאות ואימונים ביתיים', correct: true, action: 'mk_target_fit' },
-            { html: 'אנשים שמתעניינים בגינון ובישול', correct: false, action: 'mk_wrong_aud' },
+            { html: 'ממשיכים עם המודעה שעובדת', correct: true, action: 'mk_keep_winner' },
+            { html: 'ממשיכים עם שתיהן בלי לבדוק', correct: false, action: 'mk_keep_both' },
+            { html: 'מפסיקים לפרסם בכלל', correct: false, action: 'mk_stop_all' },
           ],
         },
       ];
@@ -782,19 +782,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'באפליקציה לקביעת פגישה, איזה רכיב צריך להיות הבולט ביותר במסך?',
+          question: 'מה הופך אפליקציה לנוחה לשימוש?',
           options: [
-            { html: 'הכפתור לקביעת הפגישה', correct: true, action: 'ux_cta_primary' },
-            { html: 'פסקה ארוכה על החברה', correct: false, action: 'ux_long_text' },
-            { html: 'תמונת רקע גדולה', correct: false, action: 'ux_big_bg' },
+            { html: 'שקל למצוא בה מה שמחפשים', correct: true, action: 'ux_easy_find' },
+            { html: 'שיש בה כמה שיותר כפתורים', correct: false, action: 'ux_many_buttons' },
+            { html: 'שכל מסך בצבע אחר', correct: false, action: 'ux_many_colors' },
           ],
         },
         {
-          question: 'טופס הרשמה כולל 12 שדות, אבל רק 4 מהם באמת נחוצים. מה ישפר את חוויית המשתמש?',
+          question: 'כפתור "הזמינו עכשיו" באתר צריך להיות…',
           options: [
-            { html: 'להשאיר את כל 12 השדות', correct: false, action: 'ux_keep_12' },
-            { html: 'להציג רק את 4 השדות החיוניים', correct: true, action: 'ux_only_4' },
-            { html: 'להקטין את הטקסט כדי שהטופס ייראה קצר יותר', correct: false, action: 'ux_smaller_text' },
+            { html: 'גדול, ברור ובולט', correct: true, action: 'ux_cta_bold' },
+            { html: 'קטן ומוסתר בתחתית', correct: false, action: 'ux_cta_hidden' },
+            { html: 'באותו צבע כמו הרקע', correct: false, action: 'ux_cta_camo' },
           ],
         },
       ];
@@ -939,19 +939,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'עדכון חדש עלה לאתר ומיד אחריו המערכת הפסיקה לעבוד. מה הפעולה ההגיונית הראשונה?',
+          question: 'האתר הפסיק לעבוד מיד אחרי עדכון. מה עושים קודם?',
           options: [
-            { html: 'להחזיר זמנית את הגרסה הקודמת שעבדה', correct: true, action: 'devops_rollback' },
-            { html: 'להמשיך להעלות שינויים נוספים', correct: false, action: 'devops_push_more' },
-            { html: 'להמתין ולראות אם התקלה תסתדר לבד', correct: false, action: 'devops_wait' },
+            { html: 'מחזירים את הגרסה הקודמת שעבדה', correct: true, action: 'devops_rollback' },
+            { html: 'מעלים עוד שינויים', correct: false, action: 'devops_push_more' },
+            { html: 'מחכים שיסתדר לבד', correct: false, action: 'devops_wait' },
           ],
         },
         {
-          question: 'האתר מקבל הרבה יותר מבקרים מהרגיל. מה יעזור לשמור עליו זמין?',
+          question: 'המון גולשים נכנסים לאתר בבת אחת והוא מתחיל להיתקע. מה יעזור?',
           options: [
-            { html: 'לחלק את העומס בין כמה שרתים', correct: true, action: 'devops_balance' },
-            { html: 'לכבות את מערכת הניטור', correct: false, action: 'devops_no_monitor' },
-            { html: 'להמתין עד שהאתר יקרוס', correct: false, action: 'devops_wait_crash' },
+            { html: 'להוסיף עוד שרתים שיתחלקו בעומס', correct: true, action: 'devops_balance' },
+            { html: 'לכבות את האתר', correct: false, action: 'devops_shutdown' },
+            { html: 'לבקש מהגולשים לצאת', correct: false, action: 'devops_ask_leave' },
           ],
         },
       ];
