@@ -257,19 +257,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'מה הדרך הטובה ביותר לקבל תשובה מדויקת מ־AI?',
+          question: 'איזו מערכת מוכרת קשורה לעולם ה־AI?',
           options: [
-            { html: 'לשאול שאלה ברורה עם כל הפרטים', correct: true, action: 'ai_clear_prompt' },
-            { html: 'לכתוב כמה שפחות מילים', correct: false, action: 'ai_short_prompt' },
-            { html: 'לשלוח את אותה שאלה שוב ושוב', correct: false, action: 'ai_spam_prompt' },
+            { html: 'Google Docs', correct: false, action: 'ai_docs' },
+            { html: 'ChatGPT', correct: true, action: 'ai_chatgpt' },
+            { html: 'Canva', correct: false, action: 'ai_canva' },
           ],
         },
         {
-          question: 'עוזר AI נתן לכם תשובה שנשמעת בטוחה, אבל משהו בה נראה מוזר. מה עושים?',
+          question: 'במה AI יכול לעזור ביום־יום?',
           options: [
-            { html: 'בודקים את המידע לפני שמשתמשים בו', correct: true, action: 'ai_verify' },
-            { html: 'סומכים עליו בעיניים עצומות', correct: false, action: 'ai_trust' },
-            { html: 'מפסיקים להשתמש ב־AI לתמיד', correct: false, action: 'ai_quit' },
+            { html: 'לכבות את המחשב בלי חשמל', correct: false, action: 'ai_no_power' },
+            { html: 'להחליף את כל האינטרנט', correct: false, action: 'ai_replace_web' },
+            { html: 'לענות על שאלות ולסכם מידע', correct: true, action: 'ai_answers' },
           ],
         },
       ];
@@ -369,19 +369,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'לחצתם על כפתור "שלח" באפליקציה — ושום דבר לא קרה. מה מצאתם?',
+          question: 'מה מחפשים כשבודקים אם אתר או אפליקציה עובדים כמו שצריך?',
           options: [
-            { html: 'באג שכדאי לדווח עליו', correct: true, action: 'qa_found_bug' },
-            { html: 'ככה זה אמור לעבוד', correct: false, action: 'qa_fine' },
-            { html: 'בעיה בצבע של הכפתור', correct: false, action: 'qa_color' },
+            { html: 'תקלות ובעיות שימוש', correct: true, action: 'qa_find_issues' },
+            { html: 'רק צבעים יפים', correct: false, action: 'qa_colors' },
+            { html: 'כמה מהר המחשב נדלק', correct: false, action: 'qa_boot_speed' },
           ],
         },
         {
-          question: 'מה הכי חשוב כשמדווחים על תקלה?',
+          question: 'כפתור באתר אמור להוביל לעמוד הרשמה, אבל לא קורה כלום כשלוחצים עליו. מה זה כנראה?',
           options: [
-            { html: 'להסביר מה עשיתם ומה קרה', correct: true, action: 'qa_report_good' },
-            { html: 'לכתוב רק "זה לא עובד"', correct: false, action: 'qa_report_vague' },
-            { html: 'לא לדווח ולקוות לטוב', correct: false, action: 'qa_report_none' },
+            { html: 'עיצוב חדש', correct: false, action: 'qa_new_design' },
+            { html: 'באג שצריך לבדוק', correct: true, action: 'qa_bug_check' },
+            { html: 'עדכון של הסוללה', correct: false, action: 'qa_battery' },
           ],
         },
       ];
@@ -485,19 +485,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'מילאתם טופס הרשמה בלי כתובת אימייל, וכפתור "המשך" לא נלחץ. למה?',
+          question: 'מה אפשר לבנות בעזרת תכנות?',
           options: [
-            { html: 'המערכת בודקת שכל הפרטים מולאו', correct: true, action: 'fs_validation' },
-            { html: 'האתר קרס', correct: false, action: 'fs_crash' },
-            { html: 'העכבר מקולקל', correct: false, action: 'fs_mouse' },
+            { html: 'מצגת PowerPoint בלבד', correct: false, action: 'fs_ppt' },
+            { html: 'אתר, אפליקציה או מערכת', correct: true, action: 'fs_build_all' },
+            { html: 'רק עיצוב של לוגו', correct: false, action: 'fs_logo' },
           ],
         },
         {
-          question: 'מכינים קפה: מרתיחים מים, מוסיפים קפה ואז מוזגים. מה קורה אם מדלגים על הרתחת המים?',
+          question: 'כדי לבנות אתר שעובד טוב, מה בדרך כלל חשוב לעשות?',
           options: [
-            { html: 'הקפה לא יצא טוב — הסדר חשוב', correct: true, action: 'fs_order_matters' },
-            { html: 'שום דבר, הסדר לא משנה', correct: false, action: 'fs_order_none' },
-            { html: 'הכוס תישבר', correct: false, action: 'fs_cup_break' },
+            { html: 'לעבוד לפי שלבים מסודרים', correct: true, action: 'fs_steps' },
+            { html: 'להתחיל בלי לבדוק כלום', correct: false, action: 'fs_no_check' },
+            { html: 'לשנות דברים בלי להבין למה', correct: false, action: 'fs_random_changes' },
           ],
         },
       ];
@@ -655,19 +655,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'עסק חדש מוכר ציוד לחדר כושר. למי הכי כדאי לפרסם?',
+          question: 'איפה בדרך כלל פוגשים פרסום דיגיטלי?',
           options: [
-            { html: 'לאנשים שמתאמנים ואוהבים ספורט', correct: true, action: 'mk_target_fit' },
-            { html: 'לכל מי שיש טלפון', correct: false, action: 'mk_everyone' },
-            { html: 'לאנשים שאוהבים בישול', correct: false, action: 'mk_wrong_aud' },
+            { html: 'רק בשלטי חוצות ברחוב', correct: false, action: 'mk_billboards' },
+            { html: 'רק בעיתון מודפס', correct: false, action: 'mk_newspaper' },
+            { html: 'בגוגל, פייסבוק, אינסטגרם וטיקטוק', correct: true, action: 'mk_digital' },
           ],
         },
         {
-          question: 'פרסמתם שתי מודעות: אחת מביאה המון לקוחות והשנייה כלום. מה עושים?',
+          question: 'מה המטרה של פרסום דיגיטלי טוב?',
           options: [
-            { html: 'ממשיכים עם המודעה שעובדת', correct: true, action: 'mk_keep_winner' },
-            { html: 'ממשיכים עם שתיהן בלי לבדוק', correct: false, action: 'mk_keep_both' },
-            { html: 'מפסיקים לפרסם בכלל', correct: false, action: 'mk_stop_all' },
+            { html: 'לגרום לאנשים הנכונים להתעניין', correct: true, action: 'mk_right_people' },
+            { html: 'להראות מודעה לכמה שיותר אנשים בלי קשר', correct: false, action: 'mk_spray' },
+            { html: 'להסתיר מה הלקוח צריך לעשות', correct: false, action: 'mk_hide_cta' },
           ],
         },
       ];
@@ -782,19 +782,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'מה הופך אפליקציה לנוחה לשימוש?',
+          question: 'איזה מסך יהיה בדרך כלל נוח יותר למשתמש?',
           options: [
-            { html: 'שקל למצוא בה מה שמחפשים', correct: true, action: 'ux_easy_find' },
-            { html: 'שיש בה כמה שיותר כפתורים', correct: false, action: 'ux_many_buttons' },
-            { html: 'שכל מסך בצבע אחר', correct: false, action: 'ux_many_colors' },
+            { html: 'מסך עם הרבה כפתורים דומים', correct: false, action: 'ux_many_buttons' },
+            { html: 'מסך ברור עם פעולה מרכזית אחת', correct: true, action: 'ux_clear_action' },
+            { html: 'מסך שבו צריך לנחש איפה ללחוץ', correct: false, action: 'ux_guess' },
           ],
         },
         {
-          question: 'כפתור "הזמינו עכשיו" באתר צריך להיות…',
+          question: 'מה עוזר למשתמש להבין מהר מה לעשות באפליקציה?',
           options: [
-            { html: 'גדול, ברור ובולט', correct: true, action: 'ux_cta_bold' },
-            { html: 'קטן ומוסתר בתחתית', correct: false, action: 'ux_cta_hidden' },
-            { html: 'באותו צבע כמו הרקע', correct: false, action: 'ux_cta_camo' },
+            { html: 'טקסט קטן וצפוף', correct: false, action: 'ux_tiny_text' },
+            { html: 'כמה שיותר אפשרויות במסך אחד', correct: false, action: 'ux_too_many' },
+            { html: 'כפתור ברור והסבר קצר', correct: true, action: 'ux_clear_btn' },
           ],
         },
       ];
@@ -939,19 +939,19 @@
     renderRound(stage, ctx) {
       const rounds = [
         {
-          question: 'האתר הפסיק לעבוד מיד אחרי עדכון. מה עושים קודם?',
+          question: 'מה חשוב באתר או אפליקציה שאנשים משתמשים בהם?',
           options: [
-            { html: 'מחזירים את הגרסה הקודמת שעבדה', correct: true, action: 'devops_rollback' },
-            { html: 'מעלים עוד שינויים', correct: false, action: 'devops_push_more' },
-            { html: 'מחכים שיסתדר לבד', correct: false, action: 'devops_wait' },
+            { html: 'שהמערכת תעבוד בצורה יציבה', correct: true, action: 'devops_stable' },
+            { html: 'שהיא תקרוס לפעמים', correct: false, action: 'devops_crash_ok' },
+            { html: 'שיהיה קשה להבין אם היא עובדת', correct: false, action: 'devops_opaque' },
           ],
         },
         {
-          question: 'המון גולשים נכנסים לאתר בבת אחת והוא מתחיל להיתקע. מה יעזור?',
+          question: 'אם הרבה אנשים נכנסים לאתר באותו זמן, מה עדיף שיקרה?',
           options: [
-            { html: 'להוסיף עוד שרתים שיתחלקו בעומס', correct: true, action: 'devops_balance' },
-            { html: 'לכבות את האתר', correct: false, action: 'devops_shutdown' },
-            { html: 'לבקש מהגולשים לצאת', correct: false, action: 'devops_ask_leave' },
+            { html: 'שהאתר ייסגר מיד', correct: false, action: 'devops_close' },
+            { html: 'שהאתר ימשיך לעבוד בצורה תקינה', correct: true, action: 'devops_keep_working' },
+            { html: 'שהעמוד ייעלם מהמסך', correct: false, action: 'devops_vanish' },
           ],
         },
       ];
