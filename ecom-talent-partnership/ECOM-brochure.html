@@ -90,10 +90,11 @@ body {
 
 .sec { padding-inline: var(--px); position: relative; z-index: 2; }
 .grow { flex: 1 1 0; }
-/* חשוב: flex-grow של הזוג sp-sm+sp-md חייב לסכם ל-1 בכל מיכל —
-   אחרת פלקסבוקס לא מחלק את מלוא השטח הפנוי ונשאר רווח מת בתחתית העמוד */
-.sp-sm { flex: 0.3 1 0; }
-.sp-md { flex: 0.7 1 0; }
+/* מרווחים קבועים לפני הרצועה הצבעונית התחתונה — הרצועה עצמה (flex:1)
+   סופגת את שאר השטח הפנוי בתוכה, כך שהיא מגיעה תמיד עד לתחתית העמוד
+   בלי "חלל מת" לפניה ובלי לצמצם אותה. */
+.sp-sm { flex: 0 0 auto; height: 9mm; }
+.sp-md { flex: 0 0 auto; height: 13mm; }
 
 /* ---------- טיפוגרפיה משותפת ---------- */
 
@@ -234,17 +235,17 @@ h2 .accent { color: var(--purple); }
 
 .cover-h1 {
   margin-top: 13mm;
-  font-size: 40pt;
+  font-size: 56pt;
   font-weight: 800;
-  line-height: 1.18;
-  letter-spacing: -0.005em;
+  line-height: 1.1;
+  letter-spacing: -0.008em;
   color: #FFFFFF;
 }
 .cover-h1 .l2 { color: var(--purple-soft); }
 
 .cover-sub {
-  margin-top: 9mm;
-  max-width: 125mm;
+  margin-top: 10mm;
+  max-width: 148mm;
   font-size: 12.2pt;
   font-weight: 400;
   line-height: 1.72;
@@ -269,8 +270,8 @@ h2 .accent { color: var(--purple); }
   position: absolute;
   z-index: 1;
   left: 0;
-  bottom: 15mm;
-  width: 170mm;
+  bottom: 33mm;
+  width: 198mm;
   height: auto;
   display: block;
 }
@@ -330,6 +331,9 @@ h2 .accent { color: var(--purple); }
   background: var(--tint);
   padding-top: 10mm;
   padding-bottom: var(--pt-bottom);
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 }
 .compare-label {
   font-size: 7.4pt;
@@ -337,7 +341,7 @@ h2 .accent { color: var(--purple); }
   letter-spacing: 0.15em;
   color: var(--gray);
 }
-.cmp-row { margin-top: 7.5mm; }
+.cmp-row { margin-top: 0; }
 .cmp-title {
   font-size: 11.5pt;
   font-weight: 700;
@@ -446,6 +450,9 @@ h2 .accent { color: var(--purple); }
   color: #FFFFFF;
   padding-top: 7mm;
   padding-bottom: var(--pt-bottom);
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 }
 .principle-label {
   font-size: 7.2pt;
@@ -454,7 +461,7 @@ h2 .accent { color: var(--purple); }
   color: var(--purple-soft);
 }
 .principle {
-  margin-top: 3.6mm;
+  margin-top: 0;
   font-size: 18.5pt;
   font-weight: 700;
   line-height: 1.4;
@@ -591,30 +598,26 @@ h2 .accent { color: var(--purple); }
   color: var(--purple-soft);
 }
 .contact-fields {
-  margin-top: 5.5mm;
+  margin-top: 6mm;
   display: flex;
-  gap: 9mm;
+  gap: 10mm;
 }
-.contact-fields .pair { flex: 1 1 0; }
-.contact-fields .pair--auto { flex: 0 0 auto; }
-.contact-fields .pair:not(:last-child) {
-  padding-inline-end: 9mm;
+.cf { flex: 1 1 0; }
+.cf--auto { flex: 0 0 auto; }
+.cf:not(:last-child) {
+  padding-inline-end: 10mm;
   border-inline-end: 1px solid var(--hair-dark);
 }
-.pair .k {
-  font-size: 7.5pt;
+.cf-k {
+  font-size: 7.3pt;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--gray);
+  margin-bottom: 2.6mm;
 }
-.pair .v {
-  margin-top: 2mm;
-  font-size: 11.8pt;
-  font-weight: 500;
-  color: #FFFFFF;
-  line-height: 1.4;
-}
-.pair .v .todo { color: #7A7790; font-weight: 400; }
+.cf-name { font-size: 13.5pt; font-weight: 700; color: #FFFFFF; line-height: 1.3; }
+.cf-role { margin-top: 1.2mm; font-size: 9.6pt; font-weight: 400; color: var(--dark-secondary); }
+.cf-v { font-size: 12.5pt; font-weight: 500; color: #FFFFFF; line-height: 1.4; }
 
 .closing .furniture { margin-top: 9mm; }
 
@@ -660,14 +663,12 @@ h2 .accent { color: var(--purple); }
     </div>
 
     <h1 class="cover-h1">
-      ערוץ גיוס ייעודי<br>
-      <span class="l2">למועמדים מסוננים</span><br>
-      <span class="l2">ומוכנים לתפקיד</span>
+      מועמדים מתאימים.<br>
+      <span class="l2">ללא עמלת השמה.</span>
     </h1>
 
     <p class="cover-sub">
-      שותפות מחייבת עם חברות הייטק וסטארטאפים לגיוס מספר עובדים מוסכם,
-      לתפקידים מוגדרים ובתקופה שנקבעת מראש
+      שותפות גיוס לחברות הייטק וסטארטאפים, המבוססת על תפקידים, יעד קליטה ותקופה המוגדרים מראש.
     </p>
 
     <div class="cover-tag">
@@ -746,7 +747,7 @@ h2 .accent { color: var(--purple); }
       <span>ההזדמנות העסקית</span>
     </div>
     <div class="headline-block">
-      <h2>גיוס עובדים דורש מהחברה<br><span class="accent">זמן, תקציב ומשאבים</span></h2>
+      <h2>גיוס עובדים גוזל<br><span class="accent">זמן, תקציב ומשאבים</span></h2>
     </div>
   </div>
 
@@ -759,13 +760,13 @@ h2 .accent { color: var(--purple); }
         הד־האנטרים וסינון מועמדים
       </p>
       <p>
-        שותפות הגיוס של מכללת איקום יוצרת עבור החברה ערוץ גיוס ממוקד וללא עלות
+        שותפות הגיוס של מכללת איקום יוצרת עבור החברה ערוץ גיוס ממוקד — ללא עמלת השמה.
       </p>
       <p>
         אנחנו מאפיינים את הצורך, מאתרים ומסננים מועמדים ומעבירים לחברה רק את המתאימים
       </p>
       <p class="gate">
-        רק מועמד שעבר את הסינון הראשוני של איקום מועבר לתהליך הקבלה בחברה
+        רק מועמדים שעברו את הסינון הראשוני של מכללת איקום מועברים לתהליך הקבלה בחברה.
       </p>
     </div>
 
@@ -783,6 +784,8 @@ h2 .accent { color: var(--purple); }
 
   <div class="sec compare-band">
     <div class="compare-label">השוואת תהליך הגיוס</div>
+
+    <div class="grow"></div>
 
     <div class="cmp-row">
       <div class="cmp-title">גיוס רגיל:</div>
@@ -811,6 +814,8 @@ h2 .accent { color: var(--purple); }
         <span class="step"><span class="dot"></span><span class="lbl">תהליך קבלה</span></span>
       </div>
     </div>
+
+    <div class="grow"></div>
 
     <div class="furniture">
       <span>שותפות הגיוס · מכללת איקום</span>
@@ -852,29 +857,29 @@ h2 .accent { color: var(--purple); }
     </div>
 
     <div class="commit-table">
-      <div class="ci ci--ecom"><span class="n">01</span><span class="t">לאפיין עם החברה את צורכי הגיוס</span></div>
+      <div class="ci ci--ecom"><span class="n">01</span><span class="t">לאפיין עם החברה את התפקידים ודרישות הסף</span></div>
       <div class="cv"></div>
-      <div class="ci ci--co"><span class="n">01</span><span class="t">להגדיר תפקידים ותקנים רלוונטיים</span></div>
+      <div class="ci ci--co"><span class="n">01</span><span class="t">להגדיר תפקידים, תקנים ודרישות סף</span></div>
 
-      <div class="ci ci--ecom"><span class="n">02</span><span class="t">לאתר מועמדים לפי דרישות התפקיד</span></div>
+      <div class="ci ci--ecom"><span class="n">02</span><span class="t">לאתר מועמדים בהתאם לפרופיל שהוגדר</span></div>
       <div class="cv"></div>
-      <div class="ci ci--co"><span class="n">02</span><span class="t">להקצות את המשרות לשותפות</span></div>
+      <div class="ci ci--co"><span class="n">02</span><span class="t">להסכים מראש על יעד הקליטה ותקופת השותפות</span></div>
 
-      <div class="ci ci--ecom"><span class="n">03</span><span class="t">לבצע מיון ואפיון ראשוני</span></div>
+      <div class="ci ci--ecom"><span class="n">03</span><span class="t">לבצע סינון מקצועי ואישי ראשוני</span></div>
       <div class="cv"></div>
       <div class="ci ci--co"><span class="n">03</span><span class="t">להעניק בלעדיות לתפקידים שסוכמו</span></div>
 
-      <div class="ci ci--ecom"><span class="n">04</span><span class="t">להכין את המועמדים לתהליך הקבלה</span></div>
+      <div class="ci ci--ecom"><span class="n">04</span><span class="t">להכין את המועמדים לקורות חיים, LinkedIn וראיונות</span></div>
       <div class="cv"></div>
-      <div class="ci ci--co"><span class="n">04</span><span class="t">לגייס מספר עובדים מוסכם</span></div>
+      <div class="ci ci--co"><span class="n">04</span><span class="t">להקצות זמינות לראיונות ולמשוב מהיר</span></div>
 
-      <div class="ci ci--ecom"><span class="n">05</span><span class="t">להעביר רק מועמדים רלוונטיים</span></div>
+      <div class="ci ci--ecom"><span class="n">05</span><span class="t">להעביר רק מועמדים שעברו את הסינון</span></div>
       <div class="cv"></div>
-      <div class="ci ci--co"><span class="n">05</span><span class="t">להשלים את היעד בתקופה שסוכמה</span></div>
+      <div class="ci ci--co"><span class="n">05</span><span class="t">לקדם מועמדים מתאימים ללא עיכובים</span></div>
 
       <div class="ci ci--ecom"><span class="n">06</span><span class="t">ללוות את התהליך עד לקליטה</span></div>
       <div class="cv"></div>
-      <div class="ci ci--co"><span class="n">06</span><span class="t">לקיים תהליך מיון מהיר ומקצועי</span></div>
+      <div class="ci ci--co"><span class="n">06</span><span class="t">לפעול להשלמת יעד הקליטה שסוכם</span></div>
     </div>
   </div>
 
@@ -882,6 +887,9 @@ h2 .accent { color: var(--purple); }
 
   <div class="sec principle-band">
     <div class="principle-label">עקרונות השותפות</div>
+
+    <div class="grow"></div>
+
     <div class="principle">
       השותפות מוגדרת מראש לפי <span class="accent">תפקידים</span>, <span class="accent">מספר גיוסים</span>,
       <span class="accent">תקופת זמן</span> ותנאי <span class="accent">בלעדיות</span>
@@ -889,6 +897,8 @@ h2 .accent { color: var(--purple); }
     <p class="principle-note">
       קליטת המועמדים כפופה לעמידה בדרישות המקצועיות ובתנאי הסף שסוכמו בין הצדדים
     </p>
+
+    <div class="grow"></div>
 
     <div class="furniture furniture--dark">
       <span>שותפות הגיוס · מכללת איקום</span>
@@ -953,8 +963,8 @@ h2 .accent { color: var(--purple); }
     <div class="benefits">
       <div class="benefit">
         <span class="n">01</span>
-        <span class="t">ללא עלויות גיוס</span>
-        <p class="d">ללא עמלת השמה או עמלת הצלחה</p>
+        <span class="t">ללא עמלת השמה</span>
+        <p class="d">ללא עמלת הצלחה או תשלום לחברת השמה</p>
       </div>
       <div class="benefit">
         <span class="n">02</span>
@@ -968,8 +978,8 @@ h2 .accent { color: var(--purple); }
       </div>
       <div class="benefit">
         <span class="n">04</span>
-        <span class="t">ערוץ גיוס קבוע</span>
-        <p class="d">מקור מתמשך למועמדים חדשים</p>
+        <span class="t">ערוץ גיוס מתוכנן</span>
+        <p class="d">תהליך רציף בהתאם ליעד ולתקופת השותפות</p>
       </div>
     </div>
   </div>
@@ -979,31 +989,28 @@ h2 .accent { color: var(--purple); }
   <div class="sec">
     <div class="close-sep"></div>
     <div class="close-h">
-      אתם מגדירים את הצורך<br>
-      אנחנו בונים את <span class="accent">מסלול הגיוס</span>
+      אתם מגדירים את הצורך.<br>
+      אנחנו בונים את <span class="accent">מסלול הגיוס</span>.
     </div>
     <p class="close-sub">
-      בואו נגדיר יחד את התפקידים, מספר העובדים ותקופת הגיוס במסגרת השותפות
+      בואו נגדיר יחד את התפקידים, יעד הקליטה ותקופת השותפות.
     </p>
 
     <div class="contact-block">
       <div class="contact-label">יצירת קשר</div>
       <div class="contact-fields">
-        <div class="pair">
-          <div class="k">שם מנהלת ההשמה</div>
-          <div class="v">רונית איש שלום</div>
+        <div class="cf">
+          <div class="cf-k">איש קשר</div>
+          <div class="cf-name">רונית איש שלום</div>
+          <div class="cf-role">מנהלת מחלקת ההשמה</div>
         </div>
-        <div class="pair">
-          <div class="k">תפקיד</div>
-          <div class="v">מנהלת מחלקת ההשמה</div>
+        <div class="cf cf--auto">
+          <div class="cf-k">טלפון</div>
+          <div class="cf-v" style="direction:ltr; text-align:right;">051-5322892</div>
         </div>
-        <div class="pair pair--auto">
-          <div class="k">טלפון</div>
-          <div class="v" style="direction:ltr; text-align:right;">051-5322892</div>
-        </div>
-        <div class="pair pair--auto">
-          <div class="k">דוא״ל</div>
-          <div class="v" style="direction:ltr; text-align:right;">jobs@ecomschool.co.il</div>
+        <div class="cf cf--auto">
+          <div class="cf-k">דוא״ל</div>
+          <div class="cf-v" style="direction:ltr; text-align:right;">jobs@ecomschool.co.il</div>
         </div>
       </div>
     </div>
