@@ -158,6 +158,17 @@ h2 .accent { color: var(--purple-soft); }
 .ic { width: 7.4mm; height: 7.4mm; flex: 0 0 auto; color: var(--purple-soft); }
 .ic--lg { width: 9mm; height: 9mm; }
 
+/* לוגו — פינה שמאלית עליונה, זהה בכל עמוד */
+.brand-logo {
+  position: absolute;
+  top: calc(var(--bleed) + 5mm);
+  left: var(--px);
+  width: 25mm;
+  height: auto;
+  z-index: 3;
+  display: block;
+}
+
 /* ============================================================
    עמוד 1 — שער
    ============================================================ */
@@ -681,6 +692,7 @@ h2 .accent { color: var(--purple-soft); }
      עמוד 1 · שער
      ============================================================ -->
 <section class="page cover">
+  <img class="brand-logo" src="assets/logo.png" alt="ECOM School">
   <div class="corner-frame corner-frame--tl"></div>
   <div class="corner-frame corner-frame--br"></div>
 
@@ -767,6 +779,7 @@ h2 .accent { color: var(--purple-soft); }
      עמוד 2 · מכללת Ecom — עוגני אמון
      ============================================================ -->
 <section class="page page-2-bg">
+  <img class="brand-logo" src="assets/logo.png" alt="ECOM School">
   <div class="tech-grid" style="background-image:radial-gradient(circle, rgba(255,255,255,0.05) 0.6px, transparent 0.6px); background-size:6mm 6mm;"></div>
 
   <div class="sec page-head">
@@ -867,6 +880,7 @@ h2 .accent { color: var(--purple-soft); }
      עמוד 3 · ההזדמנות העסקית
      ============================================================ -->
 <section class="page page-3-bg">
+  <img class="brand-logo" src="assets/logo.png" alt="ECOM School">
 
   <div class="sec page-head">
     <div class="kicker">
@@ -992,6 +1006,7 @@ h2 .accent { color: var(--purple-soft); }
      עמוד 4 · מודל השותפות
      ============================================================ -->
 <section class="page page-4-bg">
+  <img class="brand-logo" src="assets/logo.png" alt="ECOM School">
   <div class="page-4-lines"></div>
   <div class="corner-frame corner-frame--tl"></div>
   <div class="corner-frame corner-frame--br"></div>
@@ -1060,6 +1075,7 @@ h2 .accent { color: var(--purple-soft); }
      עמוד 5 · תהליך העבודה ויצירת קשר
      ============================================================ -->
 <section class="page closing">
+  <img class="brand-logo" src="assets/logo.png" alt="ECOM School">
 
   <div class="sec page-head">
     <div class="kicker">
