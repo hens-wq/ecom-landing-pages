@@ -285,7 +285,97 @@ h2 .accent { color: var(--purple); }
 .page-head { padding-top: var(--pt-top); }
 .headline-block { margin-top: 5.5mm; }
 
-/* ---------- עמוד 2 ---------- */
+/* ---------- עמוד 2 · מכללת איקום (עוגני אמון) ---------- */
+
+.trust-intro { max-width: 168mm; }
+.trust-intro p { font-size: 11.6pt; line-height: 1.7; color: var(--body); font-weight: 500; }
+.trust-intro p + p { margin-top: 3.6mm; }
+
+.trust-list { margin-top: 8mm; }
+.ti {
+  display: grid;
+  grid-template-columns: 9mm 1fr;
+  align-items: baseline;
+  border-top: 1px solid var(--hair);
+  padding: 4.2mm 0;
+}
+.trust-list .ti:last-child { border-bottom: 1px solid var(--hair); }
+.ti .n {
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--purple);
+  direction: ltr;
+  text-align: right;
+}
+.ti .t { font-size: 12.2pt; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.ti .d { margin-top: 1.6mm; font-size: 10.3pt; line-height: 1.56; color: var(--body); max-width: 148mm; }
+
+.tracks { margin-top: 7mm; display: flex; align-items: baseline; gap: 6mm; flex-wrap: wrap; }
+.tracks-label {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--gray);
+  flex: 0 0 auto;
+}
+.tracks-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0; }
+.tracks-row .item {
+  font-size: 9.6pt;
+  font-weight: 500;
+  color: var(--body-strong);
+}
+.tracks-row .item:not(:last-child)::after {
+  content: '·';
+  color: var(--purple);
+  font-weight: 700;
+  margin-inline: 3mm;
+}
+
+.proof-band {
+  background:
+    radial-gradient(95mm 70mm at 8% 0%, rgba(140, 82, 255, 0.14), transparent 70%),
+    var(--ink);
+  color: #FFFFFF;
+  padding-top: 9mm;
+  padding-bottom: var(--pt-bottom);
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.proof-item {
+  padding-inline-end: 8mm;
+  border-inline-end: 1px solid var(--hair-dark);
+}
+.proof-item:last-child { padding-inline-end: 0; border-inline-end: none; }
+.proof-item .val {
+  font-size: 19pt;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--purple-soft);
+  line-height: 1.1;
+  direction: ltr;
+  text-align: right;
+}
+.proof-item .val .of {
+  font-size: 10pt;
+  font-weight: 600;
+  color: var(--dark-secondary);
+  direction: rtl;
+}
+.proof-item .lbl {
+  margin-top: 2.6mm;
+  font-size: 8.6pt;
+  line-height: 1.5;
+  color: var(--dark-secondary);
+}
+.proof-band .furniture { margin-top: 9mm; }
+
+/* ---------- עמוד 3 · ההזדמנות העסקית ---------- */
 
 .lead-grid {
   display: grid;
@@ -305,6 +395,16 @@ h2 .accent { color: var(--purple); }
   color: var(--body-strong);
 }
 
+.gate-dark {
+  padding-right: 5mm;
+  border-right: 1.5px solid var(--purple-soft);
+  font-size: 13.5pt;
+  font-weight: 600;
+  line-height: 1.62;
+  color: #FFFFFF;
+  max-width: 148mm;
+}
+
 .pull {
   border-right: 1px solid var(--hair);
   padding-right: 7.5mm;
@@ -318,9 +418,9 @@ h2 .accent { color: var(--purple); }
   margin-bottom: 5.2mm;
 }
 .pull .pull-quote {
-  font-size: 18.5pt;
+  font-size: 15pt;
   font-weight: 700;
-  line-height: 1.42;
+  line-height: 1.5;
   color: var(--ink);
 }
 .pull .pull-quote .accent { color: var(--purple); }
@@ -386,7 +486,7 @@ h2 .accent { color: var(--purple); }
 .flow--ecom .conn .arr { border-right-color: var(--purple); }
 .compare-band .furniture { margin-top: 9mm; }
 
-/* ---------- עמוד 3 ---------- */
+/* ---------- עמוד 4 · מודל השותפות ---------- */
 
 /* טבלת התחייבויות: גריד אחד משותף — השורות מיושרות משני צדי הציר */
 .commit-heads {
@@ -476,7 +576,7 @@ h2 .accent { color: var(--purple); }
 }
 .principle-band .furniture { margin-top: 6mm; }
 
-/* ---------- עמוד 4 ---------- */
+/* ---------- עמוד 5 · תהליך העבודה ---------- */
 
 .closing {
   background:
@@ -486,23 +586,23 @@ h2 .accent { color: var(--purple); }
 }
 
 .stages {
-  margin-top: 9mm;
+  margin-top: 16mm;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  column-gap: 5mm;
+  column-gap: 6mm;
 }
 .stage-track {
   display: flex;
   align-items: center;
-  gap: 1.8mm;
-  margin-bottom: 5mm;
+  gap: 2.2mm;
+  margin-bottom: 8mm;
 }
-.stage:not(:last-child) .stage-track { margin-left: -5mm; }
+.stage:not(:last-child) .stage-track { margin-left: -6mm; }
 .stage-track .node {
-  width: 2.7mm; height: 2.7mm;
+  width: 3.3mm; height: 3.3mm;
   border-radius: 50%;
   background: var(--purple);
-  box-shadow: 0 0 0 1.2mm rgba(140, 82, 255, 0.18);
+  box-shadow: 0 0 0 1.5mm rgba(140, 82, 255, 0.18);
   flex: 0 0 auto;
 }
 .stage-track .line { flex: 1; height: 1px; background: var(--hair-dark); }
@@ -512,23 +612,23 @@ h2 .accent { color: var(--purple); }
 .stage .num {
   direction: ltr;
   text-align: right;
-  font-size: 16pt;
+  font-size: 21pt;
   font-weight: 800;
   letter-spacing: 0.03em;
   color: var(--purple-soft);
   line-height: 1;
 }
 .stage .name {
-  margin-top: 3mm;
-  font-size: 12pt;
+  margin-top: 4.5mm;
+  font-size: 15pt;
   font-weight: 700;
   color: #FFFFFF;
   line-height: 1;
 }
 .stage .desc {
-  margin-top: 3mm;
-  font-size: 11.5pt;
-  line-height: 1.42;
+  margin-top: 4mm;
+  font-size: 11.8pt;
+  line-height: 1.5;
   color: var(--dark-secondary);
   padding-left: 3mm;
 }
@@ -736,13 +836,123 @@ h2 .accent { color: var(--purple); }
 </section>
 
 <!-- ============================================================
-     עמוד 2 · ההזדמנות העסקית
+     עמוד 2 · מכללת איקום — עוגני אמון
      ============================================================ -->
 <section class="page">
 
   <div class="sec page-head">
     <div class="kicker">
       <span class="idx">01</span>
+      <span class="rule"></span>
+      <span>מכללת איקום</span>
+    </div>
+    <div class="headline-block">
+      <h2>לא רק מאגר מועמדים.<br><span class="accent">מערכת הכשרה שלמה.</span></h2>
+    </div>
+  </div>
+
+  <div class="sp-sm"></div>
+
+  <div class="sec">
+    <div class="trust-intro">
+      <p>
+        מכללת איקום מכשירה את דור ההייטק הבא באמצעות מסלולים מקצועיים, סגל מרצים מהתעשייה,
+        תרגול מעשי וליווי קריירה עד להשתלבות בשוק העבודה.
+      </p>
+      <p>
+        המועמדים המועברים לחברות אינם קורות חיים אקראיים ממאגר — אלה סטודנטים ובוגרים
+        שאנחנו מכירים, הכשרנו וליווינו לאורך הדרך.
+      </p>
+    </div>
+
+    <div class="trust-list">
+      <div class="ti">
+        <span class="n">01</span>
+        <div>
+          <div class="t">הכשרה שמחוברת לתעשייה</div>
+          <p class="d">מסלולי הלימוד נבנים בהתאם לדרישות המשתנות של שוק העבודה וכוללים תרגול מעשי, פרויקטים וסימולציות המדמות עבודה אמיתית.</p>
+        </div>
+      </div>
+      <div class="ti">
+        <span class="n">02</span>
+        <div>
+          <div class="t">סגל מרצים מהשטח</div>
+          <p class="d">המרצים של מכללת איקום הם מנהלים, מפתחים, אנשי סייבר, DevOps, דאטה ושיווק הפעילים בתעשייה ומביאים לכיתה ניסיון מקצועי עדכני.</p>
+        </div>
+      </div>
+      <div class="ti">
+        <span class="n">03</span>
+        <div>
+          <div class="t">שיתוף פעולה אקדמי</div>
+          <p class="d">מכללת איקום פועלת בשיתוף יחידת לימודי החוץ של אוניברסיטת אריאל ומחברת בין הכשרה מקצועית, סטנדרטים אקדמיים ודרישות המעסיקים.</p>
+        </div>
+      </div>
+      <div class="ti">
+        <span class="n">04</span>
+        <div>
+          <div class="t">קהילה וליווי גם לאחר הלימודים</div>
+          <p class="d">הבוגרים ממשיכים לקבל מעטפת באמצעות מחלקת ההשמה, מועדון הבוגרים וקהילת Ecom+, הכוללת תכנים מקצועיים, הזדמנויות תעסוקה וקשרים עם בוגרים ואנשי תעשייה.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tracks">
+      <span class="tracks-label">תחומי הלימוד</span>
+      <div class="tracks-row">
+        <span class="item">סייבר</span>
+        <span class="item">AI</span>
+        <span class="item">Full Stack</span>
+        <span class="item">DevOps</span>
+        <span class="item">QA ואוטומציה</span>
+        <span class="item">UX/UI</span>
+        <span class="item">שיווק דיגיטלי ודאטה</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grow"></div>
+
+  <div class="sec proof-band">
+    <div class="grow"></div>
+
+    <div class="proof-grid">
+      <div class="proof-item">
+        <div class="val">4.8 <span class="of">מתוך 5</span></div>
+        <div class="lbl">יותר מ־300 ביקורות בגוגל</div>
+      </div>
+      <div class="proof-item">
+        <div class="val">87%</div>
+        <div class="lbl">שיעור השמה</div>
+      </div>
+      <div class="proof-item">
+        <div class="val">2,500+</div>
+        <div class="lbl">חברות הייטק בקשרי השמה</div>
+      </div>
+      <div class="proof-item">
+        <div class="val">ISO 9001</div>
+        <div class="lbl">ורישיון השמה ממשרד העבודה</div>
+      </div>
+    </div>
+
+    <div class="grow"></div>
+
+    <div class="furniture furniture--dark">
+      <span>מכללת איקום · תוכנית שותפות למעסיקים</span>
+      <span class="en">ECOM TALENT PARTNERSHIP</span>
+      <span class="folio">02 / 05</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============================================================
+     עמוד 3 · ההזדמנות העסקית
+     ============================================================ -->
+<section class="page">
+
+  <div class="sec page-head">
+    <div class="kicker">
+      <span class="idx">02</span>
       <span class="rule"></span>
       <span>ההזדמנות העסקית</span>
     </div>
@@ -773,9 +983,8 @@ h2 .accent { color: var(--purple); }
     <aside class="pull">
       <div class="pull-label">השורה התחתונה</div>
       <div class="pull-quote">
-        החברה מקבלת מועמדים<br>
-        רלוונטיים ומסוננים —<br>
-        <span class="accent">ללא עמלת השמה</span>
+        במקום להתחיל ממאות קורות חיים, החברה מתחילה
+        <span class="accent">ממועמדים שכבר עברו מיון ראשוני</span>.
       </div>
     </aside>
   </div>
@@ -820,20 +1029,20 @@ h2 .accent { color: var(--purple); }
     <div class="furniture">
       <span>שותפות הגיוס · מכללת איקום</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
-      <span class="folio">02 / 04</span>
+      <span class="folio">03 / 05</span>
     </div>
   </div>
 
 </section>
 
 <!-- ============================================================
-     עמוד 3 · מודל השותפות
+     עמוד 4 · מודל השותפות
      ============================================================ -->
 <section class="page">
 
   <div class="sec page-head">
     <div class="kicker">
-      <span class="idx">02</span>
+      <span class="idx">03</span>
       <span class="rule"></span>
       <span>מודל השותפות</span>
     </div>
@@ -903,20 +1112,20 @@ h2 .accent { color: var(--purple); }
     <div class="furniture furniture--dark">
       <span>שותפות הגיוס · מכללת איקום</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
-      <span class="folio">03 / 04</span>
+      <span class="folio">04 / 05</span>
     </div>
   </div>
 
 </section>
 
 <!-- ============================================================
-     עמוד 4 · תהליך, יתרונות ויצירת קשר
+     עמוד 5 · תהליך העבודה ויצירת קשר
      ============================================================ -->
 <section class="page page--dark closing">
 
   <div class="sec page-head">
     <div class="kicker">
-      <span class="idx">03</span>
+      <span class="idx">04</span>
       <span class="rule"></span>
       <span>תהליך העבודה</span>
     </div>
@@ -959,29 +1168,11 @@ h2 .accent { color: var(--purple); }
   </div>
 
   <div class="sec">
-    <div class="benefits-label">היתרונות לחברה</div>
-    <div class="benefits">
-      <div class="benefit">
-        <span class="n">01</span>
-        <span class="t">ללא עמלת השמה</span>
-        <p class="d">ללא עמלת הצלחה או תשלום לחברת השמה</p>
-      </div>
-      <div class="benefit">
-        <span class="n">02</span>
-        <span class="t">פחות זמן על סינון</span>
-        <p class="d">רק מועמדים שעברו מיון ראשוני</p>
-      </div>
-      <div class="benefit">
-        <span class="n">03</span>
-        <span class="t">התאמה לצורכי החברה</span>
-        <p class="d">איתור לפי דרישות שהוגדרו מראש</p>
-      </div>
-      <div class="benefit">
-        <span class="n">04</span>
-        <span class="t">ערוץ גיוס מתוכנן</span>
-        <p class="d">תהליך רציף בהתאם ליעד ולתקופת השותפות</p>
-      </div>
-    </div>
+    <div class="benefits-label">לאורך התהליך</div>
+    <p class="gate-dark" style="margin-top:4.6mm;">
+      לאורך התהליך החברה מקבלת איש קשר אחד, מועמדים שעברו מיון ראשוני
+      ועדכונים שוטפים עד להשלמת יעד הקליטה.
+    </p>
   </div>
 
   <div class="grow"></div>
@@ -1018,7 +1209,7 @@ h2 .accent { color: var(--purple); }
     <div class="furniture furniture--dark" style="margin-top:8.5mm;">
       <span>מכללת איקום · שותפות גיוס למעסיקים</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
-      <span class="folio">04 / 04</span>
+      <span class="folio">05 / 05</span>
     </div>
   </div>
 
