@@ -7,7 +7,7 @@
 <style>
 /* ============================================================
    ECOM TALENT PARTNERSHIP — ברושור שותפות גיוס למעסיקים
-   4 עמודי A4 לאורך · דו"ח עריכתי · עברית RTL
+   5 עמודי A4 לאורך · שפה עיצובית כהה אחידה · עברית RTL
    בלִיד הדפסה: משתנה --bleed (3mm להדפסה, 0mm לדיגיטל)
    ============================================================ */
 
@@ -30,29 +30,31 @@
 
 :root {
   /* גיאומטריית דפוס */
-  --bleed: 3mm;            /* בלִיד — 0mm בגרסה דיגיטלית */
-  --mx: 16mm;              /* שוליים אופקיים מקו החיתוך */
+  --bleed: 3mm;
+  --mx: 16mm;
   --px: calc(var(--bleed) + var(--mx));
   --pt-top: calc(var(--bleed) + 14mm);
   --pt-bottom: calc(var(--bleed) + 10mm);
 
-  /* צבעי מותג */
-  --ink: #0D0D18;
+  /* משפחת כהה — שלושה גוונים לגיוון בין אזורים/עמודים */
+  --ink: #0A0A14;
+  --ink-b: #100D1F;
+  --ink-c: #090E1B;
+
+  /* מותג */
   --purple: #8C52FF;
-  --purple-soft: #A986FF;
-  --blue: #496DFF;
-  --gray: #767482;
-  --paper: #FFFFFF;
-  --tint: #F5F4F8;
+  --purple-soft: #B097FF;
+  --blue: #4E7CFF;
+  --cyan: #49D6EC;
+  --white: #FFFFFF;
 
-  /* טקסט */
-  --body: #43414E;
-  --body-strong: #1E1C28;
-  --dark-secondary: #A6A3B4;
+  /* טקסט על כהה */
+  --body: #C9C7DC;
+  --muted: #8D8BA3;
 
-  /* קווי שיער */
-  --hair: rgba(13, 13, 24, 0.14);
-  --hair-dark: rgba(255, 255, 255, 0.15);
+  /* קווים */
+  --hair: rgba(255, 255, 255, 0.13);
+  --hair-strong: rgba(255, 255, 255, 0.26);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -64,7 +66,7 @@ html {
 
 body {
   font-family: 'Heebo', sans-serif;
-  color: var(--ink);
+  color: var(--white);
   text-rendering: optimizeLegibility;
   font-kerning: normal;
 }
@@ -78,7 +80,8 @@ body {
   width: calc(210mm + 2 * var(--bleed));
   height: calc(297mm + 2 * var(--bleed));
   overflow: hidden;
-  background: var(--paper);
+  background: var(--ink);
+  color: var(--white);
   display: flex;
   flex-direction: column;
   page-break-after: always;
@@ -86,15 +89,26 @@ body {
 }
 .page:last-child { page-break-after: auto; break-after: auto; }
 
-.page--dark { background: var(--ink); color: #FFFFFF; }
-
 .sec { padding-inline: var(--px); position: relative; z-index: 2; }
 .grow { flex: 1 1 0; }
-/* מרווחים קבועים לפני הרצועה הצבעונית התחתונה — הרצועה עצמה (flex:1)
-   סופגת את שאר השטח הפנוי בתוכה, כך שהיא מגיעה תמיד עד לתחתית העמוד
-   בלי "חלל מת" לפניה ובלי לצמצם אותה. */
 .sp-sm { flex: 0 0 auto; height: 9mm; }
 .sp-md { flex: 0 0 auto; height: 13mm; }
+
+/* רקע טכנולוגי משותף: רשת נקודות עדינה, לשימוש חוזר על גבי כל עמוד */
+.tech-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.5;
+}
+.corner-frame {
+  position: absolute;
+  width: 9mm; height: 9mm;
+  z-index: 2;
+  pointer-events: none;
+}
+.corner-frame--tl { top: 0; right: 0; border-top: 1px solid var(--hair-strong); border-right: 1px solid var(--hair-strong); }
+.corner-frame--br { bottom: 0; left: 0; border-bottom: 1px solid var(--hair-strong); border-left: 1px solid var(--hair-strong); }
 
 /* ---------- טיפוגרפיה משותפת ---------- */
 
@@ -105,31 +119,19 @@ body {
   font-size: 7.6pt;
   font-weight: 600;
   letter-spacing: 0.09em;
-  color: var(--ink);
+  color: var(--white);
 }
-.kicker .idx {
-  font-weight: 700;
-  color: var(--purple);
-  letter-spacing: 0.06em;
-}
-.kicker .rule {
-  width: 7mm;
-  height: 1px;
-  background: rgba(13, 13, 24, 0.3);
-}
-.page--dark .kicker { color: #FFFFFF; }
-.page--dark .kicker .rule { background: rgba(255, 255, 255, 0.3); }
+.kicker .idx { font-weight: 700; color: var(--purple-soft); letter-spacing: 0.06em; }
+.kicker .rule { width: 7mm; height: 1px; background: var(--hair-strong); }
 
 h2 {
   font-size: 26pt;
   font-weight: 800;
   line-height: 1.26;
   letter-spacing: -0.005em;
-  color: var(--ink);
+  color: var(--white);
 }
-h2 .accent { color: var(--purple); }
-.page--dark h2 { color: #FFFFFF; }
-.page--dark h2 .accent { color: var(--purple-soft); }
+h2 .accent { color: var(--purple-soft); }
 
 /* ---------- שורת סיום עמוד ---------- */
 
@@ -141,7 +143,7 @@ h2 .accent { color: var(--purple); }
   align-items: baseline;
   font-size: 6.4pt;
   letter-spacing: 0.08em;
-  color: var(--gray);
+  color: var(--muted);
 }
 .furniture .en {
   direction: ltr;
@@ -149,50 +151,12 @@ h2 .accent { color: var(--purple); }
   font-weight: 500;
   font-size: 6.1pt;
 }
-.furniture--dark { border-top-color: var(--hair-dark); color: var(--dark-secondary); }
 .folio { font-weight: 600; letter-spacing: 0.16em; direction: ltr; }
 
-/* ---------- לוגו (משבצת החלפה) ----------
-   להחלפה בלוגו הרשמי: החליפו את תוכן .logo-slot
-   ב־<img src="assets/logo.svg" style="height:100%"> ‏(או PNG). */
+/* ---------- אייקונים / דפוסים משותפים (sprite גלובלי) ---------- */
 
-.logo-slot { height: 11.8mm; display: flex; align-items: center; }
-.wordmark { display: flex; align-items: center; gap: 3.3mm; }
-.wm-mark {
-  width: 7.8mm; height: 7.8mm;
-  border-radius: 2mm;
-  background: linear-gradient(135deg, var(--purple) 20%, var(--blue) 130%);
-  position: relative;
-}
-.wm-mark::after {
-  content: '';
-  position: absolute;
-  inset: 2.5mm;
-  border-radius: 0.95mm;
-  background: rgba(255, 255, 255, 0.92);
-}
-.wm-text { display: flex; flex-direction: column; gap: 0.7mm; }
-.wm-en {
-  direction: ltr;
-  font-size: 13.5pt;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  line-height: 1;
-  color: #FFFFFF;
-}
-.wm-he {
-  font-size: 7.3pt;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  color: var(--dark-secondary);
-  line-height: 1;
-}
-.wordmark--ink .wm-en { color: var(--ink); }
-.wordmark--ink .wm-he { color: var(--gray); }
-.wordmark--sm .wm-mark { width: 5mm; height: 5mm; border-radius: 1.3mm; }
-.wordmark--sm .wm-mark::after { inset: 1.6mm; }
-.wordmark--sm .wm-en { font-size: 8.5pt; }
-.wordmark--sm .wm-he { font-size: 5.2pt; }
+.ic { width: 7.4mm; height: 7.4mm; flex: 0 0 auto; color: var(--purple-soft); }
+.ic--lg { width: 9mm; height: 9mm; }
 
 /* ============================================================
    עמוד 1 — שער
@@ -200,81 +164,63 @@ h2 .accent { color: var(--purple); }
 
 .cover {
   background:
-    radial-gradient(115mm 95mm at 12% 8%, rgba(140, 82, 255, 0.13), transparent 70%),
-    radial-gradient(120mm 110mm at 88% 92%, rgba(73, 109, 255, 0.07), transparent 70%),
+    radial-gradient(130mm 100mm at 82% 6%, rgba(140, 82, 255, 0.22), transparent 68%),
+    radial-gradient(110mm 130mm at -5% 55%, rgba(73, 109, 255, 0.16), transparent 70%),
+    radial-gradient(90mm 90mm at 60% 100%, rgba(73, 214, 236, 0.08), transparent 72%),
     var(--ink);
 }
 
-.cover-top {
-  padding-top: var(--pt-top);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
+.cover-top { padding-top: calc(var(--pt-top) - 4mm); }
 
-.cover-titles { margin-top: 13mm; }
-.cover-label {
-  display: flex;
-  align-items: center;
-  gap: 3.2mm;
-  margin-bottom: 0;
-}
-.cover-label .sq {
-  width: 2.4mm; height: 2.4mm;
-  background: var(--purple);
-  border-radius: 0.5mm;
-}
-.cover-label-en {
+.cover-en {
   direction: ltr;
-  text-align: right;
-  font-size: 6.9pt;
-  font-weight: 500;
-  letter-spacing: 0.34em;
-  color: var(--gray);
-}
-
-.cover-h1 {
-  margin-top: 13mm;
-  font-size: 56pt;
+  text-align: left;
+  font-size: 78pt;
   font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.008em;
-  color: #FFFFFF;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  color: var(--white);
 }
-.cover-h1 .l2 { color: var(--purple-soft); }
+.cover-en .l2 { color: var(--purple-soft); }
+
+.cover-titles { margin-top: 12mm; }
+
+.cover-sub-he {
+  font-size: 23pt;
+  font-weight: 700;
+  line-height: 1.34;
+  color: var(--white);
+  max-width: 150mm;
+}
+.cover-sub-he .accent { color: var(--purple-soft); }
 
 .cover-sub {
-  margin-top: 10mm;
-  max-width: 148mm;
-  font-size: 12.2pt;
+  margin-top: 6mm;
+  max-width: 138mm;
+  font-size: 11.6pt;
   font-weight: 400;
-  line-height: 1.72;
-  color: #B6B3C4;
+  line-height: 1.68;
+  color: var(--muted);
 }
 
-.cover-tag {
-  margin-top: 5.5mm;
-  display: flex;
-  align-items: center;
-  gap: 3.4mm;
-}
-.cover-tag .rule { width: 9mm; height: 1.5px; background: var(--purple); }
-.cover-tag .txt {
-  font-size: 10.1pt;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: #FFFFFF;
-}
-
-.cover-art {
+.cover-art-wrap {
   position: absolute;
   z-index: 1;
-  left: 0;
-  bottom: 33mm;
-  width: 198mm;
-  height: auto;
-  display: block;
+  left: -6mm;
+  right: -6mm;
+  bottom: 20mm;
+  height: 128mm;
 }
+.cover-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cover-art-label {
+  position: absolute;
+  top: 51.5%;
+  transform: translate(-50%, 6mm);
+  text-align: center;
+  white-space: nowrap;
+}
+.cover-art-label .t { font-size: 9pt; font-weight: 700; color: var(--white); }
+.cover-art-label .k { display: block; margin-top: 1mm; font-size: 6.6pt; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); }
 
 .cover-bottom { padding-bottom: var(--pt-bottom); }
 
@@ -287,112 +233,119 @@ h2 .accent { color: var(--purple); }
 
 /* ---------- עמוד 2 · מכללת איקום (עוגני אמון) ---------- */
 
-.trust-intro { max-width: 168mm; }
-.trust-intro p { font-size: 11.6pt; line-height: 1.7; color: var(--body); font-weight: 500; }
-.trust-intro p + p { margin-top: 3.6mm; }
+.page-2-bg {
+  background:
+    radial-gradient(120mm 90mm at 92% 0%, rgba(73, 109, 255, 0.16), transparent 68%),
+    radial-gradient(110mm 100mm at -5% 100%, rgba(140, 82, 255, 0.14), transparent 70%),
+    var(--ink);
+}
 
-.trust-list { margin-top: 8mm; }
+.trust-intro { max-width: 172mm; margin-top: 2mm; }
+.trust-intro p { font-size: 11.8pt; line-height: 1.7; color: var(--body); font-weight: 500; }
+.trust-intro p + p { margin-top: 3.2mm; }
+
+/* כרטיס ביקורות Google — הוכחת אמון מרכזית */
+.review-card {
+  margin-top: 7mm;
+  border: 1px solid var(--hair-strong);
+  border-radius: 3mm;
+  background: linear-gradient(135deg, rgba(140, 82, 255, 0.10), rgba(73, 109, 255, 0.05));
+  padding: 6.5mm 8mm;
+  display: flex;
+  align-items: center;
+  gap: 9mm;
+}
+.review-score { display: flex; align-items: baseline; gap: 2mm; flex: 0 0 auto; }
+.review-score .num { font-size: 30pt; font-weight: 800; color: var(--white); line-height: 1; direction: ltr; }
+.review-score .of5 { font-size: 10pt; font-weight: 600; color: var(--muted); }
+.review-mid { flex: 0 0 auto; }
+.review-stars { direction: ltr; color: #F4B740; font-size: 14pt; letter-spacing: 0.5mm; line-height: 1; }
+.review-count { margin-top: 1.6mm; font-size: 9pt; color: var(--muted); }
+.review-div { width: 1px; align-self: stretch; background: var(--hair-strong); flex: 0 0 auto; }
+.review-google { flex: 1 1 0; text-align: left; direction: ltr; }
+.review-google .g {
+  font-size: 15pt;
+  font-weight: 700;
+  font-family: 'Heebo', sans-serif;
+}
+.review-google .g span:nth-child(1) { color: #4285F4; }
+.review-google .g span:nth-child(2) { color: #EA4335; }
+.review-google .g span:nth-child(3) { color: #FBBC05; }
+.review-google .g span:nth-child(4) { color: #4285F4; }
+.review-google .g span:nth-child(5) { color: #34A853; }
+.review-google .g span:nth-child(6) { color: #EA4335; }
+.review-google .cap { margin-top: 1.6mm; font-size: 7.8pt; color: var(--muted); letter-spacing: 0.04em; }
+
+.trust-list { margin-top: 7mm; }
 .ti {
   display: grid;
-  grid-template-columns: 9mm 1fr;
+  grid-template-columns: 10mm 1fr;
   align-items: baseline;
   border-top: 1px solid var(--hair);
-  padding: 4.2mm 0;
+  padding: 4.6mm 0;
 }
 .trust-list .ti:last-child { border-bottom: 1px solid var(--hair); }
 .ti .n {
-  font-size: 8pt;
+  font-size: 8.5pt;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--purple);
-  direction: ltr;
-  text-align: right;
-}
-.ti .t { font-size: 12.2pt; font-weight: 700; color: var(--ink); line-height: 1.3; }
-.ti .d { margin-top: 1.6mm; font-size: 10.3pt; line-height: 1.56; color: var(--body); max-width: 148mm; }
-
-.tracks { margin-top: 7mm; display: flex; align-items: baseline; gap: 6mm; flex-wrap: wrap; }
-.tracks-label {
-  font-size: 7pt;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--gray);
-  flex: 0 0 auto;
-}
-.tracks-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0; }
-.tracks-row .item {
-  font-size: 9.6pt;
-  font-weight: 500;
-  color: var(--body-strong);
-}
-.tracks-row .item:not(:last-child)::after {
-  content: '·';
-  color: var(--purple);
-  font-weight: 700;
-  margin-inline: 3mm;
-}
-
-.proof-band {
-  background:
-    radial-gradient(95mm 70mm at 8% 0%, rgba(140, 82, 255, 0.14), transparent 70%),
-    var(--ink);
-  color: #FFFFFF;
-  padding-top: 9mm;
-  padding-bottom: var(--pt-bottom);
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-}
-.proof-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-}
-.proof-item {
-  padding-inline-end: 8mm;
-  border-inline-end: 1px solid var(--hair-dark);
-}
-.proof-item:last-child { padding-inline-end: 0; border-inline-end: none; }
-.proof-item .val {
-  font-size: 19pt;
-  font-weight: 800;
-  letter-spacing: -0.01em;
   color: var(--purple-soft);
-  line-height: 1.1;
   direction: ltr;
   text-align: right;
 }
-.proof-item .val .of {
-  font-size: 10pt;
+.ti .t { font-size: 13pt; font-weight: 700; color: var(--white); line-height: 1.3; }
+.ti .d { margin-top: 1.8mm; font-size: 10.4pt; line-height: 1.56; color: var(--body); max-width: 150mm; }
+
+.tracks-label {
+  margin-top: 8mm;
+  font-size: 7.4pt;
   font-weight: 600;
-  color: var(--dark-secondary);
-  direction: rtl;
+  letter-spacing: 0.16em;
+  color: var(--muted);
 }
-.proof-item .lbl {
-  margin-top: 2.6mm;
-  font-size: 8.6pt;
-  line-height: 1.5;
-  color: var(--dark-secondary);
+.tracks-grid {
+  margin-top: 4mm;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3.4mm;
 }
-.proof-band .furniture { margin-top: 9mm; }
+.tracks-grid .tile {
+  flex: 1 1 37mm;
+  min-width: 37mm;
+  border: 1px solid var(--hair-strong);
+  border-radius: 2.2mm;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 4.4mm 4mm;
+  text-align: center;
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--white);
+}
 
 /* ---------- עמוד 3 · ההזדמנות העסקית ---------- */
 
+.page-3-bg {
+  background:
+    radial-gradient(120mm 100mm at 96% 4%, rgba(140, 82, 255, 0.18), transparent 68%),
+    var(--ink);
+}
+
 .lead-grid {
   display: grid;
-  grid-template-columns: 1fr 58mm;
+  grid-template-columns: 1fr 56mm;
   column-gap: 12mm;
 }
 
-.lead-copy p { font-size: 12.3pt; line-height: 1.72; color: var(--body); font-weight: 500; }
-.lead-copy p + p { margin-top: 4.8mm; }
+.lead-copy p { font-size: 10.6pt; line-height: 1.58; color: var(--body); font-weight: 500; }
+.lead-copy p + p { margin-top: 3.2mm; }
 .lead-copy .gate {
-  margin-top: 6mm;
+  margin-top: 4.4mm;
   padding-right: 4.6mm;
-  border-right: 1.5px solid var(--purple);
-  font-size: 12.5pt;
+  border-right: 1.5px solid var(--purple-soft);
+  font-size: 11.2pt;
   font-weight: 600;
-  line-height: 1.6;
-  color: var(--body-strong);
+  line-height: 1.5;
+  color: var(--white);
 }
 
 .gate-dark {
@@ -407,130 +360,134 @@ h2 .accent { color: var(--purple); }
 
 .pull {
   border-right: 1px solid var(--hair);
-  padding-right: 7.5mm;
-  margin-top: 4mm;
+  padding-right: 7mm;
 }
 .pull .pull-label {
   font-size: 7pt;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: var(--gray);
-  margin-bottom: 5.2mm;
+  color: var(--muted);
+  margin-bottom: 3.6mm;
 }
 .pull .pull-quote {
-  font-size: 15pt;
+  font-size: 12.6pt;
   font-weight: 700;
-  line-height: 1.5;
-  color: var(--ink);
+  line-height: 1.46;
+  color: var(--white);
 }
-.pull .pull-quote .accent { color: var(--purple); }
+.pull .pull-quote .accent { color: var(--purple-soft); }
 
-/* השוואת תהליך — רצועת טינט */
+/* השוואת תהליך הגיוס — הרכיב המרכזי בעמוד */
 
 .compare-band {
-  background: var(--tint);
-  padding-top: 10mm;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%),
+    var(--ink-b);
+  border-top: 1px solid var(--hair);
+  padding-top: 8mm;
   padding-bottom: var(--pt-bottom);
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
 }
 .compare-label {
-  font-size: 7.4pt;
+  font-size: 7.6pt;
   font-weight: 600;
   letter-spacing: 0.15em;
-  color: var(--gray);
+  color: var(--muted);
 }
-.cmp-row { margin-top: 0; }
-.cmp-title {
-  font-size: 11.5pt;
-  font-weight: 700;
-  color: var(--gray);
-  margin-bottom: 4.6mm;
-}
-.cmp-row--ecom .cmp-title { color: var(--ink); }
-.cmp-sep {
-  margin-top: 7mm;
-  border-top: 1px solid rgba(13, 13, 24, 0.09);
-}
-.flow { display: flex; align-items: center; gap: 3mm; }
-.flow .step {
-  display: flex;
-  align-items: center;
-  gap: 2.2mm;
-  white-space: nowrap;
-}
-.flow .dot {
-  width: 2.4mm; height: 2.4mm;
-  border-radius: 50%;
-  background: #A9A7B3;
-  flex: 0 0 auto;
-}
-.flow .lbl { font-size: 11.5pt; color: #55535F; }
-.flow .conn {
-  flex: 1 1 6mm;
-  min-width: 6mm;
-  display: flex;
-  align-items: center;
-}
-.flow .conn .line { flex: 1; height: 1px; background: rgba(13, 13, 24, 0.20); }
-.flow .conn .arr {
-  width: 0; height: 0;
-  border-top: 1.05mm solid transparent;
-  border-bottom: 1.05mm solid transparent;
-  border-right: 1.7mm solid rgba(13, 13, 24, 0.32);
-}
-.flow--ecom .dot { width: 2.9mm; height: 2.9mm; background: var(--purple); }
-.flow--ecom .lbl { font-size: 12.5pt; font-weight: 600; color: var(--ink); }
-.flow--ecom .conn .line { background: rgba(140, 82, 255, 0.55); height: 1.2px; }
-.flow--ecom .conn .arr { border-right-color: var(--purple); }
-.compare-band .furniture { margin-top: 9mm; }
 
-/* ---------- עמוד 4 · מודל השותפות ---------- */
-
-/* טבלת התחייבויות: גריד אחד משותף — השורות מיושרות משני צדי הציר */
-.commit-heads {
+.cmp2-grid {
+  margin-top: 5mm;
+  flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 1fr 12mm 1fr;
-  margin-bottom: 6.8mm;
+  align-content: center;
+  grid-template-columns: 1fr 1px 1fr;
+  column-gap: 9mm;
 }
-.commit-head {
+.cmp2-div { background: var(--hair); }
+.cmp2-head {
   display: flex;
   align-items: center;
   gap: 3mm;
+  margin-bottom: 4mm;
 }
-.commit-head--co { grid-column: 3; }
-.commit-head .sq {
-  width: 2.7mm; height: 2.7mm;
-  border-radius: 0.6mm;
-  flex: 0 0 auto;
-}
-.commit-head--ecom .sq { background: var(--purple); }
-.commit-head--co .sq { background: var(--blue); }
-.commit-head .t { font-size: 14.5pt; font-weight: 800; color: var(--ink); }
+.cmp2-head .sq { width: 2.6mm; height: 2.6mm; border-radius: 0.6mm; flex: 0 0 auto; background: var(--muted); }
+.cmp2-col--ecom .cmp2-head .sq { background: var(--purple-soft); }
+.cmp2-head .t { font-size: 13pt; font-weight: 800; color: var(--white); }
 
-.commit-table {
+.cs { display: flex; align-items: flex-start; gap: 4mm; padding: 3mm 0; }
+.cs-ic {
+  width: 10mm; height: 10mm;
+  border-radius: 50%;
+  border: 1px solid var(--hair-strong);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+.cmp2-col--ecom .cs-ic { color: var(--purple-soft); border-color: rgba(176, 151, 255, 0.4); }
+.cs-b { flex: 1 1 0; }
+.cs-t { font-size: 11.6pt; font-weight: 700; color: var(--white); line-height: 1.3; }
+.cs-d { margin-top: 1.2mm; font-size: 8.8pt; line-height: 1.44; color: var(--muted); }
+
+.cs-arrow { display: flex; justify-content: center; padding: 0.3mm 0; margin-inline-start: 5mm; }
+.cs-arrow svg { width: 3.6mm; height: 3.6mm; color: var(--hair-strong); }
+.cmp2-col--ecom .cs-arrow svg { color: rgba(176, 151, 255, 0.5); }
+
+.compare-band .furniture { margin-top: 6mm; }
+
+/* ---------- עמוד 4 · מודל השותפות ---------- */
+
+.page-4-bg {
+  background:
+    radial-gradient(110mm 90mm at 4% 0%, rgba(73, 214, 236, 0.09), transparent 70%),
+    radial-gradient(120mm 110mm at 100% 100%, rgba(140, 82, 255, 0.14), transparent 68%),
+    var(--ink-c);
+}
+.page-4-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+  background-size: 29.6mm 100%;
+  opacity: 0.35;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18mm, #000 85%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 18mm, #000 85%, transparent);
+}
+
+.commit-wrap { flex: 1 1 auto; display: flex; flex-direction: column; }
+
+.commit-heads {
   display: grid;
   grid-template-columns: 1fr 12mm 1fr;
+  margin-bottom: 4mm;
+}
+.commit-head { display: flex; align-items: center; gap: 3.2mm; }
+.commit-head--co { grid-column: 3; }
+.commit-head .sq { width: 3mm; height: 3mm; border-radius: 0.7mm; flex: 0 0 auto; }
+.commit-head--ecom .sq { background: var(--purple-soft); }
+.commit-head--co .sq { background: var(--cyan); }
+.commit-head .t { font-size: 18pt; font-weight: 800; color: var(--white); }
+
+.commit-table {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr 12mm 1fr;
+  align-content: center;
 }
 .ci {
   display: grid;
-  grid-template-columns: 8mm 1fr;
+  grid-template-columns: 9mm 1fr;
   align-items: baseline;
   border-top: 1px solid var(--hair);
-  padding: 4.6mm 0;
+  padding: 9.5mm 0;
 }
 .commit-table > .ci:nth-last-child(-n+3) { border-bottom: 1px solid var(--hair); }
-.ci .n {
-  font-size: 8.5pt;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  direction: ltr;
-  text-align: right;
-}
-.ci--ecom .n { color: var(--purple); }
-.ci--co .n { color: var(--blue); }
-.ci .t { font-size: 11.8pt; line-height: 1.5; color: var(--body); }
+.ci .n { font-size: 10pt; font-weight: 700; letter-spacing: 0.04em; direction: ltr; text-align: right; }
+.ci--ecom .n { color: var(--purple-soft); }
+.ci--co .n { color: var(--cyan); }
+.ci .t { font-size: 14.5pt; line-height: 1.46; color: var(--body); }
 .cv { position: relative; }
 .cv::before {
   content: '';
@@ -541,185 +498,113 @@ h2 .accent { color: var(--purple); }
   background: var(--hair);
 }
 
-/* רצועת עקרונות כהה */
-
-.principle-band {
-  background:
-    radial-gradient(95mm 70mm at 90% 0%, rgba(140, 82, 255, 0.14), transparent 70%),
-    var(--ink);
-  color: #FFFFFF;
-  padding-top: 7mm;
-  padding-bottom: var(--pt-bottom);
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-}
-.principle-label {
-  font-size: 7.2pt;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  color: var(--purple-soft);
-}
-.principle {
-  margin-top: 0;
-  font-size: 18.5pt;
-  font-weight: 700;
-  line-height: 1.4;
-  color: #FFFFFF;
-}
-.principle .accent { color: var(--purple-soft); }
-.principle-note {
-  margin-top: 3.4mm;
-  font-size: 11.5pt;
-  line-height: 1.5;
-  color: var(--dark-secondary);
-}
-.principle-band .furniture { margin-top: 6mm; }
-
 /* ---------- עמוד 5 · תהליך העבודה ---------- */
 
 .closing {
   background:
-    radial-gradient(110mm 85mm at 8% 100%, rgba(73, 109, 255, 0.08), transparent 70%),
-    radial-gradient(120mm 90mm at 92% 4%, rgba(140, 82, 255, 0.12), transparent 72%),
+    radial-gradient(120mm 95mm at 6% 100%, rgba(73, 109, 255, 0.14), transparent 70%),
+    radial-gradient(130mm 100mm at 96% 0%, rgba(140, 82, 255, 0.20), transparent 68%),
+    radial-gradient(80mm 80mm at 50% 45%, rgba(73, 214, 236, 0.05), transparent 72%),
     var(--ink);
 }
 
 .stages {
-  margin-top: 16mm;
+  margin-top: 12mm;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   column-gap: 6mm;
 }
-.stage-track {
-  display: flex;
-  align-items: center;
-  gap: 2.2mm;
-  margin-bottom: 8mm;
-}
-.stage:not(:last-child) .stage-track { margin-left: -6mm; }
-.stage-track .node {
-  width: 3.3mm; height: 3.3mm;
+.stage-ic {
+  width: 11mm; height: 11mm;
   border-radius: 50%;
-  background: var(--purple);
-  box-shadow: 0 0 0 1.5mm rgba(140, 82, 255, 0.18);
-  flex: 0 0 auto;
-}
-.stage-track .line { flex: 1; height: 1px; background: var(--hair-dark); }
-.stage:last-child .stage-track .line {
-  background: linear-gradient(to left, rgba(255, 255, 255, 0.15), transparent);
+  border: 1px solid var(--hair-strong);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--purple-soft);
+  margin-bottom: 5mm;
 }
 .stage .num {
   direction: ltr;
   text-align: right;
-  font-size: 21pt;
+  font-size: 13pt;
   font-weight: 800;
   letter-spacing: 0.03em;
-  color: var(--purple-soft);
+  color: var(--muted);
   line-height: 1;
 }
 .stage .name {
-  margin-top: 4.5mm;
-  font-size: 15pt;
+  margin-top: 2.6mm;
+  font-size: 14.5pt;
   font-weight: 700;
-  color: #FFFFFF;
-  line-height: 1;
+  color: var(--white);
+  line-height: 1.15;
 }
 .stage .desc {
-  margin-top: 4mm;
-  font-size: 11.8pt;
-  line-height: 1.5;
-  color: var(--dark-secondary);
-  padding-left: 3mm;
+  margin-top: 3mm;
+  font-size: 9.6pt;
+  line-height: 1.44;
+  color: var(--muted);
 }
 
-.benefits-label {
-  margin-top: 10mm;
+.gate-feature {
+  margin-top: 11mm;
+  padding: 6mm 7mm;
+  border: 1px solid var(--hair-strong);
+  border-right: 2.5px solid var(--purple-soft);
+  border-radius: 2mm;
+  background: rgba(255, 255, 255, 0.025);
+}
+.gate-feature-label {
   font-size: 7.2pt;
   font-weight: 600;
   letter-spacing: 0.16em;
   color: var(--purple-soft);
 }
-.benefits {
-  margin-top: 5.4mm;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 12mm;
-  row-gap: 6mm;
-}
-.benefit {
-  border-top: 1px solid var(--hair-dark);
-  padding-top: 3.6mm;
-  display: grid;
-  grid-template-columns: 8.5mm 1fr;
-  align-items: baseline;
-}
-.benefit .n {
-  direction: ltr;
-  text-align: right;
-  font-size: 8pt;
-  font-weight: 700;
-  color: var(--purple-soft);
-}
-.benefit .t { font-size: 12pt; font-weight: 700; color: #FFFFFF; line-height: 1.3; }
-.benefit .d {
-  grid-column: 2;
-  margin-top: 1.8mm;
-  font-size: 11.6pt;
-  line-height: 1.46;
-  color: var(--dark-secondary);
+.gate-feature p {
+  margin-top: 3mm;
+  font-size: 14pt;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--white);
+  max-width: 160mm;
 }
 
-.close-sep {
-  margin-top: 8mm;
-  border-top: 1px solid var(--hair-dark);
-}
+.close-sep { margin-top: 10mm; border-top: 1px solid var(--hair-strong); }
 .close-h {
-  margin-top: 7mm;
-  font-size: 22pt;
+  margin-top: 8mm;
+  font-size: 23pt;
   font-weight: 800;
-  line-height: 1.4;
-  color: #FFFFFF;
+  line-height: 1.38;
+  color: var(--white);
 }
 .close-h .accent { color: var(--purple-soft); }
 .close-sub {
-  margin-top: 4.6mm;
+  margin-top: 4.2mm;
   font-size: 11.5pt;
   line-height: 1.6;
-  color: var(--dark-secondary);
+  color: var(--muted);
   max-width: 138mm;
 }
 
-.contact-block { margin-top: 9mm; }
-.contact-label {
-  font-size: 6.8pt;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  color: var(--purple-soft);
-}
-.contact-fields {
-  margin-top: 6mm;
+.contact-card {
+  margin-top: 8mm;
+  border: 1px solid var(--hair-strong);
+  border-radius: 3mm;
+  background: linear-gradient(135deg, rgba(140, 82, 255, 0.08), rgba(73, 214, 236, 0.04));
+  padding: 7mm 8mm;
   display: flex;
-  gap: 10mm;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8mm;
 }
-.cf { flex: 1 1 0; }
-.cf--auto { flex: 0 0 auto; }
-.cf:not(:last-child) {
-  padding-inline-end: 10mm;
-  border-inline-end: 1px solid var(--hair-dark);
-}
-.cf-k {
-  font-size: 7.3pt;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--gray);
-  margin-bottom: 2.6mm;
-}
-.cf-name { font-size: 13.5pt; font-weight: 700; color: #FFFFFF; line-height: 1.3; }
-.cf-role { margin-top: 1.2mm; font-size: 9.6pt; font-weight: 400; color: var(--dark-secondary); }
-.cf-v { font-size: 12.5pt; font-weight: 500; color: #FFFFFF; line-height: 1.4; }
+.cc-id .cc-name { font-size: 16pt; font-weight: 800; color: var(--white); line-height: 1.25; }
+.cc-id .cc-role { margin-top: 1.4mm; font-size: 10pt; color: var(--muted); }
+.cc-sep { width: 1px; align-self: stretch; background: var(--hair-strong); flex: 0 0 auto; }
+.cc-reach { display: flex; flex-direction: column; gap: 3mm; }
+.cc-row { direction: ltr; display: flex; align-items: center; gap: 3mm; }
+.cc-row .ic { color: var(--purple-soft); width: 6.6mm; height: 6.6mm; }
+.cc-row span { font-size: 12.5pt; font-weight: 600; color: var(--white); }
 
-.closing .furniture { margin-top: 9mm; }
+.closing .furniture { margin-top: 8mm; }
 
 /* ---------- תצוגת מסך בלבד ---------- */
 
@@ -738,96 +623,105 @@ h2 .accent { color: var(--purple); }
 <body>
 
 <!-- ============================================================
+     sprite גלובלי: דפוסים ואייקונים לשימוש חוזר
+     ============================================================ -->
+<svg style="position:absolute; width:0; height:0;" aria-hidden="true">
+  <defs>
+    <pattern id="dotfield" width="7" height="7" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.7" fill="#FFFFFF" fill-opacity="0.14"/>
+    </pattern>
+    <linearGradient id="gradFlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#49D6EC"/>
+      <stop offset="0.5" stop-color="#4E7CFF"/>
+      <stop offset="1" stop-color="#8C52FF"/>
+    </linearGradient>
+
+    <g id="ic-scope"><rect x="2.6" y="2.6" width="14.8" height="14.8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="7.6" x2="14" y2="7.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="11" x2="11.6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="14.4" x2="9.6" y2="14.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g>
+    <g id="ic-source"><circle cx="6.2" cy="6.6" r="2.15" fill="currentColor"/><circle cx="13.8" cy="6.6" r="2.15" fill="currentColor"/><circle cx="10" cy="14" r="2.15" fill="currentColor"/></g>
+    <g id="ic-filter"><path d="M3.2 3.6h13.6l-5.1 6.5v5.3l-3.4 1.7v-7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></g>
+    <g id="ic-prep"><circle cx="7.3" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12.7" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"/></g>
+    <g id="ic-done"><circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.3 10.2l2.6 2.6 4.9-5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+    <g id="ic-phone"><rect x="6.2" y="2" width="7.6" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="8.6" y1="15.1" x2="11.4" y2="15.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></g>
+    <g id="ic-mail"><rect x="2" y="4.6" width="16" height="10.8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.9 5.6l7.1 5.4 7.1-5.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+    <g id="ic-arrow-down"><path d="M4 5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>
+  </defs>
+</svg>
+
+<!-- ============================================================
      עמוד 1 · שער
      ============================================================ -->
-<section class="page page--dark cover">
+<section class="page cover">
+  <div class="corner-frame corner-frame--tl"></div>
+  <div class="corner-frame corner-frame--br"></div>
 
   <div class="sec cover-top">
-    <!-- LOGO SLOT — להחלפה בלוגו הרשמי של איקום -->
-    <div class="logo-slot">
-      <div class="wordmark">
-        <div class="wm-mark"></div>
-        <div class="wm-text">
-          <span class="wm-en">ECOM</span>
-          <span class="wm-he">מכללת איקום</span>
-        </div>
-      </div>
-    </div>
-    <!-- /LOGO SLOT -->
+    <h1 class="cover-en">ECOM TALENT<br><span class="l2">PARTNERSHIP</span></h1>
   </div>
 
   <div class="sec cover-titles">
-    <div class="cover-label">
-      <span class="sq"></span>
-      <span class="cover-label-en">ECOM TALENT PARTNERSHIP</span>
+    <div class="cover-sub-he">
+      ערוץ גיוס למועמדים מסוננים — <span class="accent">ללא עמלת השמה</span>
     </div>
-
-    <h1 class="cover-h1">
-      מועמדים מתאימים.<br>
-      <span class="l2">ללא עמלת השמה.</span>
-    </h1>
-
     <p class="cover-sub">
       שותפות גיוס לחברות הייטק וסטארטאפים, המבוססת על תפקידים, יעד קליטה ותקופה המוגדרים מראש.
     </p>
-
-    <div class="cover-tag">
-      <span class="rule"></span>
-      <span class="txt">ללא עמלת השמה</span>
-    </div>
   </div>
 
   <div class="grow"></div>
 
-  <!-- גרפיקה מופשטת: שדה מועמדים מתנקז לערוץ ממוקד -->
-  <svg class="cover-art" viewBox="0 0 560 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="dg" width="16" height="16" patternUnits="userSpaceOnUse">
-        <circle cx="1.2" cy="1.2" r="1.2" fill="#767482" fill-opacity="0.16"/>
-      </pattern>
-      <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#496DFF"/>
-        <stop offset="1" stop-color="#8C52FF"/>
-      </linearGradient>
-    </defs>
+  <div class="cover-art-wrap">
+    <!-- גרפיקה מופשטת: שדה מועמדים מתנקז דרך שלושה שלבים -->
+    <svg class="cover-art" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="440" y="10" width="200" height="340" fill="url(#dotfield)"/>
 
-    <rect x="0" y="20" width="170" height="360" fill="url(#dg)"/>
+      <path d="M610 30 C480 30, 400 175, 360 180" stroke="#767482" stroke-opacity="0.22" stroke-width="1"/>
+      <path d="M565 75 C460 75, 400 172, 360 180" stroke="#8C52FF" stroke-opacity="0.3" stroke-width="1"/>
+      <path d="M600 122 C470 122, 400 176, 360 180" stroke="#49D6EC" stroke-opacity="0.24" stroke-width="1"/>
+      <path d="M548 168 C450 168, 400 179, 360 180" stroke="#767482" stroke-opacity="0.2" stroke-width="1"/>
+      <path d="M615 208 C480 208, 405 183, 360 180" stroke="#4E7CFF" stroke-opacity="0.26" stroke-width="1"/>
+      <path d="M560 255 C460 255, 405 184, 360 180" stroke="#8C52FF" stroke-opacity="0.2" stroke-width="1"/>
+      <path d="M605 298 C475 298, 405 186, 360 180" stroke="#767482" stroke-opacity="0.16" stroke-width="1"/>
+      <path d="M525 45 C440 45, 400 174, 360 180" stroke="#8C52FF" stroke-opacity="0.18" stroke-width="1"/>
+      <path d="M580 340 C470 340, 405 188, 360 180" stroke="#49D6EC" stroke-opacity="0.18" stroke-width="1"/>
+      <path d="M500 320 C430 320, 405 186, 360 180" stroke="#767482" stroke-opacity="0.14" stroke-width="1"/>
 
-    <path d="M30 45 C160 45, 300 152, 428 152" stroke="#767482" stroke-opacity="0.18" stroke-width="1"/>
-    <path d="M72 92 C190 92, 300 150, 428 151" stroke="#8C52FF" stroke-opacity="0.26" stroke-width="1"/>
-    <path d="M38 148 C170 148, 300 153, 428 152" stroke="#496DFF" stroke-opacity="0.2" stroke-width="1"/>
-    <path d="M92 196 C210 196, 310 155, 428 152" stroke="#767482" stroke-opacity="0.16" stroke-width="1"/>
-    <path d="M30 252 C180 252, 300 158, 428 153" stroke="#8C52FF" stroke-opacity="0.22" stroke-width="1"/>
-    <path d="M80 306 C210 306, 310 160, 428 154" stroke="#496DFF" stroke-opacity="0.16" stroke-width="1"/>
-    <path d="M44 362 C190 362, 305 162, 428 154" stroke="#767482" stroke-opacity="0.14" stroke-width="1"/>
-    <path d="M124 64 C230 64, 310 150, 428 151" stroke="#8C52FF" stroke-opacity="0.16" stroke-width="1"/>
-    <path d="M142 128 C240 128, 320 151, 428 152" stroke="#767482" stroke-opacity="0.2" stroke-width="1"/>
-    <path d="M132 242 C240 242, 320 156, 428 153" stroke="#496DFF" stroke-opacity="0.18" stroke-width="1"/>
-    <path d="M150 326 C255 326, 320 158, 428 154" stroke="#8C52FF" stroke-opacity="0.14" stroke-width="1"/>
-    <path d="M116 392 C240 392, 315 163, 428 155" stroke="#767482" stroke-opacity="0.12" stroke-width="1"/>
+      <circle cx="610" cy="30" r="2.1" fill="#767482" fill-opacity="0.5"/>
+      <circle cx="565" cy="75" r="2.4" fill="#8C52FF" fill-opacity="0.6"/>
+      <circle cx="600" cy="122" r="2.1" fill="#49D6EC" fill-opacity="0.5"/>
+      <circle cx="548" cy="168" r="1.9" fill="#767482" fill-opacity="0.45"/>
+      <circle cx="615" cy="208" r="2.4" fill="#4E7CFF" fill-opacity="0.55"/>
+      <circle cx="560" cy="255" r="2.1" fill="#8C52FF" fill-opacity="0.45"/>
+      <circle cx="605" cy="298" r="1.9" fill="#767482" fill-opacity="0.4"/>
+      <circle cx="525" cy="45" r="1.9" fill="#8C52FF" fill-opacity="0.4"/>
+      <circle cx="580" cy="340" r="1.9" fill="#49D6EC" fill-opacity="0.4"/>
+      <circle cx="500" cy="320" r="1.8" fill="#767482" fill-opacity="0.35"/>
 
-    <circle cx="30" cy="45" r="2" fill="#767482" fill-opacity="0.45"/>
-    <circle cx="72" cy="92" r="2.4" fill="#8C52FF" fill-opacity="0.55"/>
-    <circle cx="38" cy="148" r="2" fill="#496DFF" fill-opacity="0.45"/>
-    <circle cx="92" cy="196" r="1.8" fill="#767482" fill-opacity="0.4"/>
-    <circle cx="30" cy="252" r="2.4" fill="#8C52FF" fill-opacity="0.5"/>
-    <circle cx="80" cy="306" r="2" fill="#496DFF" fill-opacity="0.4"/>
-    <circle cx="44" cy="362" r="1.8" fill="#767482" fill-opacity="0.35"/>
-    <circle cx="124" cy="64" r="1.8" fill="#8C52FF" fill-opacity="0.4"/>
-    <circle cx="142" cy="128" r="2" fill="#767482" fill-opacity="0.42"/>
-    <circle cx="132" cy="242" r="2" fill="#496DFF" fill-opacity="0.42"/>
-    <circle cx="150" cy="326" r="1.8" fill="#8C52FF" fill-opacity="0.38"/>
-    <circle cx="116" cy="392" r="1.8" fill="#767482" fill-opacity="0.32"/>
+      <line x1="90" y1="180" x2="360" y2="180" stroke="url(#gradFlow)" stroke-width="1.6"/>
+      <circle cx="360" cy="180" r="4" fill="#8C52FF"/>
+      <circle cx="310" cy="180" r="4.6" fill="#0A0A14" stroke="#B097FF" stroke-width="1.6"/>
+      <circle cx="200" cy="180" r="4.6" fill="#0A0A14" stroke="#4E7CFF" stroke-width="1.6"/>
+      <circle cx="90" cy="180" r="5.4" fill="#0A0A14" stroke="#49D6EC" stroke-width="1.8"/>
+      <circle cx="90" cy="180" r="10.5" fill="none" stroke="#49D6EC" stroke-opacity="0.35" stroke-width="1"/>
+    </svg>
 
-    <line x1="428" y1="152.5" x2="532" y2="152.5" stroke="url(#lg1)" stroke-width="1.6"/>
-    <circle cx="448" cy="152.5" r="3.4" fill="#8C52FF"/>
-    <circle cx="490" cy="152.5" r="3.4" fill="#8C52FF"/>
-    <circle cx="490" cy="152.5" r="7.4" stroke="#8C52FF" stroke-opacity="0.4" stroke-width="1"/>
-    <circle cx="532" cy="152.5" r="3.4" fill="#8C52FF"/>
-  </svg>
+    <div class="cover-art-label" style="left:48.4%;">
+      <span class="k">01</span>
+      <span class="t">אפיון מדויק</span>
+    </div>
+    <div class="cover-art-label" style="left:31.25%;">
+      <span class="k">02</span>
+      <span class="t">מועמדים מסוננים</span>
+    </div>
+    <div class="cover-art-label" style="left:14.1%;">
+      <span class="k">03</span>
+      <span class="t">ליווי עד קליטה</span>
+    </div>
+  </div>
 
   <div class="sec cover-bottom">
-    <div class="furniture furniture--dark">
+    <div class="furniture">
       <span>מכללת איקום · תוכנית שותפות למעסיקים</span>
       <span class="en">2026</span>
     </div>
@@ -838,7 +732,8 @@ h2 .accent { color: var(--purple); }
 <!-- ============================================================
      עמוד 2 · מכללת איקום — עוגני אמון
      ============================================================ -->
-<section class="page">
+<section class="page page-2-bg">
+  <div class="tech-grid" style="background-image:radial-gradient(circle, rgba(255,255,255,0.05) 0.6px, transparent 0.6px); background-size:6mm 6mm;"></div>
 
   <div class="sec page-head">
     <div class="kicker">
@@ -851,9 +746,7 @@ h2 .accent { color: var(--purple); }
     </div>
   </div>
 
-  <div class="sp-sm"></div>
-
-  <div class="sec">
+  <div class="sec" style="margin-top:5mm;">
     <div class="trust-intro">
       <p>
         מכללת איקום מכשירה את דור ההייטק הבא באמצעות מסלולים מקצועיים, סגל מרצים מהתעשייה,
@@ -863,6 +756,22 @@ h2 .accent { color: var(--purple); }
         המועמדים המועברים לחברות אינם קורות חיים אקראיים ממאגר — אלה סטודנטים ובוגרים
         שאנחנו מכירים, הכשרנו וליווינו לאורך הדרך.
       </p>
+    </div>
+
+    <div class="review-card">
+      <div class="review-score">
+        <span class="num">4.8</span>
+        <span class="of5">/ 5</span>
+      </div>
+      <div class="review-mid">
+        <div class="review-stars">★★★★★</div>
+        <div class="review-count">יותר מ־300 ביקורות</div>
+      </div>
+      <div class="review-div"></div>
+      <div class="review-google">
+        <div class="g"><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></div>
+        <div class="cap">Google Reviews</div>
+      </div>
     </div>
 
     <div class="trust-list">
@@ -896,47 +805,22 @@ h2 .accent { color: var(--purple); }
       </div>
     </div>
 
-    <div class="tracks">
-      <span class="tracks-label">תחומי הלימוד</span>
-      <div class="tracks-row">
-        <span class="item">סייבר</span>
-        <span class="item">AI</span>
-        <span class="item">Full Stack</span>
-        <span class="item">DevOps</span>
-        <span class="item">QA ואוטומציה</span>
-        <span class="item">UX/UI</span>
-        <span class="item">שיווק דיגיטלי ודאטה</span>
-      </div>
+    <div class="tracks-label">תחומי הלימוד</div>
+    <div class="tracks-grid">
+      <div class="tile">סייבר</div>
+      <div class="tile">AI</div>
+      <div class="tile">Full Stack</div>
+      <div class="tile">DevOps</div>
+      <div class="tile">QA ואוטומציה</div>
+      <div class="tile">UX/UI</div>
+      <div class="tile">שיווק דיגיטלי ודאטה</div>
     </div>
   </div>
 
   <div class="grow"></div>
 
-  <div class="sec proof-band">
-    <div class="grow"></div>
-
-    <div class="proof-grid">
-      <div class="proof-item">
-        <div class="val">4.8 <span class="of">מתוך 5</span></div>
-        <div class="lbl">יותר מ־300 ביקורות בגוגל</div>
-      </div>
-      <div class="proof-item">
-        <div class="val">87%</div>
-        <div class="lbl">שיעור השמה</div>
-      </div>
-      <div class="proof-item">
-        <div class="val">2,500+</div>
-        <div class="lbl">חברות הייטק בקשרי השמה</div>
-      </div>
-      <div class="proof-item">
-        <div class="val">ISO 9001</div>
-        <div class="lbl">ורישיון השמה ממשרד העבודה</div>
-      </div>
-    </div>
-
-    <div class="grow"></div>
-
-    <div class="furniture furniture--dark">
+  <div class="sec" style="padding-bottom:var(--pt-bottom);">
+    <div class="furniture">
       <span>מכללת איקום · תוכנית שותפות למעסיקים</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
       <span class="folio">02 / 05</span>
@@ -948,7 +832,7 @@ h2 .accent { color: var(--purple); }
 <!-- ============================================================
      עמוד 3 · ההזדמנות העסקית
      ============================================================ -->
-<section class="page">
+<section class="page page-3-bg">
 
   <div class="sec page-head">
     <div class="kicker">
@@ -967,13 +851,10 @@ h2 .accent { color: var(--purple); }
     <div class="lead-copy">
       <p>
         חברות הייטק וסטארטאפים משקיעים זמן ותקציב בפרסום משרות, חברות השמה,
-        הד־האנטרים וסינון מועמדים
+        הד־האנטרים וסינון מועמדים.
       </p>
       <p>
         שותפות הגיוס של מכללת איקום יוצרת עבור החברה ערוץ גיוס ממוקד — ללא עמלת השמה.
-      </p>
-      <p>
-        אנחנו מאפיינים את הצורך, מאתרים ומסננים מועמדים ומעבירים לחברה רק את המתאימים
       </p>
       <p class="gate">
         רק מועמדים שעברו את הסינון הראשוני של מכללת איקום מועברים לתהליך הקבלה בחברה.
@@ -989,42 +870,80 @@ h2 .accent { color: var(--purple); }
     </aside>
   </div>
 
-  <div class="sp-md"></div>
+  <div class="sp-sm"></div>
 
   <div class="sec compare-band">
     <div class="compare-label">השוואת תהליך הגיוס</div>
 
-    <div class="grow"></div>
+    <div class="cmp2-grid">
+      <div class="cmp2-col">
+        <div class="cmp2-head"><span class="sq"></span><span class="t">גיוס רגיל</span></div>
 
-    <div class="cmp-row">
-      <div class="cmp-title">גיוס רגיל:</div>
-      <div class="flow">
-        <span class="step"><span class="dot"></span><span class="lbl">פרסום</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">מועמדויות</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">סינון</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">ראיונות</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">מועמדים מתאימים</span></span>
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-scope"/></svg></div>
+          <div class="cs-b"><div class="cs-t">פרסום משרה</div><p class="cs-d">פרסום התפקיד בלוחות דרושים וברשתות חברתיות</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-source"/></svg></div>
+          <div class="cs-b"><div class="cs-t">קבלת מועמדויות</div><p class="cs-d">איסוף קורות חיים מגורמים שונים</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-filter"/></svg></div>
+          <div class="cs-b"><div class="cs-t">סינון ידני</div><p class="cs-d">מיון וקריאת קורות חיים אחד־אחד</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-prep"/></svg></div>
+          <div class="cs-b"><div class="cs-t">ראיונות ראשוניים</div><p class="cs-d">שיחות וראיונות מקדימים עם מועמדים</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-done"/></svg></div>
+          <div class="cs-b"><div class="cs-t">איתור מועמד מתאים</div><p class="cs-d">בחירת המועמד המתאים מתוך התהליך</p></div>
+        </div>
+      </div>
+
+      <div class="cmp2-div"></div>
+
+      <div class="cmp2-col cmp2-col--ecom">
+        <div class="cmp2-head"><span class="sq"></span><span class="t">בשיתוף עם איקום</span></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-scope"/></svg></div>
+          <div class="cs-b"><div class="cs-t">אפיון התפקיד</div><p class="cs-d">הגדרת הדרישות והפרופיל המבוקש יחד עם החברה</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-source"/></svg></div>
+          <div class="cs-b"><div class="cs-t">איתור מתוך קהילת הבוגרים</div><p class="cs-d">חיפוש ממוקד במאגר הבוגרים של איקום</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-filter"/></svg></div>
+          <div class="cs-b"><div class="cs-t">מיון ראשוני</div><p class="cs-d">סינון מקצועי ואישי לפני העברה לחברה</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-prep"/></svg></div>
+          <div class="cs-b"><div class="cs-t">הכנת המועמד</div><p class="cs-d">הכנה לקורות חיים, ראיונות והתאמה לתפקיד</p></div>
+        </div>
+        <div class="cs-arrow"><svg><use href="#ic-arrow-down"/></svg></div>
+
+        <div class="cs">
+          <div class="cs-ic"><svg class="ic"><use href="#ic-done"/></svg></div>
+          <div class="cs-b"><div class="cs-t">העברה לתהליך הקבלה</div><p class="cs-d">המועמד עובר לריאיון ישירות מול החברה</p></div>
+        </div>
       </div>
     </div>
-
-    <div class="cmp-sep"></div>
-
-    <div class="cmp-row cmp-row--ecom">
-      <div class="cmp-title">בשיתוף עם איקום:</div>
-      <div class="flow flow--ecom">
-        <span class="step"><span class="dot"></span><span class="lbl">אפיון</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">מועמדים מסוננים</span></span>
-        <span class="conn"><span class="line"></span><span class="arr"></span></span>
-        <span class="step"><span class="dot"></span><span class="lbl">תהליך קבלה</span></span>
-      </div>
-    </div>
-
-    <div class="grow"></div>
 
     <div class="furniture">
       <span>שותפות הגיוס · מכללת איקום</span>
@@ -1038,7 +957,10 @@ h2 .accent { color: var(--purple); }
 <!-- ============================================================
      עמוד 4 · מודל השותפות
      ============================================================ -->
-<section class="page">
+<section class="page page-4-bg">
+  <div class="page-4-lines"></div>
+  <div class="corner-frame corner-frame--tl"></div>
+  <div class="corner-frame corner-frame--br"></div>
 
   <div class="sec page-head">
     <div class="kicker">
@@ -1051,9 +973,7 @@ h2 .accent { color: var(--purple); }
     </div>
   </div>
 
-  <div class="sp-sm"></div>
-
-  <div class="sec">
+  <div class="sec commit-wrap">
     <div class="commit-heads">
       <div class="commit-head commit-head--ecom">
         <span class="sq"></span>
@@ -1092,24 +1012,8 @@ h2 .accent { color: var(--purple); }
     </div>
   </div>
 
-  <div class="sp-md"></div>
-
-  <div class="sec principle-band">
-    <div class="principle-label">עקרונות השותפות</div>
-
-    <div class="grow"></div>
-
-    <div class="principle">
-      השותפות מוגדרת מראש לפי <span class="accent">תפקידים</span>, <span class="accent">מספר גיוסים</span>,
-      <span class="accent">תקופת זמן</span> ותנאי <span class="accent">בלעדיות</span>
-    </div>
-    <p class="principle-note">
-      קליטת המועמדים כפופה לעמידה בדרישות המקצועיות ובתנאי הסף שסוכמו בין הצדדים
-    </p>
-
-    <div class="grow"></div>
-
-    <div class="furniture furniture--dark">
+  <div class="sec" style="padding-bottom:var(--pt-bottom);">
+    <div class="furniture">
       <span>שותפות הגיוס · מכללת איקום</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
       <span class="folio">04 / 05</span>
@@ -1121,7 +1025,7 @@ h2 .accent { color: var(--purple); }
 <!-- ============================================================
      עמוד 5 · תהליך העבודה ויצירת קשר
      ============================================================ -->
-<section class="page page--dark closing">
+<section class="page closing">
 
   <div class="sec page-head">
     <div class="kicker">
@@ -1130,37 +1034,37 @@ h2 .accent { color: var(--purple); }
       <span>תהליך העבודה</span>
     </div>
     <div class="headline-block">
-      <h2 style="font-size:22.5pt;">תהליך גיוס מובנה מתחיל <span class="accent">בהגדרה מדויקת</span></h2>
+      <h2 style="font-size:24pt;">תהליך גיוס מובנה מתחיל <span class="accent">בהגדרה מדויקת</span></h2>
     </div>
   </div>
 
   <div class="sec stages">
     <div class="stage">
-      <div class="stage-track"><span class="node"></span><span class="line"></span></div>
+      <div class="stage-ic"><svg class="ic ic--lg"><use href="#ic-scope"/></svg></div>
       <div class="num">01</div>
       <div class="name">אפיון</div>
       <p class="desc">תפקידים, דרישות ויעדי גיוס</p>
     </div>
     <div class="stage">
-      <div class="stage-track"><span class="node"></span><span class="line"></span></div>
+      <div class="stage-ic"><svg class="ic ic--lg"><use href="#ic-source"/></svg></div>
       <div class="num">02</div>
       <div class="name">איתור</div>
       <p class="desc">בחירת בוגרים רלוונטיים</p>
     </div>
     <div class="stage">
-      <div class="stage-track"><span class="node"></span><span class="line"></span></div>
+      <div class="stage-ic"><svg class="ic ic--lg"><use href="#ic-filter"/></svg></div>
       <div class="num">03</div>
       <div class="name">סינון</div>
       <p class="desc">אפיון מקצועי ואישי</p>
     </div>
     <div class="stage">
-      <div class="stage-track"><span class="node"></span><span class="line"></span></div>
+      <div class="stage-ic"><svg class="ic ic--lg"><use href="#ic-prep"/></svg></div>
       <div class="num">04</div>
       <div class="name">הכנה</div>
       <p class="desc">קורות חיים, LinkedIn וסימולציות</p>
     </div>
     <div class="stage">
-      <div class="stage-track"><span class="node"></span><span class="line"></span></div>
+      <div class="stage-ic"><svg class="ic ic--lg"><use href="#ic-done"/></svg></div>
       <div class="num">05</div>
       <div class="name">קליטה</div>
       <p class="desc">קידום המועמדים והשלמת היעד</p>
@@ -1168,11 +1072,13 @@ h2 .accent { color: var(--purple); }
   </div>
 
   <div class="sec">
-    <div class="benefits-label">לאורך התהליך</div>
-    <p class="gate-dark" style="margin-top:4.6mm;">
-      לאורך התהליך החברה מקבלת איש קשר אחד, מועמדים שעברו מיון ראשוני
-      ועדכונים שוטפים עד להשלמת יעד הקליטה.
-    </p>
+    <div class="gate-feature">
+      <div class="gate-feature-label">לאורך התהליך</div>
+      <p>
+        לאורך התהליך החברה מקבלת איש קשר אחד, מועמדים שעברו מיון ראשוני
+        ועדכונים שוטפים עד להשלמת יעד הקליטה.
+      </p>
+    </div>
   </div>
 
   <div class="grow"></div>
@@ -1187,26 +1093,19 @@ h2 .accent { color: var(--purple); }
       בואו נגדיר יחד את התפקידים, יעד הקליטה ותקופת השותפות.
     </p>
 
-    <div class="contact-block">
-      <div class="contact-label">יצירת קשר</div>
-      <div class="contact-fields">
-        <div class="cf">
-          <div class="cf-k">איש קשר</div>
-          <div class="cf-name">רונית איש שלום</div>
-          <div class="cf-role">מנהלת מחלקת ההשמה</div>
-        </div>
-        <div class="cf cf--auto">
-          <div class="cf-k">טלפון</div>
-          <div class="cf-v" style="direction:ltr; text-align:right;">051-5322892</div>
-        </div>
-        <div class="cf cf--auto">
-          <div class="cf-k">דוא״ל</div>
-          <div class="cf-v" style="direction:ltr; text-align:right;">jobs@ecomschool.co.il</div>
-        </div>
+    <div class="contact-card">
+      <div class="cc-id">
+        <div class="cc-name">רונית איש שלום</div>
+        <div class="cc-role">מנהלת מחלקת ההשמה</div>
+      </div>
+      <div class="cc-sep"></div>
+      <div class="cc-reach">
+        <div class="cc-row"><svg class="ic"><use href="#ic-phone"/></svg><span>051-5322892</span></div>
+        <div class="cc-row"><svg class="ic"><use href="#ic-mail"/></svg><span>jobs@ecomschool.co.il</span></div>
       </div>
     </div>
 
-    <div class="furniture furniture--dark" style="margin-top:8.5mm;">
+    <div class="furniture" style="margin-top:8mm;">
       <span>מכללת איקום · שותפות גיוס למעסיקים</span>
       <span class="en">ECOM TALENT PARTNERSHIP</span>
       <span class="folio">05 / 05</span>
