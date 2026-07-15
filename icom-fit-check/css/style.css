@@ -202,7 +202,15 @@ img, svg { display: block; max-width: 100%; }
   padding: calc(var(--topbar-h) + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
   opacity: 0;
   visibility: hidden;
-  transform: translateY(26px) scale(0.985);
+  /* translateZ(0.01px) ולא 0 בדיוק: בספארי-מובייל טרנספורם שמגיע בדיוק
+     לזהות (translateY(0) scale(1)) לפעמים גורם ל־WebKit "להוריד" את שכבת
+     הקומפוזיציה בסוף המעבר, מה שמשאיר את תוכן המסך בלתי-מצויר (נעלם)
+     עד לגירוי חיצוני (גלילה/מגע) שמכריח ריפיינט. ערך שאינו בדיוק אפס
+     שומר על השכבה מורכבת (composited) לאורך כל הזמן ומונע את התקלה. */
+  transform: translateY(26px) scale(0.985) translateZ(0.01px);
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   transition:
     opacity 0.55s var(--ease-out),
     transform 0.55s var(--ease-out),
@@ -213,7 +221,7 @@ img, svg { display: block; max-width: 100%; }
 .screen--active {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(1) translateZ(0.01px);
   transition:
     opacity 0.6s var(--ease-out) 0.12s,
     transform 0.6s var(--ease-out) 0.12s,

@@ -153,10 +153,21 @@
     });
   }
 
+  /* גירוי ריפיינט הגנתי: בספארי-מובייל לפעמים המסך נשאר "לא מצויר" בפועל
+     בסוף מעבר ה־CSS (התוכן קיים ב־DOM אך לא נראה) עד לגירוי חיצוני. נוגעים
+     בטרנספורם בעדינות (בלי לשנות מראה) כדי להכריח ריצוד/ריפיינט אמיתי. */
+  function forceRepaint(el) {
+    if (!el) return;
+    el.style.transform = 'translateZ(0.02px)';
+    requestAnimationFrame(() => { el.style.transform = ''; });
+  }
+
   function goTo(id) {
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('screen--active'));
-    $('#' + id).classList.add('screen--active');
+    const el = $('#' + id);
+    el.classList.add('screen--active');
     scrollToTop();
+    setTimeout(() => forceRepaint(el), 750);
   }
 
   /* ============================================================
