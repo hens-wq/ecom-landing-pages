@@ -153,21 +153,26 @@
     });
   }
 
-  /* גירוי ריפיינט הגנתי: בספארי-מובייל לפעמים המסך נשאר "לא מצויר" בפועל
-     בסוף מעבר ה־CSS (התוכן קיים ב־DOM אך לא נראה) עד לגירוי חיצוני. נוגעים
-     בטרנספורם בעדינות (בלי לשנות מראה) כדי להכריח ריצוד/ריפיינט אמיתי. */
-  function forceRepaint(el) {
-    if (!el) return;
-    el.style.transform = 'translateZ(0.02px)';
-    requestAnimationFrame(() => { el.style.transform = ''; });
+  /* מסירים לגמרי את ה-transform לאחר שמעבר הכניסה מסתיים, במקום להשאיר
+     ערך זהות (translateY(0) scale(1)). ב-Safari-מובייל טרנספורם שנשאר על
+     האלמנט ממשיך לקדם אותו לשכבת GPU נפרדת — ולפעמים, כמה שניות אחרי
+     שהמעבר נגמר, ספארי "מאבד" את השכבה הזו והתוכן נעלם עד לריפיינט חיצוני
+     (מגע/גלילה). מסך מיושב בלי transform בכלל אינו תלוי בשכבה נפרדת. */
+  function settleScreen(el) {
+    setTimeout(() => {
+      if (el.classList.contains('screen--active')) el.style.transform = 'none';
+    }, 750);
   }
 
   function goTo(id) {
-    document.querySelectorAll('.screen').forEach((s) => s.classList.remove('screen--active'));
+    document.querySelectorAll('.screen').forEach((s) => {
+      s.classList.remove('screen--active');
+      s.style.transform = ''; // מבטלים override קודם כדי שאנימציית היציאה תפעל שוב מהמצב הרגיל
+    });
     const el = $('#' + id);
     el.classList.add('screen--active');
     scrollToTop();
-    setTimeout(() => forceRepaint(el), 750);
+    settleScreen(el);
   }
 
   /* ============================================================
@@ -1183,6 +1188,7 @@
     initKeyboard();
     initParticles();
     $('#ring-fill').style.strokeDashoffset = RING_CIRC;
+    settleScreen($('#screen-intro')); // מסך הפתיחה מתחיל פעיל מה-HTML, לא דרך goTo()
     A.track(A.events.PAGE_VIEW);
   }
 
