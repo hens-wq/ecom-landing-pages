@@ -229,6 +229,17 @@ img, svg { display: block; max-width: 100%; }
   pointer-events: auto;
 }
 
+/* כל המסכים חולקים את אותו תא Grid, ולכן מסך מוסתר (visibility: hidden)
+   עדיין תורם את גובהו לדף — התוצאה: גובה הדף תמיד כגובה המסך הגבוה ביותר
+   באתר, ובמסכים קצרים (כמו מסך הציון) נוצר "שטח רפאים" ריק שאפשר לגלול
+   אליו. הגבלת מסך לא-פעיל לגובה החלון מבטלת את השטח הזה: הדף מסתיים
+   בדיוק בסוף התוכן של המסך הפעיל — פלטה אחת, בלי גלילה מיותרת. */
+.screen:not(.screen--active) {
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
 .screen-inner {
   width: 100%;
   max-width: 560px;
@@ -1040,14 +1051,22 @@ img, svg { display: block; max-width: 100%; }
   .game-title { margin-top: 14px; }
   .intro-steps { margin-top: 20px; }
   #btn-start { margin-top: 24px; }
-  .score-ring-wrap { width: min(170px, 46vw); margin-top: 14px; }
-  .result-check { width: 46px; height: 46px; }
+  /* מסך התוצאה נשאר "פלטה אחת" גם במסכים נמוכים — מהדקים רווחים */
+  .score-ring-wrap { width: min(150px, 42vw); margin-top: 10px; }
+  .result-check { width: 42px; height: 42px; }
+  .result-title { margin-top: 10px; font-size: clamp(1.2rem, 5vw, 1.5rem); }
+  .result-course { margin-top: 10px; font-size: 1.3rem; }
+  .result-line { margin-top: 8px; font-size: 0.88rem; line-height: 1.5; }
+  .result-disclaimer { margin-top: 8px; }
+  #btn-advisor { margin-top: 14px; }
 }
 
 @media (max-height: 560px) {
   .game-stage { min-height: 170px; }
   .intro-steps { display: none; }
   .hero-visual { display: none; }
+  .result-check { display: none; }
+  .result-disclaimer { display: none; }
 }
 
 /* ---------- טאבלט ודסקטופ ---------- */
