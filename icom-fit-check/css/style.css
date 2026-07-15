@@ -240,6 +240,29 @@ img, svg { display: block; max-width: 100%; }
   overflow: hidden;
 }
 
+/* נעילת גלילה מוחלטת במסך התוצאה ("פלטה אחת"): כל עוד המסך מוצג, הדף
+   כולו נעול לגובה החלון — אין לאן לגלול ואין ספייס ריק. שרשרת גבהים
+   באחוזים (ולא יחידות vh/dvh) כדי שהגובה יתאים תמיד לשטח הנראה בפועל,
+   בכל דפדפן מובייל — כולל כרום/ספארי ישנים שבהם 100vh גבוה מהחלון כשסרגל
+   הכתובת מוצג. */
+html.scroll-lock,
+html.scroll-lock body {
+  height: 100%;
+  overflow: hidden;
+}
+html.scroll-lock #app {
+  height: 100%;
+  min-height: 0;
+}
+html.scroll-lock #screen-result {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* ריפוד מצומצם — משאיר לתוכן את מירב הגובה בתוך המסך הנעול */
+  padding-top: calc(44px + env(safe-area-inset-top));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
 .screen-inner {
   width: 100%;
   max-width: 560px;
@@ -963,7 +986,8 @@ img, svg { display: block; max-width: 100%; }
 
 .score-ring-wrap {
   position: relative;
-  width: min(210px, 52vw);
+  /* רכיב ה־vh דואג שהטבעת תתכווץ במסכים נמוכים ותשאיר מקום לכל השאר */
+  width: min(210px, 52vw, 27vh);
   margin-top: 22px;
   animation: fade-up 0.7s var(--ease-out) 0.45s both;
 }
@@ -1052,7 +1076,7 @@ img, svg { display: block; max-width: 100%; }
   .intro-steps { margin-top: 20px; }
   #btn-start { margin-top: 24px; }
   /* מסך התוצאה נשאר "פלטה אחת" גם במסכים נמוכים — מהדקים רווחים */
-  .score-ring-wrap { width: min(150px, 42vw); margin-top: 10px; }
+  .score-ring-wrap { width: min(150px, 42vw, 24vh); margin-top: 10px; }
   .result-check { width: 42px; height: 42px; }
   .result-title { margin-top: 10px; font-size: clamp(1.2rem, 5vw, 1.5rem); }
   .result-course { margin-top: 10px; font-size: 1.3rem; }

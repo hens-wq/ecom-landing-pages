@@ -171,6 +171,8 @@
     });
     const el = $('#' + id);
     el.classList.add('screen--active');
+    // מסך התוצאה הוא "פלטה אחת": נועלים את גלילת הדף כולו כל עוד הוא מוצג
+    document.documentElement.classList.toggle('scroll-lock', id === 'screen-result');
     scrollToTop();
     settleScreen(el);
   }
