@@ -141,10 +141,22 @@
      ניהול מסכים
      ============================================================ */
 
+  /* גלילה לראש העמוד שעמידה בפני "קפיצת" סרגל הכתובת בספארי-מובייל:
+     קריאה בודדת ל־scrollTo באותו tick מתבצעת לפני שהדפדפן סיים לכווץ/להרחיב
+     את הסרגל, מה שמשאיר את התוכן החדש מוסתר מתחת לקצה העליון עד לגלילה
+     ידנית. חוזרים על הקריאה גם ב־rAF הבא וגם אחרי השהיה קצרה. */
+  function scrollToTop() {
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      setTimeout(() => window.scrollTo(0, 0), 120);
+    });
+  }
+
   function goTo(id) {
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('screen--active'));
     $('#' + id).classList.add('screen--active');
-    window.scrollTo(0, 0);
+    scrollToTop();
   }
 
   /* ============================================================
@@ -193,7 +205,6 @@
     $('#score-label').textContent = C.texts.resultScoreLabel;
     $('#result-disclaimer').textContent = C.texts.resultDisclaimer;
     $('#btn-advisor').textContent = C.texts.resultAdvisorCta;
-    $('#btn-again').textContent = C.texts.resultCta;
 
     $('#thanks-title').textContent = C.thanks.title;
     $('#thanks-text').textContent = C.thanks.text;
@@ -452,13 +463,6 @@
     vibrate(12);
     A.track(A.events.TRACK_SELECTED, { track: track.id, track_name: track.name });
     setTimeout(() => startGame(track), C.timing.autoAdvanceAfterPickMs);
-  }
-
-  function resetTrackCards() {
-    document.querySelectorAll('.track-card').forEach((el) => {
-      el.classList.remove('selected', 'dimmed');
-      el.disabled = false;
-    });
   }
 
   /* ============================================================
@@ -988,14 +992,6 @@
       retryGame();
     });
 
-    $('#btn-again').addEventListener('click', () => {
-      Sound.click();
-      resetTrackCards();
-      $('#score-value').textContent = '0';
-      $('#ring-fill').style.strokeDashoffset = RING_CIRC;
-      goTo('screen-tracks');
-    });
-
     $('#btn-advisor').addEventListener('click', () => {
       Sound.click();
       A.track(A.events.ADVISOR_CLICK, { track: session ? session.track : null });
@@ -1044,7 +1040,7 @@
       prog.hidden = true;
     }
     $('#screen-advisor').scrollTop = 0;
-    window.scrollTo(0, 0);
+    scrollToTop();
   }
 
   function buildAdvisor() {
@@ -1085,10 +1081,8 @@
       card.appendChild(h('h3', 'adv-q-title', qDef.q));
       if (qDef.sub) card.appendChild(h('p', 'adv-q-sub', qDef.sub));
 
-      const isCourses = qDef.options === 'tracks';
-      const opts = h('div', 'adv-opts' + (isCourses ? ' adv-opts--grid' : ''));
-      const options = isCourses ? C.tracks.map((t) => t.name) : qDef.options;
-      options.forEach((opt) => {
+      const opts = h('div', 'adv-opts');
+      qDef.options.forEach((opt) => {
         const btn = h('button', 'adv-opt', opt);
         btn.type = 'button';
         btn.addEventListener('click', () => {
@@ -1109,9 +1103,9 @@
       card.appendChild(opts);
       step.appendChild(card);
 
+      const amb = h('div', 'adv-step-figure');
       const art = C.QUESTION_ART;
       if (art && art.ready && art.images && art.images.length) {
-        const amb = h('div', 'adv-step-figure');
         const img = new Image();
         img.alt = '';
         img.className = 'stage-figure-img';
@@ -1119,11 +1113,13 @@
         img.onload = () => {
           amb.appendChild(img);
           // הוספת התמונה יכולה להזיז את גובה השלב אחרי שכבר גללנו לראש המסך
-          if (step.classList.contains('active')) window.scrollTo(0, 0);
+          if (step.classList.contains('active')) scrollToTop();
         };
         img.src = art.images[qi % art.images.length];
-        step.appendChild(amb);
+      } else {
+        amb.innerHTML = '<span class="stage-ambient-ring"></span>';
       }
+      step.appendChild(amb);
 
       wrap.appendChild(step);
     });

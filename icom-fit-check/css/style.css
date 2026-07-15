@@ -1593,10 +1593,6 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .adv-opts { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 24px; }
-.adv-opts--grid { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; margin-top: 24px; }
-@media (min-width: 640px) {
-  .adv-opts--grid { grid-template-columns: repeat(2, 1fr); }
-}
 
 .adv-opt {
   padding: 14px 16px;
@@ -1650,9 +1646,8 @@ img, svg { display: block; max-width: 100%; }
   max-width: 36ch;
 }
 
-/* כפתורי מסך התוצאה */
+/* כפתור מסך התוצאה */
 #btn-advisor { margin-top: 24px; animation: fade-up 0.6s var(--ease-out) 0.9s both; }
-#btn-again.btn--ghost { animation: fade-up 0.6s var(--ease-out) 1s both; }
 
 /* כפתור וואטסאפ — מוצג במקום כפתור היועץ בקורס QA */
 .btn--whatsapp {
