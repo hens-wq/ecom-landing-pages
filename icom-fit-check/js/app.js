@@ -1066,6 +1066,18 @@
 
     /* --- שלב פתיחה --- */
     const intro = h('div', 'adv-step adv-step--intro');
+
+    // לוגו מכללת Ecom — שחזור וקטורי של הלוגו הרשמי (שלושה משולשים בצבעי המותג)
+    intro.appendChild(h('div', 'adv-logo', `
+      <svg class="adv-logo-mark" viewBox="0 0 190 118" aria-hidden="true" fill="none" stroke-linejoin="round">
+        <polygon points="8,52 102,6 102,98"  stroke="#34D1C3" stroke-width="9" transform="rotate(-8 55 52)"/>
+        <polygon points="8,52 102,6 102,98"  stroke="#85ED72" stroke-width="9" transform="translate(32 8) rotate(-8 55 52)"/>
+        <polygon points="8,52 102,6 102,98"  stroke="#6836FF" stroke-width="9" transform="translate(64 16) rotate(-8 55 52)"/>
+      </svg>
+      <span class="adv-logo-name">ECOM SCHOOL</span>
+      <span class="adv-logo-sub">Urban Online Academy &amp; Network</span>
+    `));
+
     if (C.advisor.art && C.advisor.art.ready) {
       const fig = h('div', 'result-figure advisor-art');
       const img = new Image();

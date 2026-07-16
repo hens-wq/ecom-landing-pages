@@ -1530,8 +1530,37 @@ html.scroll-lock #screen-result {
   pointer-events: auto;
 }
 
-/* שלב 1: פתיחה — קצת יותר ריווח למעלה כדי לפנות מקום לחלק העליון (ויזואל עתידי) */
-.adv-step--intro { padding-top: 6vh; }
+/* שלב 1: פתיחה */
+.adv-step--intro { padding-top: 3vh; }
+
+/* לוגו מכללת Ecom בראש עמוד היועץ */
+.adv-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  direction: ltr;
+  margin-bottom: 22px;
+  animation: fade-up 0.6s var(--ease-out) 0.1s both;
+}
+.adv-logo-mark {
+  width: min(118px, 30vw);
+  height: auto;
+  filter: drop-shadow(0 0 18px rgba(52,209,195,0.25));
+}
+.adv-logo-name {
+  margin-top: 10px;
+  font-size: 1.32rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+.adv-logo-sub {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
 
 .adv-welcome-title {
   font-size: clamp(1.05rem, 5.4vw, 1.7rem);
