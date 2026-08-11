@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import { getCourseOrNotFound } from "@/lib/get-course-or-404";
 import { KnowledgeReader } from "@/components/courses/KnowledgeReader";
+import { topicMdxComponents } from "@/components/courses/mdx";
 
 interface RouteParams {
   slug: string;
@@ -40,7 +41,7 @@ export default async function PlaybookTopicPage({
     <KnowledgeReader
       course={course}
       topic={topic}
-      renderedBody={<MDXRemote source={topic.content} />}
+      renderedBody={<MDXRemote source={topic.content} components={topicMdxComponents} />}
     />
   );
 }
