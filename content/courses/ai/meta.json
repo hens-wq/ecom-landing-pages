@@ -1,0 +1,9 @@
+{
+  "slug": "ai",
+  "title": "AI",
+  "displayName": "קורס AI",
+  "subtitle": "בינה מלאכותית ולמידת מכונה",
+  "shortDescription": "איך בונים מערכות שלומדות בעצמן, ולמה כל תעשייה רודפת אחרי זה.",
+  "icon": "BrainCircuit",
+  "order": 2
+}

@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  /* ECOM global brand colors */
+  --brand-purple: #8c52ff;
+  --brand-teal: #34d1c3;
+  --brand-green: #85ed72;
+
+  /* Default course theme (fallback, overridden per-course by CourseThemeProvider) */
+  --course-primary: var(--brand-purple);
+  --course-secondary: #5b21b6;
+  --course-soft: #f1e9fe;
+  --course-border: #d9c4fb;
+  --course-glow: rgba(140, 82, 255, 0.25);
+  --course-text-accent: #6425c7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-heebo);
+
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-green: var(--brand-green);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Scrollbar polish */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

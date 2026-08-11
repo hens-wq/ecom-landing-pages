@@ -1,0 +1,10 @@
+{
+  "primary": "#2952E3",
+  "secondary": "#1E3A8A",
+  "soft": "#EAF0FF",
+  "border": "#C7D6FF",
+  "glow": "rgba(41, 82, 227, 0.28)",
+  "textAccent": "#1D3FBF",
+  "gradientFrom": "#2952E3",
+  "gradientTo": "#16215C"
+}

@@ -1,0 +1,193 @@
+import { COURSE_SLUGS } from "@/lib/courses";
+import type {
+  CourseProgress,
+  CourseProgressState,
+  CourseSlug,
+  OverallTrainingProgress,
+  QuizAttempt,
+} from "@/lib/types";
+
+/**
+ * Progress abstraction. Nothing outside this file touches localStorage.
+ * Swapping to a real backend later means writing a DatabaseProgressRepository
+ * that implements the same interface - no UI changes required.
+ */
+export interface ProgressRepository {
+  getOverallProgress(userId: string): Promise<OverallTrainingProgress>;
+  getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress>;
+  markAboutEcomComplete(userId: string): Promise<void>;
+  markTopicComplete(userId: string, courseSlug: CourseSlug, topicId: string): Promise<void>;
+  markVideoWatched(userId: string, courseSlug: CourseSlug): Promise<void>;
+  submitQuizAttempt(
+    userId: string,
+    courseSlug: CourseSlug,
+    answers: Record<string, string>,
+    score: number,
+    passScore: number
+  ): Promise<CourseProgress>;
+  resetProgress(userId: string): Promise<void>;
+  seedProgress(userId: string, state: RawProgressState): Promise<void>;
+}
+
+interface RawProgressState {
+  aboutEcomCompleted: boolean;
+  courses: Record<CourseSlug, CourseProgressState>;
+}
+
+const TOPICS_PER_COURSE = 3;
+// Units contributing to overall completion: "who is ECOM" + each of the 5 courses.
+const OVERALL_UNITS = 1 + COURSE_SLUGS.length;
+
+export function defaultCourseState(): CourseProgressState {
+  return {
+    topicsCompleted: [],
+    videoWatched: false,
+    attempts: [],
+    bestScore: 0,
+    quizPassed: false,
+    completed: false,
+  };
+}
+
+export function defaultOverallState(): RawProgressState {
+  return {
+    aboutEcomCompleted: false,
+    courses: Object.fromEntries(
+      COURSE_SLUGS.map((slug) => [slug, defaultCourseState()])
+    ) as Record<CourseSlug, CourseProgressState>,
+  };
+}
+
+function computeCourseProgress(slug: CourseSlug, state: CourseProgressState): CourseProgress {
+  const completedUnits =
+    Math.min(state.topicsCompleted.length, TOPICS_PER_COURSE) +
+    (state.videoWatched ? 1 : 0) +
+    (state.quizPassed ? 1 : 0);
+  const totalUnits = TOPICS_PER_COURSE + 2; // topics + video + quiz
+  return {
+    slug,
+    ...state,
+    percent: Math.round((completedUnits / totalUnits) * 100),
+  };
+}
+
+function computeOverallProgress(state: RawProgressState): OverallTrainingProgress {
+  const completedCourses = COURSE_SLUGS.filter((slug) => state.courses[slug]?.completed).length;
+  const completedUnits = (state.aboutEcomCompleted ? 1 : 0) + completedCourses;
+  const percent = Math.round((completedUnits / OVERALL_UNITS) * 100);
+
+  let currentStepId = "about-ecom";
+  if (state.aboutEcomCompleted) {
+    const nextCourse = COURSE_SLUGS.find((slug) => !state.courses[slug]?.completed);
+    currentStepId = nextCourse ? "courses" : "customer-profile";
+  }
+
+  return { ...state, percent, currentStepId };
+}
+
+class LocalProgressRepository implements ProgressRepository {
+  private key(userId: string) {
+    return `ecom-lms:progress:${userId}`;
+  }
+
+  private read(userId: string): RawProgressState {
+    if (typeof window === "undefined") return defaultOverallState();
+    const raw = window.localStorage.getItem(this.key(userId));
+    if (!raw) return defaultOverallState();
+    try {
+      const parsed = JSON.parse(raw) as RawProgressState;
+      // Merge with defaults in case new courses were added since this was saved.
+      return {
+        aboutEcomCompleted: parsed.aboutEcomCompleted ?? false,
+        courses: {
+          ...defaultOverallState().courses,
+          ...parsed.courses,
+        },
+      };
+    } catch {
+      return defaultOverallState();
+    }
+  }
+
+  private write(userId: string, state: RawProgressState) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(this.key(userId), JSON.stringify(state));
+  }
+
+  async getOverallProgress(userId: string): Promise<OverallTrainingProgress> {
+    return computeOverallProgress(this.read(userId));
+  }
+
+  async getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress> {
+    const state = this.read(userId);
+    return computeCourseProgress(courseSlug, state.courses[courseSlug] ?? defaultCourseState());
+  }
+
+  async markAboutEcomComplete(userId: string): Promise<void> {
+    const state = this.read(userId);
+    state.aboutEcomCompleted = true;
+    this.write(userId, state);
+  }
+
+  async markTopicComplete(userId: string, courseSlug: CourseSlug, topicId: string): Promise<void> {
+    const state = this.read(userId);
+    const course = state.courses[courseSlug] ?? defaultCourseState();
+    if (!course.topicsCompleted.includes(topicId)) {
+      course.topicsCompleted = [...course.topicsCompleted, topicId];
+    }
+    state.courses[courseSlug] = course;
+    this.write(userId, state);
+  }
+
+  async markVideoWatched(userId: string, courseSlug: CourseSlug): Promise<void> {
+    const state = this.read(userId);
+    const course = state.courses[courseSlug] ?? defaultCourseState();
+    course.videoWatched = true;
+    state.courses[courseSlug] = course;
+    this.write(userId, state);
+  }
+
+  async submitQuizAttempt(
+    userId: string,
+    courseSlug: CourseSlug,
+    answers: Record<string, string>,
+    score: number,
+    passScore: number
+  ): Promise<CourseProgress> {
+    const state = this.read(userId);
+    const course = state.courses[courseSlug] ?? defaultCourseState();
+    const passed = score >= passScore;
+
+    const attempt: QuizAttempt = {
+      id: crypto.randomUUID(),
+      courseSlug,
+      answers,
+      score,
+      passed,
+      completedAt: new Date().toISOString(),
+    };
+
+    course.attempts = [...course.attempts, attempt];
+    course.bestScore = Math.max(course.bestScore, score);
+    course.quizPassed = course.quizPassed || passed;
+    if (course.quizPassed && !course.completed) {
+      course.completed = true;
+      course.completedAt = new Date().toISOString();
+    }
+
+    state.courses[courseSlug] = course;
+    this.write(userId, state);
+    return computeCourseProgress(courseSlug, course);
+  }
+
+  async resetProgress(userId: string): Promise<void> {
+    this.write(userId, defaultOverallState());
+  }
+
+  async seedProgress(userId: string, seedState: RawProgressState): Promise<void> {
+    this.write(userId, seedState);
+  }
+}
+
+export const progressRepository: ProgressRepository = new LocalProgressRepository();
+export type { RawProgressState };

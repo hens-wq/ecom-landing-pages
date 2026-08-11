@@ -1,0 +1,13 @@
+{
+  "greetingSubtitle": "ברוכים הבאים למערכת ההכשרה של איקום",
+  "heroKicker": "מסע ההכשרה שלך",
+  "continueCtaLabel": "המשך מאיפה שהפסקת",
+  "startCtaLabel": "מתחילים את ההכשרה",
+  "emptyActivityMessage": "עדיין לא נרשמה פעילות. בואו נתחיל!",
+  "sectionTitles": {
+    "progress": "ההתקדמות שלי",
+    "nextTask": "המשימה הבאה",
+    "courses": "הקורסים שלי",
+    "activity": "פעילות אחרונה"
+  }
+}

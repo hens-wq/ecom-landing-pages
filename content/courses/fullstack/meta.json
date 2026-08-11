@@ -1,0 +1,9 @@
+{
+  "slug": "fullstack",
+  "title": "Full Stack",
+  "displayName": "קורס Full Stack",
+  "subtitle": "פיתוח תוכנה ואתרים מקצה לקצה",
+  "shortDescription": "איך בונים אתר או אפליקציה שלמים - מהצד שרואים ועד הצד שלא רואים.",
+  "icon": "Code2",
+  "order": 3
+}

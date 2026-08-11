@@ -1,0 +1,9 @@
+{
+  "slug": "cyber",
+  "title": "Cyber",
+  "displayName": "קורס Cyber",
+  "subtitle": "אבטחת מידע והגנת סייבר",
+  "shortDescription": "איך פורצים, איך מגנים, ולמה כל חברה היום חייבת אנשי סייבר.",
+  "icon": "ShieldCheck",
+  "order": 1
+}

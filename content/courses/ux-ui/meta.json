@@ -1,0 +1,9 @@
+{
+  "slug": "ux-ui",
+  "title": "UX/UI",
+  "displayName": "קורס UX/UI",
+  "subtitle": "עיצוב חוויית וממשק משתמש",
+  "shortDescription": "איך הופכים מוצר דיגיטלי למשהו שאנשים אוהבים וקל להם להשתמש בו.",
+  "icon": "PenTool",
+  "order": 4
+}

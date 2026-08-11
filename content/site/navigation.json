@@ -1,0 +1,12 @@
+{
+  "primary": [
+    { "id": "home", "label": "בית", "href": "/", "icon": "Home" },
+    { "id": "about-ecom", "label": "מי זאת איקום", "href": "/about-ecom", "icon": "Building2" },
+    { "id": "training-path", "label": "מסלול ההכשרה שלי", "href": "/training-path", "icon": "Map" },
+    { "id": "courses", "label": "הקורסים", "href": "/courses", "icon": "GraduationCap" },
+    { "id": "customer-profile", "label": "פרופיל לקוח", "href": "/customer-profile", "icon": "UserSearch", "comingSoon": true },
+    { "id": "sales-method", "label": "שיטת המכירה", "href": "/sales-method", "icon": "Target", "comingSoon": true },
+    { "id": "simulations", "label": "סימולציות AI", "href": "/simulations", "icon": "Bot", "comingSoon": true },
+    { "id": "profile", "label": "פרופיל / הגדרות", "href": "/profile", "icon": "Settings" }
+  ]
+}
