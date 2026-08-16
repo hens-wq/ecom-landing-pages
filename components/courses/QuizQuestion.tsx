@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import type { QuizQuestion as QuizQuestionType } from "@/lib/types";
+import type { MultipleChoiceQuestion } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function QuizQuestion({
@@ -7,7 +7,7 @@ export function QuizQuestion({
   selectedOptionId,
   onSelect,
 }: {
-  question: QuizQuestionType;
+  question: MultipleChoiceQuestion;
   selectedOptionId?: string;
   onSelect: (optionId: string) => void;
 }) {
@@ -25,10 +25,11 @@ export function QuizQuestion({
               aria-checked={selected}
               onClick={() => onSelect(option.id)}
               className={cn(
-                "flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-right text-sm transition-all",
+                "flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-right text-sm transition-all outline-none",
+                "focus-visible:ring-2 focus-visible:ring-[var(--course-primary)] focus-visible:ring-offset-2",
                 selected
                   ? "border-[var(--course-primary)] bg-[var(--course-soft)] font-medium text-slate-900"
-                  : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  : "border-slate-200 text-slate-600 hover:border-[var(--course-border)] hover:bg-[var(--course-soft)]/40"
               )}
             >
               <span

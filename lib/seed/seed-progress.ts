@@ -8,12 +8,18 @@ import { defaultCourseState, defaultOverallState, type RawProgressState } from "
  */
 
 function makeAttempt(courseSlug: CourseSlug, score: number, passed: boolean): QuizAttempt {
+  const pointsAutoMax = 80;
   return {
     id: crypto.randomUUID(),
     courseSlug,
-    answers: {},
+    mcqAnswers: {},
+    openAnswers: [],
     score,
+    pointsEarned: Math.round((score / 100) * pointsAutoMax),
+    pointsAutoMax,
+    pointsTotalPossible: 100,
     passed,
+    pendingReview: false,
     completedAt: new Date().toISOString(),
   };
 }

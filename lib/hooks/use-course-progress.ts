@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CourseProgress, CourseSlug } from "@/lib/types";
-import { progressRepository } from "@/lib/repositories/progress.repository";
+import type { CourseProgress, CourseSlug, QuizDraft } from "@/lib/types";
+import {
+  progressRepository,
+  type SubmitQuizAttemptInput,
+} from "@/lib/repositories/progress.repository";
 
 export function useCourseProgress(userId: string | undefined, slug: CourseSlug) {
   const [progress, setProgress] = useState<CourseProgress | null>(null);
@@ -37,14 +40,42 @@ export function useCourseProgress(userId: string | undefined, slug: CourseSlug) 
   }, [userId, slug, refresh]);
 
   const submitQuiz = useCallback(
-    async (answers: Record<string, string>, score: number, passScore: number) => {
+    async (input: SubmitQuizAttemptInput) => {
       if (!userId) return null;
-      const result = await progressRepository.submitQuizAttempt(userId, slug, answers, score, passScore);
+      const result = await progressRepository.submitQuizAttempt(userId, slug, input);
       await refresh();
       return result;
     },
     [userId, slug, refresh]
   );
 
-  return { progress, loading, refresh, markTopicComplete, markVideoWatched, submitQuiz };
+  const getQuizDraft = useCallback((): Promise<QuizDraft | null> => {
+    if (!userId) return Promise.resolve(null);
+    return progressRepository.getQuizDraft(userId, slug);
+  }, [userId, slug]);
+
+  const saveQuizDraft = useCallback(
+    (draft: QuizDraft) => {
+      if (!userId) return Promise.resolve();
+      return progressRepository.saveQuizDraft(userId, slug, draft);
+    },
+    [userId, slug]
+  );
+
+  const clearQuizDraft = useCallback(() => {
+    if (!userId) return Promise.resolve();
+    return progressRepository.clearQuizDraft(userId, slug);
+  }, [userId, slug]);
+
+  return {
+    progress,
+    loading,
+    refresh,
+    markTopicComplete,
+    markVideoWatched,
+    submitQuiz,
+    getQuizDraft,
+    saveQuizDraft,
+    clearQuizDraft,
+  };
 }

@@ -90,6 +90,13 @@ export interface VideoLesson {
 
 // ---------------------------------------------------------------------------
 // Quiz engine
+//
+// A "knowledge exam" mixes auto-graded multiple-choice questions with
+// open-text questions that need human (or future AI) review. Each question
+// carries its own point value; the exam's questions must sum to
+// `pointsTotalPossible` (validated in lib/content/schemas.ts). Only the
+// multiple-choice portion is auto-graded today — see
+// lib/repositories/progress.repository.ts for how `passed` is computed.
 // ---------------------------------------------------------------------------
 
 export interface QuizOption {
@@ -97,27 +104,74 @@ export interface QuizOption {
   text: string;
 }
 
-export interface QuizQuestion {
+export interface MultipleChoiceQuestion {
   id: string;
+  type: "multipleChoice";
   question: string;
+  points: number;
   options: QuizOption[];
   correctOptionId: string;
   explanation?: string;
 }
 
+export interface OpenTextQuestion {
+  id: string;
+  type: "openText";
+  question: string;
+  points: number;
+  /** Internal grading notes for a human or future AI reviewer — never shown to the rep. */
+  rubric: string[];
+}
+
+export type QuizQuestion = MultipleChoiceQuestion | OpenTextQuestion;
+
+export interface QuizIntro {
+  title: string;
+  description: string[];
+  reminder: string;
+  materialsNote: string;
+  goodLuck: string;
+}
+
 export interface Quiz {
   title: string;
+  /** Pass threshold, as a percentage of the auto-gradable (multiple-choice) points. */
   passScore: number;
+  intro: QuizIntro;
   questions: QuizQuestion[];
+  /** Shown just before submission. May include a {{courseName}} placeholder. */
+  closingNote: string;
+}
+
+export interface QuizOpenAnswerRecord {
+  questionId: string;
+  answerText: string;
+  points: number;
+  rubric: string[];
+  status: "pending" | "graded";
+  score?: number;
 }
 
 export interface QuizAttempt {
   id: string;
   courseSlug: CourseSlug;
-  answers: Record<string, string>;
+  mcqAnswers: Record<string, string>;
+  openAnswers: QuizOpenAnswerRecord[];
+  /** Percentage (0-100), computed from the auto-graded MCQ portion only. */
   score: number;
+  pointsEarned: number;
+  pointsAutoMax: number;
+  pointsTotalPossible: number;
   passed: boolean;
+  pendingReview: boolean;
   completedAt: string;
+}
+
+export interface QuizDraft {
+  currentIndex: number;
+  mcqAnswers: Record<string, string>;
+  openAnswers: Record<string, string>;
+  updatedAt: string;
 }
 
 // ---------------------------------------------------------------------------

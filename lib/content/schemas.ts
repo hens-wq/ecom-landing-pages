@@ -159,19 +159,77 @@ export const quizOptionSchema = z.object({
   text: z.string(),
 });
 
-export const quizQuestionSchema = z.object({
+export const multipleChoiceQuestionSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("multipleChoice"),
+    question: z.string(),
+    points: z.number().positive(),
+    options: z.array(quizOptionSchema).min(2),
+    correctOptionId: z.string(),
+    explanation: z.string().optional(),
+  })
+  .refine((q) => q.options.some((o) => o.id === q.correctOptionId), {
+    message: "correctOptionId must match one of this question's option ids",
+    path: ["correctOptionId"],
+  });
+
+export const openTextQuestionSchema = z.object({
   id: z.string(),
+  type: z.literal("openText"),
   question: z.string(),
-  options: z.array(quizOptionSchema).min(2),
-  correctOptionId: z.string(),
-  explanation: z.string().optional(),
+  points: z.number().positive(),
+  rubric: z.array(z.string()).min(1),
 });
 
-export const quizSchema = z.object({
+export const quizQuestionSchema = z.discriminatedUnion("type", [
+  multipleChoiceQuestionSchema,
+  openTextQuestionSchema,
+]);
+
+export const quizIntroSchema = z.object({
   title: z.string(),
-  passScore: z.number().min(0).max(100),
-  questions: z.array(quizQuestionSchema).min(1),
+  description: z.array(z.string()).min(1),
+  reminder: z.string(),
+  materialsNote: z.string(),
+  goodLuck: z.string(),
 });
+
+export const quizSchema = z
+  .object({
+    title: z.string(),
+    passScore: z.number().min(0).max(100),
+    intro: quizIntroSchema,
+    questions: z.array(quizQuestionSchema).min(1),
+    closingNote: z.string(),
+  })
+  .superRefine((quiz, ctx) => {
+    const mcqCount = quiz.questions.filter((q) => q.type === "multipleChoice").length;
+    const openCount = quiz.questions.filter((q) => q.type === "openText").length;
+    if (mcqCount !== 10 || openCount !== 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Every exam must have exactly 10 multiple-choice + 2 open-text questions (found ${mcqCount} + ${openCount})`,
+        path: ["questions"],
+      });
+    }
+    const totalPoints = quiz.questions.reduce((sum, q) => sum + q.points, 0);
+    if (totalPoints !== 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Exam question points must sum to 100 (found ${totalPoints})`,
+        path: ["questions"],
+      });
+    }
+    const ids = quiz.questions.map((q) => q.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Question ids must be unique within the exam",
+        path: ["questions"],
+      });
+    }
+  });
 
 export const comingSoonPageSchema = z.object({
   icon: z.string(),

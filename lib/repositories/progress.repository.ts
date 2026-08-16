@@ -5,6 +5,8 @@ import type {
   CourseSlug,
   OverallTrainingProgress,
   QuizAttempt,
+  QuizDraft,
+  QuizOpenAnswerRecord,
 } from "@/lib/types";
 
 /**
@@ -12,6 +14,15 @@ import type {
  * Swapping to a real backend later means writing a DatabaseProgressRepository
  * that implements the same interface - no UI changes required.
  */
+export interface SubmitQuizAttemptInput {
+  mcqAnswers: Record<string, string>;
+  openAnswers: QuizOpenAnswerRecord[];
+  pointsEarned: number;
+  pointsAutoMax: number;
+  pointsTotalPossible: number;
+  passScore: number;
+}
+
 export interface ProgressRepository {
   getOverallProgress(userId: string): Promise<OverallTrainingProgress>;
   getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress>;
@@ -21,10 +32,11 @@ export interface ProgressRepository {
   submitQuizAttempt(
     userId: string,
     courseSlug: CourseSlug,
-    answers: Record<string, string>,
-    score: number,
-    passScore: number
+    input: SubmitQuizAttemptInput
   ): Promise<CourseProgress>;
+  getQuizDraft(userId: string, courseSlug: CourseSlug): Promise<QuizDraft | null>;
+  saveQuizDraft(userId: string, courseSlug: CourseSlug, draft: QuizDraft): Promise<void>;
+  clearQuizDraft(userId: string, courseSlug: CourseSlug): Promise<void>;
   resetProgress(userId: string): Promise<void>;
   seedProgress(userId: string, state: RawProgressState): Promise<void>;
 }
@@ -90,6 +102,10 @@ class LocalProgressRepository implements ProgressRepository {
     return `ecom-lms:progress:${userId}`;
   }
 
+  private draftKey(userId: string, courseSlug: CourseSlug) {
+    return `ecom-lms:quiz-draft:${userId}:${courseSlug}`;
+  }
+
   private read(userId: string): RawProgressState {
     if (typeof window === "undefined") return defaultOverallState();
     const raw = window.localStorage.getItem(this.key(userId));
@@ -150,20 +166,28 @@ class LocalProgressRepository implements ProgressRepository {
   async submitQuizAttempt(
     userId: string,
     courseSlug: CourseSlug,
-    answers: Record<string, string>,
-    score: number,
-    passScore: number
+    input: SubmitQuizAttemptInput
   ): Promise<CourseProgress> {
     const state = this.read(userId);
     const course = state.courses[courseSlug] ?? defaultCourseState();
-    const passed = score >= passScore;
+    // Only the multiple-choice portion is auto-graded today; pass/fail is
+    // measured against that portion until open answers have a real
+    // evaluator (see QuizOpenAnswerRecord.status).
+    const score = Math.round((input.pointsEarned / input.pointsAutoMax) * 100);
+    const passed = score >= input.passScore;
+    const pendingReview = input.openAnswers.some((a) => a.status === "pending");
 
     const attempt: QuizAttempt = {
       id: crypto.randomUUID(),
       courseSlug,
-      answers,
+      mcqAnswers: input.mcqAnswers,
+      openAnswers: input.openAnswers,
       score,
+      pointsEarned: input.pointsEarned,
+      pointsAutoMax: input.pointsAutoMax,
+      pointsTotalPossible: input.pointsTotalPossible,
       passed,
+      pendingReview,
       completedAt: new Date().toISOString(),
     };
 
@@ -177,7 +201,29 @@ class LocalProgressRepository implements ProgressRepository {
 
     state.courses[courseSlug] = course;
     this.write(userId, state);
+    await this.clearQuizDraft(userId, courseSlug);
     return computeCourseProgress(courseSlug, course);
+  }
+
+  async getQuizDraft(userId: string, courseSlug: CourseSlug): Promise<QuizDraft | null> {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(this.draftKey(userId, courseSlug));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as QuizDraft;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveQuizDraft(userId: string, courseSlug: CourseSlug, draft: QuizDraft): Promise<void> {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(this.draftKey(userId, courseSlug), JSON.stringify(draft));
+  }
+
+  async clearQuizDraft(userId: string, courseSlug: CourseSlug): Promise<void> {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(this.draftKey(userId, courseSlug));
   }
 
   async resetProgress(userId: string): Promise<void> {
