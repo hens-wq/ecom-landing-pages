@@ -95,8 +95,9 @@ export interface VideoLesson {
 // open-text questions that need human (or future AI) review. Each question
 // carries its own point value; the exam's questions must sum to
 // `pointsTotalPossible` (validated in lib/content/schemas.ts). Only the
-// multiple-choice portion is auto-graded today — see
-// lib/repositories/progress.repository.ts for how `passed` is computed.
+// multiple-choice portion is auto-graded today. A final score and pass/fail
+// verdict only exist once every open-text answer has been graded — see
+// `QuizAttempt.evaluationStatus` and lib/repositories/progress.repository.ts.
 // ---------------------------------------------------------------------------
 
 export interface QuizOption {
@@ -152,18 +153,25 @@ export interface QuizOpenAnswerRecord {
   score?: number;
 }
 
+export type QuizEvaluationStatus = "pending_review" | "graded";
+
 export interface QuizAttempt {
   id: string;
   courseSlug: CourseSlug;
   mcqAnswers: Record<string, string>;
   openAnswers: QuizOpenAnswerRecord[];
-  /** Percentage (0-100), computed from the auto-graded MCQ portion only. */
-  score: number;
+  /** Points earned on the auto-graded multiple-choice portion (out of pointsAutoMax). */
   pointsEarned: number;
+  /** Max auto-gradable points — the multiple-choice portion (e.g. 80). */
   pointsAutoMax: number;
+  /** Full exam point value — multiple-choice + open-text (e.g. 100). */
   pointsTotalPossible: number;
-  passed: boolean;
-  pendingReview: boolean;
+  /** "pending_review" until every open-text answer in `openAnswers` has status "graded". */
+  evaluationStatus: QuizEvaluationStatus;
+  /** Final percentage (MCQ + graded open-text points) out of 100. Null until evaluationStatus is "graded". */
+  score: number | null;
+  /** Pass/fail against quiz.passScore. Null until evaluationStatus is "graded". */
+  passed: boolean | null;
   completedAt: string;
 }
 

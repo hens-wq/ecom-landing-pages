@@ -170,33 +170,44 @@ class LocalProgressRepository implements ProgressRepository {
   ): Promise<CourseProgress> {
     const state = this.read(userId);
     const course = state.courses[courseSlug] ?? defaultCourseState();
-    // Only the multiple-choice portion is auto-graded today; pass/fail is
-    // measured against that portion until open answers have a real
-    // evaluator (see QuizOpenAnswerRecord.status).
-    const score = Math.round((input.pointsEarned / input.pointsAutoMax) * 100);
-    const passed = score >= input.passScore;
-    const pendingReview = input.openAnswers.some((a) => a.status === "pending");
+    // No final score or pass/fail exists until every open-text answer has
+    // been graded (see QuizOpenAnswerRecord.status) - the multiple-choice
+    // portion alone is never presented or treated as the exam result.
+    const allOpenGraded = input.openAnswers.every((a) => a.status === "graded");
+    const openPointsEarned = input.openAnswers.reduce(
+      (sum, a) => sum + (a.status === "graded" ? (a.score ?? 0) : 0),
+      0
+    );
+    const evaluationStatus: QuizAttempt["evaluationStatus"] = allOpenGraded
+      ? "graded"
+      : "pending_review";
+    const score = allOpenGraded
+      ? Math.round(((input.pointsEarned + openPointsEarned) / input.pointsTotalPossible) * 100)
+      : null;
+    const passed = allOpenGraded ? score! >= input.passScore : null;
 
     const attempt: QuizAttempt = {
       id: crypto.randomUUID(),
       courseSlug,
       mcqAnswers: input.mcqAnswers,
       openAnswers: input.openAnswers,
-      score,
       pointsEarned: input.pointsEarned,
       pointsAutoMax: input.pointsAutoMax,
       pointsTotalPossible: input.pointsTotalPossible,
+      evaluationStatus,
+      score,
       passed,
-      pendingReview,
       completedAt: new Date().toISOString(),
     };
 
     course.attempts = [...course.attempts, attempt];
-    course.bestScore = Math.max(course.bestScore, score);
-    course.quizPassed = course.quizPassed || passed;
-    if (course.quizPassed && !course.completed) {
-      course.completed = true;
-      course.completedAt = new Date().toISOString();
+    if (evaluationStatus === "graded") {
+      course.bestScore = Math.max(course.bestScore, score ?? 0);
+      course.quizPassed = course.quizPassed || !!passed;
+      if (course.quizPassed && !course.completed) {
+        course.completed = true;
+        course.completedAt = new Date().toISOString();
+      }
     }
 
     state.courses[courseSlug] = course;

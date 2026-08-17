@@ -9,17 +9,19 @@ import { defaultCourseState, defaultOverallState, type RawProgressState } from "
 
 function makeAttempt(courseSlug: CourseSlug, score: number, passed: boolean): QuizAttempt {
   const pointsAutoMax = 80;
+  const pointsTotalPossible = 100;
   return {
     id: crypto.randomUUID(),
     courseSlug,
     mcqAnswers: {},
     openAnswers: [],
-    score,
     pointsEarned: Math.round((score / 100) * pointsAutoMax),
     pointsAutoMax,
-    pointsTotalPossible: 100,
+    pointsTotalPossible,
+    // Demo presets simulate an already-graded attempt (both open questions evaluated).
+    evaluationStatus: "graded",
+    score,
     passed,
-    pendingReview: false,
     completedAt: new Date().toISOString(),
   };
 }

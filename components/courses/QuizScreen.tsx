@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Course, QuizDraft, QuizOpenAnswerRecord } from "@/lib/types";
+import type { Course, QuizDraft, QuizEvaluationStatus, QuizOpenAnswerRecord } from "@/lib/types";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useCourseProgress } from "@/lib/hooks/use-course-progress";
 import { isOpenText, scoreMultipleChoice, totalPossiblePoints } from "@/lib/quiz";
@@ -17,10 +17,13 @@ type DraftShape = Pick<QuizDraft, "currentIndex" | "mcqAnswers" | "openAnswers">
 
 interface AttemptView {
   mcqAnswers: Record<string, string>;
-  openAnswersText: Record<string, string>;
+  openAnswers: QuizOpenAnswerRecord[];
   pointsEarned: number;
   pointsAutoMax: number;
-  passed: boolean;
+  pointsTotalPossible: number;
+  evaluationStatus: QuizEvaluationStatus;
+  score: number | null;
+  passed: boolean | null;
   bestScore: number;
   attemptsCount: number;
 }
@@ -90,14 +93,19 @@ export function QuizScreen({ course }: { course: Course }) {
       passScore: quiz.passScore,
     });
 
-    const percent = pointsAutoMax > 0 ? Math.round((pointsEarned / pointsAutoMax) * 100) : 0;
+    // The repository is the source of truth for evaluationStatus/score/passed -
+    // no final score or pass/fail is computed here from the MCQ portion alone.
+    const submittedAttempt = updated?.attempts[updated.attempts.length - 1];
     setAttemptView({
       mcqAnswers: result.mcqAnswers,
-      openAnswersText: result.openAnswers,
+      openAnswers: submittedAttempt?.openAnswers ?? openAnswers,
       pointsEarned,
       pointsAutoMax,
-      passed: percent >= quiz.passScore,
-      bestScore: updated?.bestScore ?? percent,
+      pointsTotalPossible: totalPossiblePoints(quiz),
+      evaluationStatus: submittedAttempt?.evaluationStatus ?? "pending_review",
+      score: submittedAttempt?.score ?? null,
+      passed: submittedAttempt?.passed ?? null,
+      bestScore: updated?.bestScore ?? 0,
       attemptsCount: updated?.attempts.length ?? 1,
     });
     setDraft(null);
@@ -160,9 +168,12 @@ export function QuizScreen({ course }: { course: Course }) {
             <QuizResult
               quiz={quiz}
               mcqAnswers={attemptView.mcqAnswers}
-              openAnswersText={attemptView.openAnswersText}
+              openAnswers={attemptView.openAnswers}
               pointsEarned={attemptView.pointsEarned}
               pointsAutoMax={attemptView.pointsAutoMax}
+              pointsTotalPossible={attemptView.pointsTotalPossible}
+              evaluationStatus={attemptView.evaluationStatus}
+              score={attemptView.score}
               passed={attemptView.passed}
               bestScore={attemptView.bestScore}
               attemptsCount={attemptView.attemptsCount}
