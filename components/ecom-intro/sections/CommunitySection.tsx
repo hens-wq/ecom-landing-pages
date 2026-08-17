@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { Users } from "lucide-react";
 import type { IntroCommunityContent } from "@/lib/content/schemas";
-import { SectionShell } from "@/components/ecom-intro/SectionShell";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
+import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 
-const TILT = ["-rotate-2", "rotate-2", "-rotate-1", "rotate-1"];
+const PANEL_SIZES = ["sm:row-span-2", "", "", "sm:row-span-2"];
 
 export function CommunitySection({
   content,
@@ -18,61 +19,72 @@ export function CommunitySection({
   onPrev: () => void;
 }) {
   return (
-    <SectionShell maxWidthClassName="max-w-3xl">
-      <motion.h2
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="text-3xl font-extrabold text-slate-900 sm:text-4xl"
-      >
-        {content.headline}
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-        className="max-w-xl text-lg leading-relaxed text-slate-600"
-      >
-        {content.body}
-      </motion.p>
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-20 sm:px-10">
+      <BrandBackdrop tone="sunrise" />
 
-      <div className="flex flex-wrap items-end justify-center gap-4">
-        {content.photos.map((photo, i) => (
-          <motion.figure
-            key={photo.name}
-            initial={{ opacity: 0, y: 24, rotate: 0 }}
-            whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-            className={`overflow-hidden rounded-2xl border-4 border-white shadow-md ${TILT[i % TILT.length]}`}
-          >
-            <div className="relative size-28 sm:size-32">
-              <Image src={photo.photoSrc} alt={photo.name} fill sizes="128px" className="object-cover" />
-            </div>
-          </motion.figure>
-        ))}
+      <div className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+        {/* Photo mosaic */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="grid grid-cols-2 gap-3 sm:grid-rows-2"
+        >
+          {content.photos.map((photo, i) => (
+            <motion.figure
+              key={photo.name}
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              whileHover={{ scale: 1.02 }}
+              className={`relative overflow-hidden rounded-3xl border-2 border-white shadow-[0_20px_50px_-25px_rgba(140,82,255,0.4)] ${PANEL_SIZES[i % PANEL_SIZES.length]}`}
+              style={{ aspectRatio: PANEL_SIZES[i % PANEL_SIZES.length] ? "3/4" : "4/3" }}
+            >
+              <Image src={photo.photoSrc} alt={photo.name} fill sizes="240px" className="object-cover" style={{ objectPosition: "50% 15%" }} />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent px-4 py-3">
+                <span className="text-sm font-bold text-white drop-shadow">{photo.name}</span>
+              </div>
+            </motion.figure>
+          ))}
+        </motion.div>
+
+        {/* Text + community pulse panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="flex flex-col items-start gap-6 text-right"
+        >
+          <span className="flex items-center gap-2 rounded-full bg-[var(--brand-purple)]/10 px-4 py-1.5 text-xs font-bold text-[var(--brand-purple)]">
+            <Users className="size-4" />
+            קהילת הבוגרים
+          </span>
+          <h2 className="text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl">{content.headline}</h2>
+          <p className="max-w-xl text-lg leading-relaxed text-slate-600">{content.body}</p>
+
+          <div className="flex flex-wrap justify-end gap-2.5">
+            {content.terms.map((term, i) => (
+              <motion.span
+                key={term}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.3 + i * 0.06 }}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm"
+              >
+                {term}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        className="flex flex-wrap items-center justify-center gap-2"
-      >
-        {content.terms.map((term) => (
-          <span
-            key={term}
-            className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600"
-          >
-            {term}
-          </span>
-        ))}
-      </motion.div>
-
-      <SectionNav onPrev={onPrev} onNext={onNext} />
-    </SectionShell>
+      <div className="relative z-10 mt-10">
+        <SectionNav onPrev={onPrev} onNext={onNext} />
+      </div>
+    </div>
   );
 }
