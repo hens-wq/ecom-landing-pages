@@ -19,6 +19,16 @@ const DEMO_PRESETS = [
   { id: "nearly", label: "כמעט סיימתי", seed: nearlyDoneUserSeed },
 ] as const;
 
+/**
+ * New reps see the branded "who is Ecom" opening experience once, right
+ * after login, before the dashboard/training flow - see
+ * components/ecom-intro/EcomIntroScreen.tsx, which marks it complete.
+ */
+async function postLoginDestination(userId: string): Promise<string> {
+  const progress = await progressRepository.getOverallProgress(userId);
+  return progress.introCompleted ? "/" : "/ecom-intro";
+}
+
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState(MOCK_USER.email);
@@ -30,8 +40,8 @@ export function LoginForm() {
   const [forgotClicked, setForgotClicked] = useState(false);
 
   useEffect(() => {
-    authRepository.getCurrentUser().then((user) => {
-      if (user) router.replace("/");
+    authRepository.getCurrentUser().then(async (user) => {
+      if (user) router.replace(await postLoginDestination(user.id));
     });
   }, [router]);
 
@@ -40,8 +50,8 @@ export function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      await authRepository.login(email, password);
-      router.push("/");
+      const user = await authRepository.login(email, password);
+      router.push(await postLoginDestination(user.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "אירעה שגיאה בהתחברות");
     } finally {
@@ -54,7 +64,7 @@ export function LoginForm() {
     try {
       const user = await authRepository.login(MOCK_USER.email, "demo");
       await progressRepository.seedProgress(user.id, seed());
-      router.push("/");
+      router.push(await postLoginDestination(user.id));
     } finally {
       setLoading(false);
     }

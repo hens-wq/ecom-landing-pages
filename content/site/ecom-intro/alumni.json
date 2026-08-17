@@ -1,0 +1,40 @@
+{
+  "successStories": {
+    "headline": "מאחורי המספרים יש אנשים אמיתיים",
+    "supportingLine": "הכירו חלק מהבוגרים של Ecom"
+  },
+  "videosSection": {
+    "headline": "הבוגרים מספרים בעצמם",
+    "supportingLine": "לפעמים סרטון קצר מספר יותר מכל טקסט"
+  },
+  "stories": [
+    {
+      "id": "yossi-blass",
+      "name": "יוסי בלאס",
+      "course": "בוגר קורס Cyber",
+      "photoSrc": "/ecom-intro/alumni/yossi-blass.jpeg",
+      "videoSrc": "/ecom-intro/alumni/yossi-blass.mp4"
+    },
+    {
+      "id": "pinhas-cohen",
+      "name": "פנחס כהן",
+      "course": "בוגר קורס QA",
+      "photoSrc": "/ecom-intro/alumni/pinhas-cohen.jpg",
+      "videoSrc": "/ecom-intro/alumni/pinhas-cohen.mp4"
+    },
+    {
+      "id": "tzur-israel",
+      "name": "צור ישראל",
+      "course": "בוגר קורס Cyber",
+      "photoSrc": "/ecom-intro/alumni/tzur-israel.jpeg",
+      "videoSrc": "/ecom-intro/alumni/tzur-israel.mp4"
+    },
+    {
+      "id": "shelly-rivka",
+      "name": "שלי רבקה",
+      "course": "בוגרת קורס Digital Marketing",
+      "photoSrc": "/ecom-intro/alumni/shelly-rivka.png",
+      "videoSrc": "/ecom-intro/alumni/shelly-rivka.mp4"
+    }
+  ]
+}

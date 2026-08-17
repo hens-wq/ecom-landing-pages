@@ -234,6 +234,8 @@ export interface CourseProgress extends CourseProgressState {
 }
 
 export interface OverallTrainingProgress {
+  /** Has the rep finished the branded "who is Ecom" opening experience? */
+  introCompleted: boolean;
   aboutEcomCompleted: boolean;
   courses: Record<CourseSlug, CourseProgressState>;
   percent: number;

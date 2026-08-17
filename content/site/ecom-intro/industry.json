@@ -1,0 +1,20 @@
+{
+  "headline": "Ecom מחוברת לתעשייה",
+  "alternativeHeadline": "אנחנו לא מלמדים בתוך בועה",
+  "body": "ההכשרה ב-Ecom מחוברת לעולם העבודה ולחברות מהתעשייה",
+  "logos": [
+    { "name": "Microsoft", "src": "/ecom-intro/companies/microsoft.jpg" },
+    { "name": "Check Point", "src": "/ecom-intro/companies/check-point.png" },
+    { "name": "Deloitte", "src": "/ecom-intro/companies/deloitte.png" },
+    { "name": "EY", "src": "/ecom-intro/companies/ey.png" },
+    { "name": "Experis", "src": "/ecom-intro/companies/experis.png" },
+    { "name": "Manpower", "src": "/ecom-intro/companies/manpower.png" },
+    { "name": "Citadel", "src": "/ecom-intro/companies/citadel.jpg" },
+    { "name": "Elad Group", "src": "/ecom-intro/companies/elad-group.png" },
+    { "name": "Ness", "src": "/ecom-intro/companies/ness.jpg" },
+    { "name": "Partner", "src": "/ecom-intro/companies/partner.png" },
+    { "name": "Radware", "src": "/ecom-intro/companies/radware.png" },
+    { "name": "Wix", "src": "/ecom-intro/companies/wix.jpg" },
+    { "name": "Bynet", "src": "/ecom-intro/companies/bynet.png" }
+  ]
+}

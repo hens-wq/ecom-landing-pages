@@ -231,6 +231,140 @@ export const quizSchema = z
     }
   });
 
+// ---------------------------------------------------------------------------
+// Ecom intro (branded opening experience before the training flow)
+// ---------------------------------------------------------------------------
+
+export const introBrandSchema = z.object({
+  logoStackedSrc: z.string(),
+  logoHorizontalSrc: z.string(),
+  logoMarkSrc: z.string(),
+});
+
+export const introWelcomeSchema = z.object({
+  headline: z.string(),
+  supportingLine: z.string(),
+  additionalLine: z.string(),
+  ctaLabel: z.string(),
+});
+
+export const introCourseAreaSchema = z.object({
+  label: z.string(),
+  icon: z.string(),
+});
+
+export const introWhoIsEcomSchema = z.object({
+  headline: z.string(),
+  statement: z.string(),
+  courseAreas: z.array(introCourseAreaSchema).min(1),
+  supportingStatement: z.string(),
+});
+
+export const introArielSchema = z.object({
+  headline: z.string(),
+  body: z.string(),
+  applicablePrograms: z.array(z.string()).min(1),
+  clarification: z.string().optional(),
+  logoSrc: z.string(),
+});
+
+export const introLogoSchema = z.object({
+  name: z.string(),
+  src: z.string(),
+});
+
+export const introIndustrySchema = z.object({
+  headline: z.string(),
+  alternativeHeadline: z.string(),
+  body: z.string(),
+  logos: z.array(introLogoSchema).min(1),
+});
+
+export const introJourneySchema = z.object({
+  headline: z.string(),
+  body: z.string(),
+  steps: z.array(z.string()).min(1),
+});
+
+export const introStatSchema = z.object({
+  value: z.number(),
+  suffix: z.string().default(""),
+  decimals: z.number().int().min(0).max(2).default(0),
+  label: z.string(),
+});
+
+export const introStatsSchema = z.object({
+  headline: z.string(),
+  stats: z.array(introStatSchema).min(1),
+});
+
+export const introAlumniStorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  course: z.string(),
+  roleBefore: z.string().optional(),
+  roleAfter: z.string().optional(),
+  company: z.string().optional(),
+  quote: z.string().optional(),
+  story: z.string().optional(),
+  photoSrc: z.string(),
+  videoSrc: z.string().optional(),
+});
+
+export const introAlumniContentSchema = z.object({
+  successStories: z.object({
+    headline: z.string(),
+    supportingLine: z.string(),
+  }),
+  videosSection: z.object({
+    headline: z.string(),
+    supportingLine: z.string(),
+  }),
+  stories: z.array(introAlumniStorySchema).min(1),
+});
+
+export const introCommunityPhotoSchema = z.object({
+  name: z.string(),
+  photoSrc: z.string(),
+});
+
+export const introCommunitySchema = z.object({
+  headline: z.string(),
+  body: z.string(),
+  terms: z.array(z.string()).min(1),
+  photos: z.array(introCommunityPhotoSchema).min(1),
+});
+
+export const introTrustSchema = z.object({
+  headline: z.string(),
+  items: z.array(z.string()).min(1),
+});
+
+export const introClosingSchema = z.object({
+  headline: z.string(),
+  body: z.array(z.string()).min(1),
+  supportingLine: z.string(),
+  ctaLabel: z.string(),
+});
+
+export const introAudioSchema = z.object({
+  src: z.string().nullable(),
+});
+
+export type IntroBrandContent = z.infer<typeof introBrandSchema>;
+export type IntroWelcomeContent = z.infer<typeof introWelcomeSchema>;
+export type IntroWhoIsEcomContent = z.infer<typeof introWhoIsEcomSchema>;
+export type IntroArielContent = z.infer<typeof introArielSchema>;
+export type IntroIndustryContent = z.infer<typeof introIndustrySchema>;
+export type IntroJourneyContent = z.infer<typeof introJourneySchema>;
+export type IntroStatsContent = z.infer<typeof introStatsSchema>;
+export type IntroAlumniStory = z.infer<typeof introAlumniStorySchema>;
+export type IntroAlumniContent = z.infer<typeof introAlumniContentSchema>;
+export type IntroCommunityContent = z.infer<typeof introCommunitySchema>;
+export type IntroTrustContent = z.infer<typeof introTrustSchema>;
+export type IntroClosingContent = z.infer<typeof introClosingSchema>;
+export type IntroAudioContent = z.infer<typeof introAudioSchema>;
+
 export const comingSoonPageSchema = z.object({
   icon: z.string(),
   kicker: z.string(),

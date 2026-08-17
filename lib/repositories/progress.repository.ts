@@ -26,6 +26,7 @@ export interface SubmitQuizAttemptInput {
 export interface ProgressRepository {
   getOverallProgress(userId: string): Promise<OverallTrainingProgress>;
   getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress>;
+  markIntroComplete(userId: string): Promise<void>;
   markAboutEcomComplete(userId: string): Promise<void>;
   markTopicComplete(userId: string, courseSlug: CourseSlug, topicId: string): Promise<void>;
   markVideoWatched(userId: string, courseSlug: CourseSlug): Promise<void>;
@@ -42,6 +43,7 @@ export interface ProgressRepository {
 }
 
 interface RawProgressState {
+  introCompleted: boolean;
   aboutEcomCompleted: boolean;
   courses: Record<CourseSlug, CourseProgressState>;
 }
@@ -63,6 +65,7 @@ export function defaultCourseState(): CourseProgressState {
 
 export function defaultOverallState(): RawProgressState {
   return {
+    introCompleted: false,
     aboutEcomCompleted: false,
     courses: Object.fromEntries(
       COURSE_SLUGS.map((slug) => [slug, defaultCourseState()])
@@ -114,6 +117,7 @@ class LocalProgressRepository implements ProgressRepository {
       const parsed = JSON.parse(raw) as RawProgressState;
       // Merge with defaults in case new courses were added since this was saved.
       return {
+        introCompleted: parsed.introCompleted ?? false,
         aboutEcomCompleted: parsed.aboutEcomCompleted ?? false,
         courses: {
           ...defaultOverallState().courses,
@@ -137,6 +141,12 @@ class LocalProgressRepository implements ProgressRepository {
   async getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress> {
     const state = this.read(userId);
     return computeCourseProgress(courseSlug, state.courses[courseSlug] ?? defaultCourseState());
+  }
+
+  async markIntroComplete(userId: string): Promise<void> {
+    const state = this.read(userId);
+    state.introCompleted = true;
+    this.write(userId, state);
   }
 
   async markAboutEcomComplete(userId: string): Promise<void> {

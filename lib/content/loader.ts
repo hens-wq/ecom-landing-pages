@@ -23,6 +23,18 @@ import {
   courseOverviewSchema,
   courseThemeSchema,
   homeContentSchema,
+  introAlumniContentSchema,
+  introArielSchema,
+  introAudioSchema,
+  introBrandSchema,
+  introClosingSchema,
+  introCommunitySchema,
+  introIndustrySchema,
+  introJourneySchema,
+  introStatsSchema,
+  introTrustSchema,
+  introWelcomeSchema,
+  introWhoIsEcomSchema,
   navigationSchema,
   quizSchema,
   topicFrontmatterSchema,
@@ -95,6 +107,33 @@ export function getTrainingPathContent() {
 export function getComingSoonPage(fileName: "customer-profile" | "sales-method" | "simulations") {
   return readJson(`site/${fileName}.json`, comingSoonPageSchema);
 }
+
+// ---------------------------------------------------------------------------
+// Ecom intro (branded opening experience before the training flow)
+// ---------------------------------------------------------------------------
+
+function introDir(fileName: string) {
+  return path.join("site", "ecom-intro", fileName);
+}
+
+export function getEcomIntroContent() {
+  return {
+    brand: readJson(introDir("brand.json"), introBrandSchema),
+    welcome: readJson(introDir("welcome.json"), introWelcomeSchema),
+    whoIsEcom: readJson(introDir("who-is-ecom.json"), introWhoIsEcomSchema),
+    ariel: readJson(introDir("ariel.json"), introArielSchema),
+    industry: readJson(introDir("industry.json"), introIndustrySchema),
+    journey: readJson(introDir("journey.json"), introJourneySchema),
+    stats: readJson(introDir("stats.json"), introStatsSchema),
+    alumni: readJson(introDir("alumni.json"), introAlumniContentSchema),
+    community: readJson(introDir("community.json"), introCommunitySchema),
+    trust: readJson(introDir("trust.json"), introTrustSchema),
+    closing: readJson(introDir("closing.json"), introClosingSchema),
+    audio: readJson(introDir("audio.json"), introAudioSchema),
+  };
+}
+
+export type EcomIntroContent = ReturnType<typeof getEcomIntroContent>;
 
 // ---------------------------------------------------------------------------
 // Courses

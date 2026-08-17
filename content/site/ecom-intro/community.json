@@ -1,0 +1,11 @@
+{
+  "headline": "הקשר עם Ecom לא נגמר בסיום הקורס",
+  "body": "בוגרי Ecom ממשיכים להיות חלק מקהילה מקצועית גם אחרי הלימודים",
+  "terms": ["מועדון הבוגרים", "Ecom+", "תכנים מקצועיים", "הזדמנויות", "קשרים מקצועיים", "המשך צמיחה"],
+  "photos": [
+    { "name": "רעות שוקר", "photoSrc": "/ecom-intro/community/reut-shoker.jpg" },
+    { "name": "אמיל רז", "photoSrc": "/ecom-intro/community/amil-raz.jpg" },
+    { "name": "בנימין בן דוד", "photoSrc": "/ecom-intro/community/binyamin-ben-david.jpg" },
+    { "name": "אמיתי גבאי", "photoSrc": "/ecom-intro/community/amitai-gabbai.jpg" }
+  ]
+}

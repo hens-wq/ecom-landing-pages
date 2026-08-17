@@ -1,0 +1,9 @@
+{
+  "headline": "Ecom במספרים",
+  "stats": [
+    { "value": 87, "suffix": "%", "decimals": 0, "label": "השמה לעבודה לאחר הקורס" },
+    { "value": 2500, "suffix": "+", "decimals": 0, "label": "חברות ועסקים בקשרי השמה" },
+    { "value": 300, "suffix": "+", "decimals": 0, "label": "ביקורות Google" },
+    { "value": 4.8, "suffix": "/5", "decimals": 1, "label": "דירוג ממוצע ב-Google" }
+  ]
+}
