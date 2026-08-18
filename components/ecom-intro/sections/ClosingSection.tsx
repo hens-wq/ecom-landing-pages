@@ -3,25 +3,80 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import type { IntroBrandContent, IntroClosingContent } from "@/lib/content/schemas";
+import type {
+  IntroAlumniContent,
+  IntroBrandContent,
+  IntroClosingContent,
+  IntroIndustryContent,
+  IntroStudentsContent,
+} from "@/lib/content/schemas";
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
+import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 import { OutlineTriangle, FilledTriangle } from "@/components/shared/GeometricDecor";
+
+const CORNER_ALUMNI = [
+  { className: "left-[6%] top-[10%] size-28 -rotate-6" },
+  { className: "right-[7%] top-[16%] size-24 rotate-6" },
+  { className: "left-[10%] bottom-[14%] size-24 rotate-3" },
+  { className: "right-[9%] bottom-[10%] size-28 -rotate-3" },
+];
 
 export function ClosingSection({
   content,
   brand,
+  alumni,
+  industry,
+  students,
   onPrev,
   onFinish,
 }: {
   content: IntroClosingContent;
   brand: IntroBrandContent;
+  alumni: IntroAlumniContent;
+  industry: IntroIndustryContent;
+  students: IntroStudentsContent;
   onPrev: () => void;
   onFinish: () => void;
 }) {
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-20 text-center sm:px-10">
       <BrandBackdrop tone="sunrise" strong />
+
+      {/* Faded echoes of the journey: alumni faces + a couple of industry logos */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
+        {CORNER_ALUMNI.map((c, i) => {
+          const person = alumni.stories[i % alumni.stories.length];
+          if (!person) return null;
+          return (
+            <motion.div
+              key={person.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.12 }}
+              transition={{ duration: 1.2, delay: 0.3 + i * 0.15 }}
+              className={`absolute overflow-hidden rounded-3xl blur-[1px] ${c.className}`}
+            >
+              <Image src={person.photoSrc} alt="" fill className="object-cover" style={{ objectPosition: "50% 15%" }} />
+            </motion.div>
+          );
+        })}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.14 }}
+          transition={{ duration: 1, delay: 0.5 }}
+          className="absolute left-[16%] top-[42%] h-10 w-24"
+        >
+          <Image src={industry.logos[0].src} alt="" fill className="object-contain" />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.14 }}
+          transition={{ duration: 1, delay: 0.65 }}
+          className="absolute right-[15%] bottom-[38%] h-10 w-24"
+        >
+          <Image src={industry.logos[3]?.src ?? industry.logos[0].src} alt="" fill className="object-contain" />
+        </motion.div>
+      </div>
 
       <motion.div
         className="pointer-events-none absolute inset-0"
@@ -37,11 +92,21 @@ export function ClosingSection({
 
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 size-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
         style={{
-          background:
-            "radial-gradient(circle, rgba(52,209,195,0.16) 0%, rgba(140,82,255,0.12) 45%, transparent 72%)",
+          background: "radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 45%, transparent 75%)",
         }}
+      />
+
+      <StudentPhoto
+        students={students}
+        id="closing-1"
+        className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[75%] w-auto object-contain object-bottom opacity-85 lg:block"
+      />
+      <StudentPhoto
+        students={students}
+        id="closing-2"
+        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[60%] w-auto object-contain object-bottom opacity-50 blur-[1px] lg:block"
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-7">
@@ -73,7 +138,7 @@ export function ClosingSection({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.22 + i * 0.1 }}
-              className="text-xl leading-relaxed text-slate-600"
+              className="text-xl leading-relaxed text-slate-700"
             >
               {paragraph}
             </motion.p>
@@ -106,7 +171,7 @@ export function ClosingSection({
             {content.ctaLabel}
             <ArrowLeft className="size-5" />
           </Button>
-          <button type="button" onClick={onPrev} className="text-xs font-medium text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={onPrev} className="text-xs font-medium text-slate-500 hover:text-slate-700">
             חזרה
           </button>
         </motion.div>

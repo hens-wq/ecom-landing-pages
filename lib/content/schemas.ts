@@ -248,21 +248,10 @@ export const introWelcomeSchema = z.object({
   ctaLabel: z.string(),
 });
 
-export const introCourseAreaSchema = z.object({
-  label: z.string(),
-  icon: z.string(),
-});
-
-export const introWhoIsEcomSchema = z.object({
-  headline: z.string(),
-  statement: z.string(),
-  courseAreas: z.array(introCourseAreaSchema).min(1),
-  supportingStatement: z.string(),
-});
-
 export const introArielSchema = z.object({
   headline: z.string(),
   body: z.string(),
+  benefits: z.array(z.string()).min(1),
   applicablePrograms: z.array(z.string()).min(1),
   clarification: z.string().optional(),
   logoSrc: z.string(),
@@ -278,12 +267,6 @@ export const introIndustrySchema = z.object({
   alternativeHeadline: z.string(),
   body: z.string(),
   logos: z.array(introLogoSchema).min(1),
-});
-
-export const introJourneySchema = z.object({
-  headline: z.string(),
-  body: z.string(),
-  steps: z.array(z.string()).min(1),
 });
 
 export const introStatSchema = z.object({
@@ -323,16 +306,18 @@ export const introAlumniContentSchema = z.object({
   stories: z.array(introAlumniStorySchema).min(1),
 });
 
-export const introCommunityPhotoSchema = z.object({
+export const introInstructorSchema = z.object({
   name: z.string(),
   photoSrc: z.string(),
+  course: z.string().optional(),
+  role: z.string().optional(),
+  company: z.string().optional(),
 });
 
-export const introCommunitySchema = z.object({
+export const introInstructorsSchema = z.object({
   headline: z.string(),
   body: z.string(),
-  terms: z.array(z.string()).min(1),
-  photos: z.array(introCommunityPhotoSchema).min(1),
+  instructors: z.array(introInstructorSchema).min(1),
 });
 
 export const introTrustSchema = z.object({
@@ -351,19 +336,35 @@ export const introAudioSchema = z.object({
   src: z.string().nullable(),
 });
 
+/**
+ * Generic supporting human imagery (NOT real alumni or instructors) used
+ * sparingly on informational screens. Keyed by placement id so a section
+ * can look up its own slot and render nothing gracefully until a real
+ * photo is added here - see content/site/ecom-intro/students.json.
+ */
+export const introStudentPhotoSchema = z.object({
+  id: z.string(),
+  photoSrc: z.string(),
+});
+
+export const introStudentsSchema = z.object({
+  photos: z.array(introStudentPhotoSchema),
+});
+
 export type IntroBrandContent = z.infer<typeof introBrandSchema>;
 export type IntroWelcomeContent = z.infer<typeof introWelcomeSchema>;
-export type IntroWhoIsEcomContent = z.infer<typeof introWhoIsEcomSchema>;
 export type IntroArielContent = z.infer<typeof introArielSchema>;
 export type IntroIndustryContent = z.infer<typeof introIndustrySchema>;
-export type IntroJourneyContent = z.infer<typeof introJourneySchema>;
 export type IntroStatsContent = z.infer<typeof introStatsSchema>;
 export type IntroAlumniStory = z.infer<typeof introAlumniStorySchema>;
 export type IntroAlumniContent = z.infer<typeof introAlumniContentSchema>;
-export type IntroCommunityContent = z.infer<typeof introCommunitySchema>;
+export type IntroInstructor = z.infer<typeof introInstructorSchema>;
+export type IntroInstructorsContent = z.infer<typeof introInstructorsSchema>;
 export type IntroTrustContent = z.infer<typeof introTrustSchema>;
 export type IntroClosingContent = z.infer<typeof introClosingSchema>;
 export type IntroAudioContent = z.infer<typeof introAudioSchema>;
+export type IntroStudentPhoto = z.infer<typeof introStudentPhotoSchema>;
+export type IntroStudentsContent = z.infer<typeof introStudentsSchema>;
 
 export const comingSoonPageSchema = z.object({
   icon: z.string(),

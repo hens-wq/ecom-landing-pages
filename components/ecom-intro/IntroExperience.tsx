@@ -7,18 +7,16 @@ import { IntroAudioProvider, useIntroAudio } from "@/components/ecom-intro/audio
 import { MusicToggle } from "@/components/ecom-intro/MusicToggle";
 import { ProgressIndicator } from "@/components/ecom-intro/ProgressIndicator";
 import { WelcomeSection } from "@/components/ecom-intro/sections/WelcomeSection";
-import { WhoIsEcomSection } from "@/components/ecom-intro/sections/WhoIsEcomSection";
 import { ArielSection } from "@/components/ecom-intro/sections/ArielSection";
 import { IndustrySection } from "@/components/ecom-intro/sections/IndustrySection";
-import { JourneySection } from "@/components/ecom-intro/sections/JourneySection";
 import { StatsSection } from "@/components/ecom-intro/sections/StatsSection";
 import { SuccessStoriesSection } from "@/components/ecom-intro/sections/SuccessStoriesSection";
 import { AlumniVideosSection } from "@/components/ecom-intro/sections/AlumniVideosSection";
-import { CommunitySection } from "@/components/ecom-intro/sections/CommunitySection";
+import { InstructorsSection } from "@/components/ecom-intro/sections/InstructorsSection";
 import { TrustSection } from "@/components/ecom-intro/sections/TrustSection";
 import { ClosingSection } from "@/components/ecom-intro/sections/ClosingSection";
 
-const SECTION_COUNT = 11;
+const SECTION_COUNT = 9;
 
 export function IntroExperience({ content, onFinish }: { content: EcomIntroContent; onFinish: () => void }) {
   return (
@@ -41,7 +39,7 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
   }
 
   // Left/right arrow keys let reps move through the story without reaching for the mouse.
-  // The welcome (0) and closing (10) sections keep their own dedicated CTA instead.
+  // The welcome (0) and closing (8) sections keep their own dedicated CTA instead.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (index === 0 || index === SECTION_COUNT - 1) return;
@@ -52,11 +50,13 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [index, next, prev]);
 
+  const isCinema = index === 5; // AlumniVideosSection runs a dark theme - keep the top bar readable on it too
+
   return (
     <div className="relative min-h-[100dvh] w-full bg-white">
       {index > 0 && index < SECTION_COUNT - 1 && (
         <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-4 sm:px-8">
-          <ProgressIndicator current={index} total={SECTION_COUNT} />
+          <ProgressIndicator current={index} total={SECTION_COUNT} dark={isCinema} />
           <MusicToggle />
         </div>
       )}
@@ -75,21 +75,29 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
           transition={{ duration: 0.45, ease: "easeOut" }}
         >
           {index === 0 && (
-            <WelcomeSection content={content.welcome} brand={content.brand} onStart={handleStart} />
+            <WelcomeSection content={content.welcome} brand={content.brand} students={content.students} onStart={handleStart} />
           )}
-          {index === 1 && <WhoIsEcomSection content={content.whoIsEcom} onNext={next} onPrev={prev} />}
+          {index === 1 && (
+            <ArielSection content={content.ariel} brand={content.brand} students={content.students} onNext={next} onPrev={prev} />
+          )}
           {index === 2 && (
-            <ArielSection content={content.ariel} brand={content.brand} onNext={next} onPrev={prev} />
+            <IndustrySection content={content.industry} students={content.students} onNext={next} onPrev={prev} />
           )}
-          {index === 3 && <IndustrySection content={content.industry} onNext={next} onPrev={prev} />}
-          {index === 4 && <JourneySection content={content.journey} onNext={next} onPrev={prev} />}
-          {index === 5 && <StatsSection content={content.stats} onNext={next} onPrev={prev} />}
-          {index === 6 && <SuccessStoriesSection content={content.alumni} onNext={next} onPrev={prev} />}
-          {index === 7 && <AlumniVideosSection content={content.alumni} onNext={next} onPrev={prev} />}
-          {index === 8 && <CommunitySection content={content.community} onNext={next} onPrev={prev} />}
-          {index === 9 && <TrustSection content={content.trust} onNext={next} onPrev={prev} />}
-          {index === 10 && (
-            <ClosingSection content={content.closing} brand={content.brand} onPrev={prev} onFinish={onFinish} />
+          {index === 3 && <StatsSection content={content.stats} students={content.students} onNext={next} onPrev={prev} />}
+          {index === 4 && <SuccessStoriesSection content={content.alumni} onNext={next} onPrev={prev} />}
+          {index === 5 && <AlumniVideosSection content={content.alumni} onNext={next} onPrev={prev} />}
+          {index === 6 && <InstructorsSection content={content.instructors} onNext={next} onPrev={prev} />}
+          {index === 7 && <TrustSection content={content.trust} students={content.students} onNext={next} onPrev={prev} />}
+          {index === 8 && (
+            <ClosingSection
+              content={content.closing}
+              brand={content.brand}
+              alumni={content.alumni}
+              industry={content.industry}
+              students={content.students}
+              onPrev={prev}
+              onFinish={onFinish}
+            />
           )}
         </motion.div>
       </AnimatePresence>

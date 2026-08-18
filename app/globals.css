@@ -41,6 +41,16 @@ body {
   scrollbar-color: #d4d4d8 transparent;
 }
 
+/* Ecom intro: living two-row logo wall (components/ecom-intro/sections/IndustrySection.tsx) */
+@keyframes ecom-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

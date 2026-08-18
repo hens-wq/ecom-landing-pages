@@ -7,11 +7,14 @@ export function AnimatedCounter({
   value,
   decimals = 0,
   suffix = "",
+  delayMs = 0,
   className,
 }: {
   value: number;
   decimals?: number;
   suffix?: string;
+  /** Stagger the count-up start relative to sibling counters (e.g. i * 300). */
+  delayMs?: number;
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -24,19 +27,28 @@ export function AnimatedCounter({
 
   useEffect(() => {
     if (!inView) return;
-    const controls = animate(0, value, {
-      duration: 1.6,
-      ease: "easeOut",
-      onUpdate: (latest) => setDisplay(formatter.format(latest)),
-    });
-    return () => controls.stop();
+    let controls: ReturnType<typeof animate> | undefined;
+    const timer = setTimeout(() => {
+      controls = animate(0, value, {
+        duration: 1.4,
+        ease: "easeOut",
+        onUpdate: (latest) => setDisplay(formatter.format(latest)),
+      });
+    }, delayMs);
+    return () => {
+      clearTimeout(timer);
+      controls?.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView, value, decimals]);
+  }, [inView, value, decimals, delayMs]);
 
   return (
     <span ref={ref} className={className}>
-      {display}
-      {suffix}
+      {/* Isolated as LTR so the RTL page context can never reorder the digits and suffix (e.g. "2,500+" flipping to "+2,500"). */}
+      <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
+        {display}
+        {suffix}
+      </span>
     </span>
   );
 }

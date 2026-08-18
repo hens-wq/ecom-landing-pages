@@ -100,7 +100,7 @@ export function SuccessStoriesSection({
                     </span>
                   </div>
                   {story.quote && <p className="relative text-base leading-relaxed text-slate-600">&ldquo;{story.quote}&rdquo;</p>}
-                  {story.story && <p className="relative text-sm leading-relaxed text-slate-500">{story.story}</p>}
+                  {story.story && <p className="relative text-sm leading-relaxed text-slate-600">{story.story}</p>}
                 </div>
               </motion.div>
             </AnimatePresence>
