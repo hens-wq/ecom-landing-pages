@@ -284,6 +284,8 @@ export const introStatsSchema = z.object({
 export const introAlumniStorySchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** Verbatim approved phrase, e.g. "בן 36, גר באזור הצפון" - kept as one string rather than split age/location fields so gender agreement (בן/בת, גר/גרה) is never reconstructed. */
+  subtitle: z.string().optional(),
   course: z.string(),
   roleBefore: z.string().optional(),
   roleAfter: z.string().optional(),
@@ -312,6 +314,7 @@ export const introInstructorSchema = z.object({
   course: z.string().optional(),
   role: z.string().optional(),
   company: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export const introInstructorsSchema = z.object({

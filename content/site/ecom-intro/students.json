@@ -1,3 +1,11 @@
 {
-  "photos": []
+  "photos": [
+    { "id": "welcome-1", "photoSrc": "/ecom-intro/students/woman-standing-laptop-backpack.png" },
+    { "id": "welcome-2", "photoSrc": "/ecom-intro/students/man-standing-casual.png" },
+    { "id": "ariel-1", "photoSrc": "/ecom-intro/students/woman-standing-blazer.png" },
+    { "id": "stats-1", "photoSrc": "/ecom-intro/students/woman-sitting-laptop.png" },
+    { "id": "trust-1", "photoSrc": "/ecom-intro/students/man-sitting-beanbag-laptop.png" },
+    { "id": "closing-1", "photoSrc": "/ecom-intro/students/man-standing-laptop-backpack.png" },
+    { "id": "closing-2", "photoSrc": "/ecom-intro/students/woman-standing-blazer.png" }
+  ]
 }

@@ -2,10 +2,9 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import type { IntroIndustryContent, IntroStudentsContent } from "@/lib/content/schemas";
+import type { IntroIndustryContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
-import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 
 function LogoRow({ logos, reverse, durationS }: { logos: IntroIndustryContent["logos"]; reverse?: boolean; durationS: number }) {
   const track = [...logos, ...logos];
@@ -30,12 +29,10 @@ function LogoRow({ logos, reverse, durationS }: { logos: IntroIndustryContent["l
 
 export function IndustrySection({
   content,
-  students,
   onNext,
   onPrev,
 }: {
   content: IntroIndustryContent;
-  students: IntroStudentsContent;
   onNext: () => void;
   onPrev: () => void;
 }) {
@@ -46,11 +43,6 @@ export function IndustrySection({
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-16 sm:px-10">
       <BrandBackdrop tone="violet" />
-      <StudentPhoto
-        students={students}
-        id="industry-1"
-        className="pointer-events-none absolute bottom-0 left-4 z-0 hidden h-[62%] w-auto object-contain object-bottom opacity-85 lg:block"
-      />
 
       <div className="relative z-10 mx-auto flex w-full max-w-[90rem] flex-1 flex-col items-center justify-center gap-8">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 text-center">

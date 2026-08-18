@@ -143,7 +143,7 @@ export function WelcomeSection({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
-        className="relative z-10 mt-6 max-w-2xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
+        className="relative z-10 mt-6 max-w-xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
       >
         {content.supportingLine}
       </motion.p>

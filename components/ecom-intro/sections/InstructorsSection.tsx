@@ -46,7 +46,7 @@ export function InstructorsSection({
           </motion.p>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2">
           {content.instructors.map((instructor, i) => (
             <motion.div
               key={instructor.name}
@@ -54,25 +54,30 @@ export function InstructorsSection({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              whileHover={{ y: -6 }}
-              className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-xl"
+              whileHover={{ y: -4 }}
+              className="group flex items-center gap-5 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 text-right shadow-sm transition-shadow hover:shadow-xl"
             >
-              <div className="relative aspect-[4/5] w-full">
+              <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl sm:size-28">
                 <Image
                   src={instructor.photoSrc}
                   alt={instructor.name}
                   fill
-                  sizes="(min-width: 640px) 25vw, 50vw"
+                  sizes="112px"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   style={{ objectPosition: "50% 15%" }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-1 p-4 text-right">
-                  <span className="text-base font-extrabold text-white drop-shadow">{instructor.name}</span>
-                  <span className="rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-bold text-[var(--brand-purple)]">
-                    {instructor.course ?? "מרצה/ת ב-Ecom"}
+              </div>
+              <div className="flex flex-1 flex-col items-start gap-1.5">
+                {instructor.course && (
+                  <span className="rounded-full bg-[var(--brand-purple)]/10 px-2.5 py-0.5 text-[11px] font-bold text-[var(--brand-purple)]">
+                    {instructor.course}
                   </span>
-                </div>
+                )}
+                <span className="text-lg font-extrabold text-slate-900">{instructor.name}</span>
+                {instructor.role && <span className="text-sm font-bold text-[var(--brand-teal)]">{instructor.role}</span>}
+                {instructor.description && (
+                  <p className="text-xs leading-relaxed text-slate-600">{instructor.description}</p>
+                )}
               </div>
             </motion.div>
           ))}
