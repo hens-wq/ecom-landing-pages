@@ -187,10 +187,14 @@ export function ClosingSection({
           </div>
         </motion.div>
 
+        {/*
+          Mount-triggered (animate), not scroll-triggered (whileInView) - this
+          is the button that actually finishes the intro, so its visibility
+          can never depend on an IntersectionObserver firing in time.
+        */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
           className="flex flex-col items-center gap-3"
         >

@@ -97,22 +97,20 @@ export function WelcomeSection({
       />
 
       {/*
-        Both figures are width-capped (not height-capped) so they scale down
-        together with narrower desktop viewports instead of ballooning taller
-        - that's what previously let the woman's figure creep into the
-        subtitle at smaller desktop widths. Inset a few % from the edge
-        (not flush) for extra clearance, matched by the text column's own
-        max-width below.
+        Height-based for real visual presence (matches the Ariel section's
+        figure), with a min/max width safety band so they can't balloon wide
+        enough to reach the centered text column on unusually short or tall
+        viewports. Inset a bit from the edge (not flush) for extra clearance.
       */}
       <StudentPhoto
         students={students}
         id="welcome-1"
-        className="pointer-events-none absolute bottom-0 right-[1%] z-10 hidden h-auto w-[18vw] min-w-[210px] max-w-[300px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
+        className="pointer-events-none absolute bottom-0 right-[1%] z-10 hidden h-[52%] w-auto min-w-[240px] max-w-[370px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
       />
       <StudentPhoto
         students={students}
         id="welcome-2"
-        className="pointer-events-none absolute bottom-0 left-[1%] z-0 hidden h-auto w-[15vw] min-w-[175px] max-w-[245px] object-contain object-bottom opacity-80 lg:block"
+        className="pointer-events-none absolute bottom-0 left-[1%] z-0 hidden h-[45%] w-auto min-w-[205px] max-w-[310px] object-contain object-bottom opacity-80 lg:block"
       />
 
       <motion.div
