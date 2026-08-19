@@ -244,7 +244,6 @@ export const introBrandSchema = z.object({
 export const introWelcomeSchema = z.object({
   headline: z.string(),
   supportingLine: z.string(),
-  additionalLine: z.string(),
   ctaLabel: z.string(),
 });
 
@@ -252,8 +251,6 @@ export const introArielSchema = z.object({
   headline: z.string(),
   body: z.string(),
   benefits: z.array(z.string()).min(1),
-  applicablePrograms: z.array(z.string()).min(1),
-  clarification: z.string().optional(),
   logoSrc: z.string(),
 });
 
@@ -264,7 +261,6 @@ export const introLogoSchema = z.object({
 
 export const introIndustrySchema = z.object({
   headline: z.string(),
-  alternativeHeadline: z.string(),
   body: z.string(),
   logos: z.array(introLogoSchema).min(1),
 });
@@ -323,14 +319,25 @@ export const introInstructorsSchema = z.object({
   instructors: z.array(introInstructorSchema).min(1),
 });
 
+export const introTrustItemSchema = z.object({
+  headline: z.string(),
+  explanation: z.string(),
+});
+
 export const introTrustSchema = z.object({
   headline: z.string(),
-  items: z.array(z.string()).min(1),
+  items: z.array(introTrustItemSchema).min(1),
+});
+
+export const introClosingOnboardingSchema = z.object({
+  eyebrow: z.string(),
+  steps: z.array(z.string()).min(1),
 });
 
 export const introClosingSchema = z.object({
   headline: z.string(),
   body: z.array(z.string()).min(1),
+  onboarding: introClosingOnboardingSchema,
   supportingLine: z.string(),
   ctaLabel: z.string(),
 });
@@ -363,6 +370,7 @@ export type IntroAlumniStory = z.infer<typeof introAlumniStorySchema>;
 export type IntroAlumniContent = z.infer<typeof introAlumniContentSchema>;
 export type IntroInstructor = z.infer<typeof introInstructorSchema>;
 export type IntroInstructorsContent = z.infer<typeof introInstructorsSchema>;
+export type IntroTrustItem = z.infer<typeof introTrustItemSchema>;
 export type IntroTrustContent = z.infer<typeof introTrustSchema>;
 export type IntroClosingContent = z.infer<typeof introClosingSchema>;
 export type IntroAudioContent = z.infer<typeof introAudioSchema>;

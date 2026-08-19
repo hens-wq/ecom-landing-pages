@@ -96,30 +96,38 @@ export function WelcomeSection({
         }}
       />
 
+      {/*
+        Both figures are width-capped (not height-capped) so they scale down
+        together with narrower desktop viewports instead of ballooning taller
+        - that's what previously let the woman's figure creep into the
+        subtitle at smaller desktop widths. Inset a few % from the edge
+        (not flush) for extra clearance, matched by the text column's own
+        max-width below.
+      */}
       <StudentPhoto
         students={students}
         id="welcome-1"
-        className="pointer-events-none absolute bottom-0 right-0 z-10 hidden h-[85%] w-auto object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
+        className="pointer-events-none absolute bottom-0 right-[2%] z-10 hidden h-auto w-[15vw] min-w-[170px] max-w-[240px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
       />
       <StudentPhoto
         students={students}
         id="welcome-2"
-        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[65%] w-auto object-contain object-bottom opacity-50 blur-[1px] lg:block"
+        className="pointer-events-none absolute bottom-0 left-[2%] z-0 hidden h-auto w-[12vw] min-w-[140px] max-w-[195px] object-contain object-bottom opacity-80 lg:block"
       />
 
       <motion.div
         initial={{ opacity: 0, y: -16, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="relative z-10 mb-4"
+        className="relative z-10 mb-2"
       >
         <Image
           src={brand.logoStackedSrc}
           alt="Ecom School"
-          width={220}
-          height={121}
+          width={260}
+          height={143}
           priority
-          className="mx-auto h-auto w-44 drop-shadow-[0_8px_30px_rgba(140,82,255,0.25)] sm:w-56"
+          className="mx-auto h-auto w-52 drop-shadow-[0_8px_30px_rgba(140,82,255,0.25)] sm:w-64"
         />
       </motion.div>
 
@@ -143,18 +151,9 @@ export function WelcomeSection({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
-        className="relative z-10 mt-6 max-w-xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
+        className="relative z-10 mt-6 max-w-3xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
       >
         {content.supportingLine}
-      </motion.p>
-
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut", delay: 0.65 }}
-        className="relative z-10 mt-3 max-w-xl text-base leading-relaxed text-slate-600"
-      >
-        {content.additionalLine}
       </motion.p>
 
       <motion.div

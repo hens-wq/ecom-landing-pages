@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { BadgeCheck, ClipboardCheck, GraduationCap, ShieldCheck, UserCheck } from "lucide-react";
+import { BadgeCheck, ClipboardCheck, ShieldCheck, UserCheck } from "lucide-react";
 import type { IntroArielContent, IntroBrandContent, IntroStudentsContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
@@ -34,45 +34,43 @@ export function ArielSection({
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-8 text-center">
-        <motion.span
-          initial={{ opacity: 0, y: -10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-[var(--brand-teal)] shadow-sm"
-        >
-          <GraduationCap className="size-4" />
-          פיקוח ואישור פדגוגי
-        </motion.span>
-
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.05 }}
+          transition={{ duration: 0.6 }}
           className="text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl"
         >
           {content.headline}
         </motion.h2>
 
-        {/* Big unified lockup: two substantial brands in one professional frame */}
+        {/* Big unified lockup: two substantial brands, each centered in its own half */}
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.65, delay: 0.1 }}
-          className="relative flex w-full items-center justify-center gap-8 overflow-hidden rounded-[2rem] border border-white/60 bg-white px-10 py-8 shadow-[0_30px_80px_-30px_rgba(52,209,195,0.35)] sm:gap-14 sm:py-10"
+          className="relative grid w-full grid-cols-2 overflow-hidden rounded-[2rem] border border-white/60 bg-white shadow-[0_30px_80px_-30px_rgba(52,209,195,0.35)]"
         >
           <DotGrid className="left-6 top-6 h-14 w-14 text-[var(--brand-teal)] opacity-20" />
-          <Image src={brand.logoMarkSrc} alt="Ecom" width={100} height={100} className="relative h-16 w-16 sm:h-24 sm:w-24" />
-          <span className="relative h-16 w-px bg-slate-200 sm:h-20" />
-          <Image
-            src={content.logoSrc}
-            alt="אוניברסיטת אריאל בשומרון"
-            width={280}
-            height={280}
-            className="relative h-20 w-auto sm:h-28"
-          />
+          <div className="flex items-center justify-center border-e border-slate-100 px-6 py-10 sm:py-14">
+            <Image
+              src={brand.logoStackedSrc}
+              alt="Ecom School"
+              width={220}
+              height={121}
+              className="relative h-auto w-32 sm:w-40"
+            />
+          </div>
+          <div className="flex items-center justify-center px-6 py-10 sm:py-14">
+            <Image
+              src={content.logoSrc}
+              alt="אוניברסיטת אריאל בשומרון"
+              width={280}
+              height={280}
+              className="relative h-20 w-auto sm:h-28"
+            />
+          </div>
         </motion.div>
 
         <motion.p
@@ -85,7 +83,7 @@ export function ArielSection({
           {content.body}
         </motion.p>
 
-        {/* Benefits - the real point of this screen */}
+        {/* Benefits - the point of this screen */}
         <div className="grid w-full grid-cols-2 gap-3 sm:gap-4">
           {content.benefits.map((benefit, i) => {
             const Icon = BENEFIT_ICONS[i % BENEFIT_ICONS.length];
@@ -106,24 +104,6 @@ export function ArielSection({
             );
           })}
         </div>
-
-        {/* Course list - secondary, small */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.65 }}
-          className="flex flex-wrap items-center justify-center gap-2 text-xs"
-        >
-          <span className="font-bold text-slate-500">האישור חל על מסלולי:</span>
-          {content.applicablePrograms.map((program) => (
-            <span key={program} className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">
-              {program}
-            </span>
-          ))}
-        </motion.div>
-
-        {content.clarification && <p className="text-xs text-slate-500">{content.clarification}</p>}
 
         <SectionNav onPrev={onPrev} onNext={onNext} />
       </div>

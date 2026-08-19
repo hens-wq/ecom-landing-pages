@@ -8,11 +8,11 @@ import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 
 /** Purely decorative, matched by keyword against our own fixed trust copy - not content-driven. */
-function iconFor(item: string): LucideIcon {
-  if (item.includes("ISO")) return Award;
-  if (item.includes("משרד העבודה")) return FileCheck2;
-  if (item.includes("משרד הביטחון")) return ShieldCheck;
-  if (item.includes("פדגוגי")) return GraduationCap;
+function iconFor(headline: string): LucideIcon {
+  if (headline.includes("ISO")) return Award;
+  if (headline.includes("משרד העבודה")) return FileCheck2;
+  if (headline.includes("משרד הביטחון")) return ShieldCheck;
+  if (headline.includes("פדגוגי")) return GraduationCap;
   return Award;
 }
 
@@ -36,7 +36,7 @@ export function TrustSection({
         className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[55%] w-auto object-contain object-bottom opacity-35 lg:block"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-14 text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-10 text-center">
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -47,22 +47,23 @@ export function TrustSection({
           {content.headline}
         </motion.h2>
 
-        <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-4">
+        <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2">
           {content.items.map((item, i) => {
-            const Icon = iconFor(item);
+            const Icon = iconFor(item.headline);
             return (
               <motion.div
-                key={item}
-                initial={{ opacity: 0, y: 30, scale: 0.85 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                key={item.headline}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.18 }}
-                className="flex flex-col items-center gap-4"
+                transition={{ duration: 0.5, delay: i * 0.12 }}
+                className="flex flex-col items-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_20px_50px_-30px_rgba(15,23,42,0.35)]"
               >
-                <span className="flex size-20 items-center justify-center rounded-full bg-white text-[var(--brand-teal)] shadow-[0_20px_45px_-20px_rgba(52,209,195,0.5)] ring-1 ring-slate-100 sm:size-24">
-                  <Icon className="size-9 sm:size-10" />
+                <span className="flex size-16 items-center justify-center rounded-full bg-[var(--brand-teal)]/10 text-[var(--brand-teal)]">
+                  <Icon className="size-7" />
                 </span>
-                <span className="text-sm font-bold leading-snug text-slate-800 sm:text-base">{item}</span>
+                <span className="text-lg font-extrabold leading-snug text-slate-900">{item.headline}</span>
+                <p className="text-sm leading-relaxed text-slate-600">{item.explanation}</p>
               </motion.div>
             );
           })}

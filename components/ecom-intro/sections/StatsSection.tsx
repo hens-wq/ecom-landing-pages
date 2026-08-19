@@ -1,18 +1,22 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
-import type { IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
+import type { IntroIndustryContent, IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 import { AnimatedCounter } from "@/components/ecom-intro/AnimatedCounter";
+import { GoogleLogo } from "@/components/ecom-intro/GoogleLogo";
 
 const CARD_ACCENTS = [
   "from-[var(--brand-teal)] to-[var(--brand-green)]",
   "from-[var(--brand-green)] to-[var(--brand-purple)]",
   "from-[var(--brand-purple)] to-[var(--brand-teal)]",
 ];
+
+const PARTNER_LOGO_NAMES = ["Microsoft", "Check Point", "Deloitte", "EY", "Wix"];
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -36,16 +40,21 @@ function StarRow({ rating }: { rating: number }) {
 
 export function StatsSection({
   content,
+  industry,
   students,
   onNext,
   onPrev,
 }: {
   content: IntroStatsContent;
+  industry: IntroIndustryContent;
   students: IntroStudentsContent;
   onNext: () => void;
   onPrev: () => void;
 }) {
   const [hero, ...rest] = content.stats;
+  const partnerLogos = PARTNER_LOGO_NAMES.map((name) => industry.logos.find((l) => l.name === name)).filter(
+    (l): l is IntroIndustryContent["logos"][number] => !!l
+  );
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-16 sm:px-10">
@@ -91,6 +100,8 @@ export function StatsSection({
           <div className="grid w-full grid-cols-3 gap-4">
             {rest.map((stat, i) => {
               const isRating = stat.suffix === "/5";
+              const isGoogleReviews = stat.label === "ביקורות Google";
+              const isCompanies = stat.label === "חברות ועסקים בקשרי השמה";
               return (
                 <motion.div
                   key={stat.label}
@@ -101,6 +112,7 @@ export function StatsSection({
                   className="relative flex flex-col items-center gap-1.5 overflow-hidden rounded-2xl border border-slate-200 bg-white px-3 py-6 shadow-sm"
                 >
                   <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-l ${CARD_ACCENTS[i % CARD_ACCENTS.length]}`} />
+                  {isGoogleReviews && <GoogleLogo className="size-5" />}
                   <AnimatedCounter
                     value={stat.value}
                     decimals={stat.decimals}
@@ -110,6 +122,15 @@ export function StatsSection({
                   />
                   {isRating && <StarRow rating={stat.value} />}
                   <span className="text-xs font-semibold text-slate-600 sm:text-sm">{stat.label}</span>
+                  {isCompanies && partnerLogos.length > 0 && (
+                    <div className="mt-1 flex items-center justify-center gap-2.5">
+                      {partnerLogos.map((logo) => (
+                        <div key={logo.name} className="relative h-4 w-9 opacity-70 grayscale">
+                          <Image src={logo.src} alt={logo.name} fill sizes="36px" className="object-contain" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}

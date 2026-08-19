@@ -83,7 +83,9 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
           {index === 2 && (
             <IndustrySection content={content.industry} onNext={next} onPrev={prev} />
           )}
-          {index === 3 && <StatsSection content={content.stats} students={content.students} onNext={next} onPrev={prev} />}
+          {index === 3 && (
+            <StatsSection content={content.stats} industry={content.industry} students={content.students} onNext={next} onPrev={prev} />
+          )}
           {index === 4 && <SuccessStoriesSection content={content.alumni} onNext={next} onPrev={prev} />}
           {index === 5 && <AlumniVideosSection content={content.alumni} onNext={next} onPrev={prev} />}
           {index === 6 && <InstructorsSection content={content.instructors} onNext={next} onPrev={prev} />}

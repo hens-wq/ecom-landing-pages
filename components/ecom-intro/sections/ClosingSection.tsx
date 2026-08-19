@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import type {
   IntroAlumniContent,
   IntroBrandContent,
@@ -40,7 +40,7 @@ export function ClosingSection({
   onFinish: () => void;
 }) {
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-20 text-center sm:px-10">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden px-6 py-20 text-center sm:px-10">
       <BrandBackdrop tone="sunrise" strong />
 
       {/* Faded echoes of the journey: alumni faces + a couple of industry logos */}
@@ -92,7 +92,7 @@ export function ClosingSection({
 
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 size-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-1/3 size-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
         style={{
           background: "radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 45%, transparent 75%)",
         }}
@@ -109,15 +109,20 @@ export function ClosingSection({
         className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[60%] w-auto object-contain object-bottom opacity-50 blur-[1px] lg:block"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-7">
+      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center gap-8">
         <motion.div
-          initial={{ opacity: 0, y: -12, scale: 0.9 }}
+          initial={{ opacity: 0, y: -12, scale: 0.94 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="flex size-20 items-center justify-center rounded-3xl bg-white shadow-[0_20px_50px_-20px_rgba(140,82,255,0.5)]"
         >
-          <Image src={brand.logoMarkSrc} alt="Ecom" width={56} height={56} className="h-11 w-11" />
+          <Image
+            src={brand.logoStackedSrc}
+            alt="Ecom School"
+            width={220}
+            height={121}
+            className="mx-auto h-auto w-40 drop-shadow-[0_8px_30px_rgba(140,82,255,0.25)] sm:w-48"
+          />
         </motion.div>
 
         <motion.h2
@@ -130,38 +135,56 @@ export function ClosingSection({
           {content.headline}
         </motion.h2>
 
-        <div className="flex max-w-xl flex-col gap-3">
-          {content.body.map((paragraph, i) => (
-            <motion.p
-              key={paragraph}
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.22 + i * 0.1 }}
-              className="text-xl leading-relaxed text-slate-700"
-            >
-              {paragraph}
-            </motion.p>
-          ))}
-        </div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+        {/* The key takeaway from the whole intro, framed as one panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.45 }}
-          className="text-base font-bold tracking-wide text-[var(--brand-purple)]"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex w-full flex-col gap-3 rounded-3xl border border-[var(--brand-purple)]/15 bg-white/80 p-6 shadow-[0_25px_60px_-35px_rgba(140,82,255,0.4)] backdrop-blur-sm sm:p-8"
         >
-          {content.supportingLine}
-        </motion.p>
+          {content.body.map((paragraph) => (
+            <p key={paragraph} className="text-lg leading-relaxed text-slate-800 sm:text-xl">
+              {paragraph}
+            </p>
+          ))}
+        </motion.div>
+
+        {/* What happens now - broken into short onboarding blocks, not one paragraph */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="flex w-full flex-col items-center gap-4"
+        >
+          <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--brand-purple)]">
+            <Sparkles className="size-3.5" />
+            {content.onboarding.eyebrow}
+          </span>
+          <div className="flex w-full flex-col gap-2.5">
+            {content.onboarding.steps.map((step, i) => (
+              <div
+                key={step}
+                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-right shadow-sm"
+              >
+                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-purple)]/10 text-xs font-bold text-[var(--brand-purple)]">
+                  {i + 1}
+                </span>
+                <p className="text-sm leading-relaxed text-slate-700">{step}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.55 }}
-          className="mt-4 flex flex-col items-center gap-3"
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex flex-col items-center gap-3"
         >
+          <p className="text-base font-bold tracking-wide text-[var(--brand-purple)]">{content.supportingLine}</p>
           <Button
             type="button"
             size="lg"
