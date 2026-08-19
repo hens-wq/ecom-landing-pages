@@ -8,15 +8,39 @@ import type { IntroBrandContent, IntroWelcomeContent } from "@/lib/content/schem
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { OutlineTriangle, FilledTriangle } from "@/components/shared/GeometricDecor";
+import { cn } from "@/lib/utils";
 
-const FLOATING_TERMS = [
-  { label: "Cyber", top: "18%", right: "8%", delay: 0 },
-  { label: "AI", top: "68%", right: "14%", delay: 1.6 },
-  { label: "Full Stack", top: "24%", left: "8%", delay: 3.2 },
-  { label: "UX/UI", top: "72%", left: "12%", delay: 4.8 },
-  { label: "QA", top: "42%", right: "4%", delay: 6.4 },
-  { label: "Digital Marketing", top: "50%", left: "3%", delay: 8 },
+const BRAND_COLORS = ["text-[var(--brand-purple)]", "text-[var(--brand-teal)]", "text-[var(--brand-green)]"];
+
+/** A wider field of triangles than the small corner accents elsewhere - some sharp, some pushed soft into the background. */
+const TRIANGLES = [
+  { kind: "outline", size: 100, pos: "left-[9%] top-[9%]", opacity: 0.14, rotate: -15, blur: "" },
+  { kind: "outline", size: 150, pos: "-right-10 -top-10", opacity: 0.1, rotate: 12, blur: "blur-sm" },
+  { kind: "filled", size: 20, pos: "left-[24%] top-[20%]", opacity: 0.2, rotate: 20, blur: "" },
+  { kind: "outline", size: 60, pos: "right-[16%] top-[26%]", opacity: 0.16, rotate: -25, blur: "" },
+  { kind: "filled", size: 30, pos: "left-[6%] top-[52%]", opacity: 0.12, rotate: 40, blur: "blur-[2px]" },
+  { kind: "outline", size: 170, pos: "-left-14 -bottom-14", opacity: 0.08, rotate: -10, blur: "blur-md" },
+  { kind: "outline", size: 80, pos: "right-[10%] bottom-[16%]", opacity: 0.15, rotate: 30, blur: "" },
+  { kind: "filled", size: 16, pos: "left-[30%] bottom-[22%]", opacity: 0.2, rotate: -18, blur: "" },
+  { kind: "outline", size: 44, pos: "right-[30%] top-[10%]", opacity: 0.18, rotate: 8, blur: "" },
 ];
+
+/** Not navigation - pure atmosphere, so the page feels like the Ecom world without needing people. */
+const WORLD_CHIPS = [
+  { label: "Cyber", pos: "left-[8%] top-[13%]", tier: "visible" as const, delay: 0 },
+  { label: "AI", pos: "right-[9%] top-[19%]", tier: "subtle" as const, delay: 0.7 },
+  { label: "DevOps", pos: "left-[36%] top-[7%]", tier: "faded" as const, delay: 1.4 },
+  { label: "Full Stack", pos: "left-[5%] top-[46%]", tier: "faded" as const, delay: 2.1 },
+  { label: "UX/UI", pos: "right-[6%] top-[50%]", tier: "visible" as const, delay: 2.8 },
+  { label: "Digital Marketing & Data", pos: "right-[10%] bottom-[14%]", tier: "subtle" as const, delay: 3.5 },
+  { label: "QA", pos: "left-[10%] bottom-[12%]", tier: "visible" as const, delay: 4.2 },
+];
+
+const CHIP_TIERS = {
+  visible: "border-white/70 bg-white/55 text-slate-800 opacity-90",
+  subtle: "border-white/50 bg-white/35 text-slate-600 opacity-55",
+  faded: "border-white/40 bg-white/20 text-slate-500 opacity-35 blur-[0.5px]",
+};
 
 function useParallax(strength = 14): { x: MotionValue<number>; y: MotionValue<number>; onMouseMove: (e: React.MouseEvent) => void } {
   const rawX = useMotionValue(0);
@@ -48,6 +72,8 @@ export function WelcomeSection({
   const parallax = useParallax();
   const bgX = useTransform(parallax.x, (v) => v);
   const bgY = useTransform(parallax.y, (v) => v);
+  const chipX = useTransform(parallax.x, (v) => v * 0.5);
+  const chipY = useTransform(parallax.y, (v) => v * 0.5);
 
   return (
     <div
@@ -57,31 +83,76 @@ export function WelcomeSection({
     >
       <BrandBackdrop tone="sunrise" strong />
 
-      {/* Slow-drifting triangle motifs, gently mouse-reactive */}
+      {/* Wider triangle field - gently mouse-reactive, two independent slow rotations for a less mechanical feel */}
       <motion.div className="pointer-events-none absolute inset-0" aria-hidden style={{ x: bgX, y: bgY }}>
-        <motion.div animate={{ rotate: [0, 6, 0] }} transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}>
-          <OutlineTriangle className="left-[10%] top-[14%] text-[var(--brand-purple)] opacity-[0.16]" size={64} rotate={-12} />
-          <OutlineTriangle className="right-[12%] bottom-[18%] text-[var(--brand-teal)] opacity-[0.16]" size={80} rotate={20} />
-          <FilledTriangle className="right-[22%] top-[22%] text-[var(--brand-green)] opacity-[0.2]" size={22} rotate={-8} />
-          <FilledTriangle className="left-[20%] bottom-[24%] text-[var(--brand-purple)] opacity-[0.18]" size={16} rotate={40} />
+        <motion.div animate={{ rotate: [0, 5, 0] }} transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}>
+          {TRIANGLES.slice(0, 5).map((t, i) =>
+            t.kind === "outline" ? (
+              <OutlineTriangle
+                key={i}
+                className={cn(t.pos, BRAND_COLORS[i % BRAND_COLORS.length], `opacity-[${t.opacity}]`, t.blur)}
+                size={t.size}
+                rotate={t.rotate}
+              />
+            ) : (
+              <FilledTriangle
+                key={i}
+                className={cn(t.pos, BRAND_COLORS[i % BRAND_COLORS.length], `opacity-[${t.opacity}]`, t.blur)}
+                size={t.size}
+                rotate={t.rotate}
+              />
+            )
+          )}
+        </motion.div>
+        <motion.div animate={{ rotate: [0, -4, 0] }} transition={{ duration: 32, repeat: Infinity, ease: "easeInOut", delay: 2 }}>
+          {TRIANGLES.slice(5).map((t, i) =>
+            t.kind === "outline" ? (
+              <OutlineTriangle
+                key={i}
+                className={cn(t.pos, BRAND_COLORS[(i + 1) % BRAND_COLORS.length], `opacity-[${t.opacity}]`, t.blur)}
+                size={t.size}
+                rotate={t.rotate}
+              />
+            ) : (
+              <FilledTriangle
+                key={i}
+                className={cn(t.pos, BRAND_COLORS[(i + 1) % BRAND_COLORS.length], `opacity-[${t.opacity}]`, t.blur)}
+                size={t.size}
+                rotate={t.rotate}
+              />
+            )
+          )}
         </motion.div>
       </motion.div>
 
-      {/* Course terms softly fading in and out in the background */}
-      <div className="pointer-events-none absolute inset-0 hidden sm:block" aria-hidden>
-        {FLOATING_TERMS.map((term) => (
-          <motion.span
-            key={term.label}
-            className="absolute text-lg font-bold text-[var(--brand-purple)] sm:text-xl"
-            style={{ top: term.top, left: term.left, right: term.right }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.16, 0.16, 0] }}
-            transition={{ duration: 6, repeat: Infinity, repeatDelay: 9.6 - 6, delay: term.delay, ease: "easeInOut" }}
+      {/* Floating glass chips - the Ecom learning world, as atmosphere rather than navigation */}
+      <motion.div className="pointer-events-none absolute inset-0 hidden sm:block" aria-hidden style={{ x: chipX, y: chipY }}>
+        {WORLD_CHIPS.map((chip) => (
+          <motion.div
+            key={chip.label}
+            className={cn("absolute", chip.pos)}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: [0, -10, 0] }}
+            transition={{
+              opacity: { duration: 0.9, delay: chip.delay },
+              y: { duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: chip.delay },
+            }}
           >
-            {term.label}
-          </motion.span>
+            <span
+              className={cn(
+                "flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-bold backdrop-blur-md sm:text-sm",
+                CHIP_TIERS[chip.tier]
+              )}
+            >
+              <span
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ background: `var(--brand-${["purple", "teal", "green"][chip.label.length % 3]})` }}
+              />
+              {chip.label}
+            </span>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Radial glow halo directly behind the wordmark */}
       <div
@@ -125,14 +196,18 @@ export function WelcomeSection({
         className="relative z-10 mt-6 h-[3px] w-24 rounded-full bg-gradient-to-l from-[var(--brand-purple)] via-[var(--brand-teal)] to-[var(--brand-green)]"
       />
 
-      <motion.p
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut", delay: 0.55 }}
-        className="relative z-10 mt-6 max-w-3xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
+        className="relative z-10 mt-6 max-w-2xl text-xl leading-relaxed text-slate-700 sm:text-2xl"
       >
-        {content.supportingLine}
-      </motion.p>
+        {content.supportingLine.map((line) => (
+          <span key={line} className="block">
+            {line}
+          </span>
+        ))}
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -140,15 +215,24 @@ export function WelcomeSection({
         transition={{ duration: 0.6, ease: "easeOut", delay: 0.8 }}
         className="relative z-10 mt-10"
       >
-        <Button
-          type="button"
-          size="lg"
-          onClick={onStart}
-          className="h-14 rounded-full px-11 text-lg shadow-[0_16px_40px_rgba(140,82,255,0.35)] transition-transform hover:scale-[1.03]"
-        >
-          {content.ctaLabel}
-          <ArrowLeft className="size-5" />
-        </Button>
+        <div className="relative inline-block">
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 rounded-full blur-xl"
+            style={{ background: "var(--brand-purple)" }}
+            animate={{ opacity: [0.25, 0.45, 0.25] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <Button
+            type="button"
+            size="lg"
+            onClick={onStart}
+            className="h-14 rounded-full px-11 text-lg shadow-[0_16px_40px_rgba(140,82,255,0.35)] transition-transform hover:scale-[1.03]"
+          >
+            {content.ctaLabel}
+            <ArrowLeft className="size-5" />
+          </Button>
+        </div>
       </motion.div>
     </div>
   );

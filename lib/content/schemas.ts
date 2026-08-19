@@ -243,7 +243,8 @@ export const introBrandSchema = z.object({
 
 export const introWelcomeSchema = z.object({
   headline: z.string(),
-  supportingLine: z.string(),
+  /** Each entry renders as its own line - the welcome screen wants an exact, guaranteed line break here, not text that happens to wrap. */
+  supportingLine: z.array(z.string()).min(1),
   ctaLabel: z.string(),
 });
 
