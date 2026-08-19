@@ -1,6 +1,7 @@
 {
   "headline": "Ecom מחוברת לתעשייה",
   "body": "Ecom נמצאת בקשר עם חברות וארגונים מהתעשייה, כדי שהלימודים יישארו מחוברים למה שקורה באמת בשטח.",
+  "logosCaption": "אלה רק חלק מהחברות שמגייסות את בוגרי המכללה",
   "logos": [
     { "name": "Microsoft", "src": "/ecom-intro/companies/microsoft.jpg" },
     { "name": "Check Point", "src": "/ecom-intro/companies/check-point.png" },

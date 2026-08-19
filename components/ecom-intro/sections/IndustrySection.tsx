@@ -8,12 +8,12 @@ import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 
 /** Cycled per logo (not random) so the scatter is organic but stable across renders. */
 const SCATTER = [
-  { h: "h-9 sm:h-11", shift: "translate-y-0" },
-  { h: "h-14 sm:h-16", shift: "translate-y-6" },
-  { h: "h-8 sm:h-10", shift: "-translate-y-2" },
-  { h: "h-12 sm:h-14", shift: "translate-y-3" },
-  { h: "h-10 sm:h-12", shift: "translate-y-8" },
-  { h: "h-11 sm:h-12", shift: "-translate-y-4" },
+  { h: "h-12 sm:h-14", shift: "translate-y-0" },
+  { h: "h-16 sm:h-20", shift: "translate-y-6" },
+  { h: "h-11 sm:h-12", shift: "-translate-y-2" },
+  { h: "h-14 sm:h-16", shift: "translate-y-3" },
+  { h: "h-12 sm:h-14", shift: "translate-y-8" },
+  { h: "h-14 sm:h-16", shift: "-translate-y-4" },
 ];
 
 export function IndustrySection({
@@ -52,7 +52,7 @@ export function IndustrySection({
         </div>
 
         {/* Organic brand/partner wall - no per-logo cards, natural scatter of sizes and offsets */}
-        <div className="flex w-full flex-wrap items-center justify-center gap-x-10 gap-y-6 px-4 sm:gap-x-14 sm:gap-y-10 sm:px-10">
+        <div className="flex w-full flex-wrap items-center justify-center gap-x-12 gap-y-8 px-4 sm:gap-x-16 sm:gap-y-12 sm:px-10">
           {content.logos.map((logo, i) => {
             const variant = SCATTER[i % SCATTER.length];
             return (
@@ -63,19 +63,31 @@ export function IndustrySection({
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: i * 0.05 }}
                 whileHover={{ scale: 1.08 }}
-                className={`relative w-28 shrink-0 sm:w-32 ${variant.h} ${variant.shift}`}
+                className={`relative w-36 shrink-0 sm:w-44 ${variant.h} ${variant.shift}`}
               >
                 <Image
                   src={logo.src}
                   alt={logo.name}
                   fill
-                  sizes="140px"
+                  sizes="180px"
                   className="object-contain drop-shadow-[0_4px_10px_rgba(15,23,42,0.08)]"
                 />
               </motion.div>
             );
           })}
         </div>
+
+        {content.logosCaption && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-sm font-semibold text-slate-500"
+          >
+            {content.logosCaption}
+          </motion.p>
+        )}
 
         <SectionNav onPrev={onPrev} onNext={onNext} />
       </div>

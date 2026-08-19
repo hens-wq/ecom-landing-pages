@@ -125,7 +125,7 @@ export function StatsSection({
                   {isCompanies && partnerLogos.length > 0 && (
                     <div className="mt-1 flex items-center justify-center gap-2.5">
                       {partnerLogos.map((logo) => (
-                        <div key={logo.name} className="relative h-4 w-9 opacity-70 grayscale">
+                        <div key={logo.name} className="relative h-5 w-11">
                           <Image src={logo.src} alt={logo.name} fill sizes="36px" className="object-contain" />
                         </div>
                       ))}

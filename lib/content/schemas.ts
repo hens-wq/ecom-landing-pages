@@ -262,6 +262,7 @@ export const introLogoSchema = z.object({
 export const introIndustrySchema = z.object({
   headline: z.string(),
   body: z.string(),
+  logosCaption: z.string().optional(),
   logos: z.array(introLogoSchema).min(1),
 });
 
@@ -338,7 +339,6 @@ export const introClosingSchema = z.object({
   headline: z.string(),
   body: z.array(z.string()).min(1),
   onboarding: introClosingOnboardingSchema,
-  supportingLine: z.string(),
   ctaLabel: z.string(),
 });
 

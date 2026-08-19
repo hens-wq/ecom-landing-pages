@@ -106,7 +106,7 @@ export function ClosingSection({
       <StudentPhoto
         students={students}
         id="closing-2"
-        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[60%] w-auto object-contain object-bottom opacity-50 blur-[1px] lg:block"
+        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[60%] w-auto object-contain object-bottom opacity-85 lg:block"
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center gap-8">
@@ -143,11 +143,21 @@ export function ClosingSection({
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex w-full flex-col gap-3 rounded-3xl border border-[var(--brand-purple)]/15 bg-white/80 p-6 shadow-[0_25px_60px_-35px_rgba(140,82,255,0.4)] backdrop-blur-sm sm:p-8"
         >
-          {content.body.map((paragraph) => (
-            <p key={paragraph} className="text-lg leading-relaxed text-slate-800 sm:text-xl">
-              {paragraph}
-            </p>
-          ))}
+          {content.body.map((paragraph, i) => {
+            const isLast = i === content.body.length - 1;
+            return (
+              <p
+                key={paragraph}
+                className={
+                  isLast
+                    ? "text-lg font-bold leading-relaxed text-[var(--brand-purple)] sm:text-xl"
+                    : "text-lg leading-relaxed text-slate-800 sm:text-xl"
+                }
+              >
+                {paragraph}
+              </p>
+            );
+          })}
         </motion.div>
 
         {/* What happens now - broken into short onboarding blocks, not one paragraph */}
@@ -158,20 +168,20 @@ export function ClosingSection({
           transition={{ duration: 0.6, delay: 0.3 }}
           className="flex w-full flex-col items-center gap-4"
         >
-          <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--brand-purple)]">
-            <Sparkles className="size-3.5" />
+          <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--brand-purple)]">
+            <Sparkles className="size-4" />
             {content.onboarding.eyebrow}
           </span>
-          <div className="flex w-full flex-col gap-2.5">
+          <div className="flex w-full flex-col gap-3">
             {content.onboarding.steps.map((step, i) => (
               <div
                 key={step}
-                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-right shadow-sm"
+                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm"
               >
-                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-purple)]/10 text-xs font-bold text-[var(--brand-purple)]">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-purple)]/10 text-sm font-bold text-[var(--brand-purple)]">
                   {i + 1}
                 </span>
-                <p className="text-sm leading-relaxed text-slate-700">{step}</p>
+                <p className="text-base leading-relaxed text-slate-800 sm:text-lg">{step}</p>
               </div>
             ))}
           </div>
@@ -184,7 +194,6 @@ export function ClosingSection({
           transition={{ duration: 0.5, delay: 0.4 }}
           className="flex flex-col items-center gap-3"
         >
-          <p className="text-base font-bold tracking-wide text-[var(--brand-purple)]">{content.supportingLine}</p>
           <Button
             type="button"
             size="lg"

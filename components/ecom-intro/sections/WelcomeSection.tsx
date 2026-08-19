@@ -107,12 +107,12 @@ export function WelcomeSection({
       <StudentPhoto
         students={students}
         id="welcome-1"
-        className="pointer-events-none absolute bottom-0 right-[2%] z-10 hidden h-auto w-[15vw] min-w-[170px] max-w-[240px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
+        className="pointer-events-none absolute bottom-0 right-[1%] z-10 hidden h-auto w-[18vw] min-w-[210px] max-w-[300px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
       />
       <StudentPhoto
         students={students}
         id="welcome-2"
-        className="pointer-events-none absolute bottom-0 left-[2%] z-0 hidden h-auto w-[12vw] min-w-[140px] max-w-[195px] object-contain object-bottom opacity-80 lg:block"
+        className="pointer-events-none absolute bottom-0 left-[1%] z-0 hidden h-auto w-[15vw] min-w-[175px] max-w-[245px] object-contain object-bottom opacity-80 lg:block"
       />
 
       <motion.div
