@@ -75,7 +75,7 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
           transition={{ duration: 0.45, ease: "easeOut" }}
         >
           {index === 0 && (
-            <WelcomeSection content={content.welcome} brand={content.brand} students={content.students} onStart={handleStart} />
+            <WelcomeSection content={content.welcome} brand={content.brand} onStart={handleStart} />
           )}
           {index === 1 && (
             <ArielSection content={content.ariel} brand={content.brand} students={content.students} onNext={next} onPrev={prev} />

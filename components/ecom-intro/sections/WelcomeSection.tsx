@@ -4,10 +4,9 @@ import { useRef } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import type { IntroBrandContent, IntroStudentsContent, IntroWelcomeContent } from "@/lib/content/schemas";
+import type { IntroBrandContent, IntroWelcomeContent } from "@/lib/content/schemas";
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
-import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 import { OutlineTriangle, FilledTriangle } from "@/components/shared/GeometricDecor";
 
 const FLOATING_TERMS = [
@@ -39,12 +38,10 @@ function useParallax(strength = 14): { x: MotionValue<number>; y: MotionValue<nu
 export function WelcomeSection({
   content,
   brand,
-  students,
   onStart,
 }: {
   content: IntroWelcomeContent;
   brand: IntroBrandContent;
-  students: IntroStudentsContent;
   onStart: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,23 +91,6 @@ export function WelcomeSection({
           background:
             "radial-gradient(circle, rgba(140,82,255,0.16) 0%, rgba(52,209,195,0.1) 45%, transparent 72%)",
         }}
-      />
-
-      {/*
-        Height-based for real visual presence (matches the Ariel section's
-        figure), with a min/max width safety band so they can't balloon wide
-        enough to reach the centered text column on unusually short or tall
-        viewports. Inset a bit from the edge (not flush) for extra clearance.
-      */}
-      <StudentPhoto
-        students={students}
-        id="welcome-1"
-        className="pointer-events-none absolute bottom-0 right-[1%] z-10 hidden h-[52%] w-auto min-w-[240px] max-w-[370px] object-contain object-bottom opacity-90 drop-shadow-2xl lg:block"
-      />
-      <StudentPhoto
-        students={students}
-        id="welcome-2"
-        className="pointer-events-none absolute bottom-0 left-[1%] z-0 hidden h-[45%] w-auto min-w-[205px] max-w-[310px] object-contain object-bottom opacity-80 lg:block"
       />
 
       <motion.div
