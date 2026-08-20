@@ -4,5 +4,11 @@
     "לפני שלומדים איך למכור את Ecom",
     "בואו נכיר את המקום שאתם מייצגים"
   ],
+  "features": [
+    { "icon": "Target", "label": "הכשרה מקצועית" },
+    { "icon": "PlayCircle", "label": "למידה מעשית" },
+    { "icon": "Users", "label": "אנשי מקצוע מהתעשייה" },
+    { "icon": "TrendingUp", "label": "ליווי לקריירה" }
+  ],
   "ctaLabel": "מתחילים"
 }

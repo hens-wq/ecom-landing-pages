@@ -87,6 +87,47 @@ export function FilledTriangle({
 }
 
 /**
+ * A cluster of thin flowing curves in a teal-to-green gradient, used as a
+ * quiet decorative ribbon in a corner. Purely atmospheric.
+ */
+export function FlowLines({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      className={cn("pointer-events-none absolute", className)}
+      width="420"
+      height="260"
+      viewBox="0 0 420 260"
+      fill="none"
+    >
+      <path
+        d="M0 176C60 138 100 214 160 184C220 154 240 78 320 98C368 110 392 60 420 40"
+        stroke="url(#flowGrad)"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M0 216C70 186 110 244 180 216C240 191 260 128 340 148C380 158 400 108 420 90"
+        stroke="url(#flowGrad)"
+        strokeWidth="1.5"
+        opacity="0.7"
+      />
+      <path
+        d="M0 138C50 110 90 168 150 144C210 120 230 62 300 76C350 86 380 42 420 22"
+        stroke="url(#flowGrad)"
+        strokeWidth="1.5"
+        opacity="0.5"
+      />
+      <defs>
+        <linearGradient id="flowGrad" x1="0" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
+          <stop stopColor="var(--brand-teal)" />
+          <stop offset="1" stopColor="var(--brand-green)" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/**
  * Full corner treatment for a themed hero/card: a soft gradient wedge in one
  * corner, a dot grid and diagonal lines in another, plus a few scattered
  * triangles. Reads the current course theme via CSS variables, so it

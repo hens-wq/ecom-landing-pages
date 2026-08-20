@@ -241,10 +241,17 @@ export const introBrandSchema = z.object({
   logoMarkSrc: z.string(),
 });
 
+export const introWelcomeFeatureSchema = z.object({
+  /** Key into lib/icon-map.ts ICON_MAP */
+  icon: z.string(),
+  label: z.string(),
+});
+
 export const introWelcomeSchema = z.object({
   headline: z.string(),
   /** Each entry renders as its own line - the welcome screen wants an exact, guaranteed line break here, not text that happens to wrap. */
   supportingLine: z.array(z.string()).min(1),
+  features: z.array(introWelcomeFeatureSchema).min(1),
   ctaLabel: z.string(),
 });
 
