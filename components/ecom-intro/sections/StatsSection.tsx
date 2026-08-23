@@ -3,12 +3,15 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
-import type { IntroIndustryContent, IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
+import type { IntroBrandContent, IntroIndustryContent, IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
 import { AnimatedCounter } from "@/components/ecom-intro/AnimatedCounter";
 import { GoogleLogo } from "@/components/ecom-intro/GoogleLogo";
+import { HighlightEcom } from "@/components/ecom-intro/HighlightEcom";
+import { DotGrid, FilledTriangle, FlowLines, OutlineTriangle } from "@/components/shared/GeometricDecor";
+import { cn } from "@/lib/utils";
 
 const CARD_ACCENTS = [
   "from-[var(--brand-teal)] to-[var(--brand-green)]",
@@ -17,6 +20,15 @@ const CARD_ACCENTS = [
 ];
 
 const PARTNER_LOGO_NAMES = ["Microsoft", "Check Point", "Deloitte", "EY", "Wix"];
+
+/** Own scatter for this screen - same decorative vocabulary as Welcome/Industry/Ariel, different composition. */
+const TRIANGLES = [
+  { kind: "outline", size: 190, pos: "-right-16 -top-14", opacity: 0.4, rotate: 8, color: "text-[var(--brand-purple)]" },
+  { kind: "outline", size: 30, pos: "left-[15%] top-[7%]", opacity: 0.28, rotate: -12, color: "text-slate-400" },
+  { kind: "filled", size: 16, pos: "left-[5%] top-[15%]", opacity: 0.7, rotate: -20, color: "text-[var(--brand-purple)]" },
+  { kind: "filled", size: 18, pos: "right-[3%] top-[44%]", opacity: 0.5, rotate: 90, color: "text-[var(--brand-purple)]" },
+  { kind: "filled", size: 16, pos: "right-[16%] top-[66%]", opacity: 0.55, rotate: 90, color: "text-[var(--brand-green)]" },
+] as const;
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -40,12 +52,14 @@ function StarRow({ rating }: { rating: number }) {
 
 export function StatsSection({
   content,
+  brand,
   industry,
   students,
   onNext,
   onPrev,
 }: {
   content: IntroStatsContent;
+  brand: IntroBrandContent;
   industry: IntroIndustryContent;
   students: IntroStudentsContent;
   onNext: () => void;
@@ -58,23 +72,65 @@ export function StatsSection({
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden px-6 py-16 sm:px-10">
-      <BrandBackdrop tone="sunrise" strong />
+      <BrandBackdrop tone="sunrise" />
+
+      <DotGrid className="left-6 top-8 h-24 w-24 text-slate-400 opacity-[0.3]" />
+      <DotGrid className="right-8 bottom-16 h-20 w-20 text-slate-400 opacity-[0.22]" />
+      <FlowLines className="-bottom-6 -right-6 opacity-[0.5] sm:bottom-0 sm:right-0" />
+
+      {TRIANGLES.map((t, i) =>
+        t.kind === "outline" ? (
+          <OutlineTriangle key={i} className={cn(t.pos, t.color, `opacity-[${t.opacity}]`)} size={t.size} rotate={t.rotate} />
+        ) : (
+          <FilledTriangle key={i} className={cn(t.pos, t.color, `opacity-[${t.opacity}]`)} size={t.size} rotate={t.rotate} />
+        )
+      )}
+
+      {/* Soft glow seating the figure into the composition rather than leaving her floating on bare background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 hidden h-[32rem] w-[32rem] -translate-x-1/4 translate-y-1/4 rounded-full opacity-40 blur-3xl lg:block"
+        style={{ background: "radial-gradient(circle, var(--brand-purple) 0%, var(--brand-teal) 55%, transparent 75%)" }}
+      />
       <StudentPhoto
         students={students}
         id="stats-1"
-        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[45%] w-auto object-contain object-bottom opacity-30 lg:block"
+        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[52%] w-auto object-contain object-bottom drop-shadow-[0_20px_40px_rgba(15,23,42,0.15)] lg:block"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-8 text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: -12, scale: 0.94 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <Image
+            src={brand.logoStackedSrc}
+            alt="Ecom School"
+            width={220}
+            height={121}
+            className="mx-auto h-auto w-36 sm:w-44"
+          />
+        </motion.div>
+
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
           className="text-4xl font-extrabold text-slate-900 sm:text-5xl"
         >
-          {content.headline}
+          <HighlightEcom text={content.headline} />
         </motion.h2>
+
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          whileInView={{ opacity: 1, scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
+          className="h-[3px] w-24 rounded-full bg-gradient-to-l from-[var(--brand-purple)] via-[var(--brand-teal)] to-[var(--brand-green)]"
+        />
 
         <div className="flex w-full flex-col gap-5">
           {hero && (

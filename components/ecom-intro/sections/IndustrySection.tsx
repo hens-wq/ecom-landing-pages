@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { IntroIndustryContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
+import { HighlightEcom } from "@/components/ecom-intro/HighlightEcom";
 import { DotGrid, FilledTriangle, FlowLines, OutlineTriangle } from "@/components/shared/GeometricDecor";
 import { cn } from "@/lib/utils";
 
@@ -53,20 +53,6 @@ function ConnectorLines() {
       <path d="M180 300 C 320 340, 420 300, 540 340" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 6" fill="none" opacity="0.5" />
       <path d="M540 340 C 680 380, 780 320, 900 260" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 6" fill="none" opacity="0.4" />
     </svg>
-  );
-}
-
-/** Renders text with any "Ecom" substring picked out in brand purple, matching the reference title treatment. */
-function HighlightEcom({ text }: { text: string }) {
-  const parts = text.split(/(Ecom)/g);
-  return (
-    <>
-      {parts.map((part, i) => (
-        <Fragment key={i}>
-          {part === "Ecom" ? <span className="text-[var(--brand-purple)]">{part}</span> : part}
-        </Fragment>
-      ))}
-    </>
   );
 }
 
