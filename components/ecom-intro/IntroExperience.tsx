@@ -55,10 +55,14 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
   return (
     <div className="relative min-h-[100dvh] w-full bg-white">
       {index > 0 && index < SECTION_COUNT - 1 && (
-        <div className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-4 sm:px-8">
-          <ProgressIndicator current={index} total={SECTION_COUNT} dark={isCinema} />
-          <MusicToggle />
-        </div>
+        <>
+          <div className="fixed left-5 top-4 z-20 sm:left-8">
+            <ProgressIndicator current={index} total={SECTION_COUNT} dark={isCinema} />
+          </div>
+          <div className="fixed right-5 top-4 z-20 sm:right-8">
+            <MusicToggle />
+          </div>
+        </>
       )}
       {(index === 0 || index === SECTION_COUNT - 1) && (
         <div className="fixed left-5 top-4 z-20 sm:left-8">
