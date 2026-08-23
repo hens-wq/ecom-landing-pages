@@ -2,93 +2,65 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import type {
-  IntroAlumniContent,
-  IntroBrandContent,
-  IntroClosingContent,
-  IntroIndustryContent,
-  IntroStudentsContent,
-} from "@/lib/content/schemas";
+import { ArrowLeft, GraduationCap, MessageCircle, RefreshCw, Rocket, Target, type LucideIcon } from "lucide-react";
+import type { IntroBrandContent, IntroClosingContent, IntroStudentsContent } from "@/lib/content/schemas";
 import { Button } from "@/components/ui/button";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
-import { OutlineTriangle, FilledTriangle } from "@/components/shared/GeometricDecor";
+import { DotGrid, FilledTriangle, FlowLines, OutlineTriangle } from "@/components/shared/GeometricDecor";
+import { cn } from "@/lib/utils";
 
-const CORNER_ALUMNI = [
-  { className: "left-[6%] top-[10%] size-28 -rotate-6" },
-  { className: "right-[7%] top-[16%] size-24 rotate-6" },
-  { className: "left-[10%] bottom-[14%] size-24 rotate-3" },
-  { className: "right-[9%] bottom-[10%] size-28 -rotate-3" },
-];
+const STEP_ICONS: LucideIcon[] = [Rocket, GraduationCap, RefreshCw, MessageCircle, Target];
+
+/** Own scatter for this screen - same decorative vocabulary as the other rebuilt screens. */
+const TRIANGLES = [
+  { kind: "outline", size: 28, pos: "left-[8%] top-[6%]", opacity: 0.28, rotate: -15, color: "text-slate-400" },
+  { kind: "filled", size: 16, pos: "left-[13%] top-[15%]", opacity: 0.55, rotate: -10, color: "text-[var(--brand-green)]" },
+  { kind: "outline", size: 170, pos: "-right-16 -top-14", opacity: 0.35, rotate: 10, color: "text-[var(--brand-purple)]" },
+  { kind: "filled", size: 20, pos: "right-[9%] top-[9%]", opacity: 0.45, rotate: 15, color: "text-[var(--brand-purple)]" },
+  { kind: "outline", size: 22, pos: "right-[5%] top-[30%]", opacity: 0.3, rotate: -12, color: "text-[var(--brand-teal)]" },
+] as const;
 
 export function ClosingSection({
   content,
   brand,
-  alumni,
-  industry,
   students,
   onPrev,
   onFinish,
 }: {
   content: IntroClosingContent;
   brand: IntroBrandContent;
-  alumni: IntroAlumniContent;
-  industry: IntroIndustryContent;
   students: IntroStudentsContent;
   onPrev: () => void;
   onFinish: () => void;
 }) {
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden px-6 py-20 text-center sm:px-10">
-      <BrandBackdrop tone="sunrise" strong />
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden px-6 py-12 text-center sm:px-10">
+      <BrandBackdrop tone="sunrise" />
 
-      {/* Faded echoes of the journey: alumni faces + a couple of industry logos */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
-        {CORNER_ALUMNI.map((c, i) => {
-          const person = alumni.stories[i % alumni.stories.length];
-          if (!person) return null;
-          return (
-            <motion.div
-              key={person.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.12 }}
-              transition={{ duration: 1.2, delay: 0.3 + i * 0.15 }}
-              className={`absolute overflow-hidden rounded-3xl blur-[1px] ${c.className}`}
-            >
-              <Image src={person.photoSrc} alt="" fill className="object-cover" style={{ objectPosition: "50% 15%" }} />
-            </motion.div>
-          );
-        })}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.14 }}
-          transition={{ duration: 1, delay: 0.5 }}
-          className="absolute left-[16%] top-[42%] h-10 w-24"
-        >
-          <Image src={industry.logos[0].src} alt="" fill className="object-contain" />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.14 }}
-          transition={{ duration: 1, delay: 0.65 }}
-          className="absolute right-[15%] bottom-[38%] h-10 w-24"
-        >
-          <Image src={industry.logos[3]?.src ?? industry.logos[0].src} alt="" fill className="object-contain" />
-        </motion.div>
-      </div>
+      <DotGrid className="left-6 top-8 h-24 w-24 text-slate-400 opacity-[0.3]" />
+      <FlowLines className="-left-6 -top-6 opacity-[0.4]" />
+      <FlowLines className="-right-6 -top-6 -scale-x-100 opacity-[0.35]" />
 
-      <motion.div
-        className="pointer-events-none absolute inset-0"
+      {TRIANGLES.map((t, i) =>
+        t.kind === "outline" ? (
+          <OutlineTriangle key={i} className={cn(t.pos, t.color, `opacity-[${t.opacity}]`)} size={t.size} rotate={t.rotate} />
+        ) : (
+          <FilledTriangle key={i} className={cn(t.pos, t.color, `opacity-[${t.opacity}]`)} size={t.size} rotate={t.rotate} />
+        )
+      )}
+
+      {/* Purple glow behind the female figure, aqua/green glow behind the male figure */}
+      <div
         aria-hidden
-        animate={{ rotate: [0, -6, 0] }}
-        transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <OutlineTriangle className="right-[10%] top-[16%] text-[var(--brand-teal)] opacity-[0.16]" size={72} rotate={16} />
-        <OutlineTriangle className="left-[12%] bottom-[16%] text-[var(--brand-purple)] opacity-[0.16]" size={64} rotate={-20} />
-        <FilledTriangle className="left-[24%] top-[24%] text-[var(--brand-green)] opacity-[0.2]" size={18} rotate={10} />
-        <FilledTriangle className="right-[24%] bottom-[26%] text-[var(--brand-teal)] opacity-[0.18]" size={22} rotate={-16} />
-      </motion.div>
+        className="pointer-events-none absolute bottom-0 left-0 hidden h-[30rem] w-[30rem] -translate-x-1/4 translate-y-1/4 rounded-full opacity-35 blur-3xl lg:block"
+        style={{ background: "radial-gradient(circle, var(--brand-purple) 0%, transparent 72%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 hidden h-[30rem] w-[30rem] translate-x-1/4 translate-y-1/4 rounded-full opacity-30 blur-3xl lg:block"
+        style={{ background: "radial-gradient(circle, var(--brand-teal) 0%, var(--brand-green) 55%, transparent 75%)" }}
+      />
 
       <div
         aria-hidden
@@ -101,15 +73,15 @@ export function ClosingSection({
       <StudentPhoto
         students={students}
         id="closing-1"
-        className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[75%] w-auto object-contain object-bottom opacity-85 lg:block"
+        className="pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[78%] w-auto object-contain object-bottom drop-shadow-[0_20px_40px_rgba(15,23,42,0.15)] lg:block"
       />
       <StudentPhoto
         students={students}
         id="closing-2"
-        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[60%] w-auto object-contain object-bottom opacity-85 lg:block"
+        className="pointer-events-none absolute bottom-0 left-0 z-0 hidden h-[72%] w-auto object-contain object-bottom drop-shadow-[0_20px_40px_rgba(15,23,42,0.15)] lg:block"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center gap-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6">
         <motion.div
           initial={{ opacity: 0, y: -12, scale: 0.94 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -121,7 +93,7 @@ export function ClosingSection({
             alt="Ecom School"
             width={220}
             height={121}
-            className="mx-auto h-auto w-40 drop-shadow-[0_8px_30px_rgba(140,82,255,0.25)] sm:w-48"
+            className="mx-auto h-auto w-36 drop-shadow-[0_8px_30px_rgba(140,82,255,0.25)] sm:w-44"
           />
         </motion.div>
 
@@ -130,7 +102,7 @@ export function ClosingSection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="text-5xl font-extrabold leading-tight text-slate-900 sm:text-6xl"
+          className="text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl"
         >
           {content.headline}
         </motion.h2>
@@ -141,7 +113,7 @@ export function ClosingSection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex w-full flex-col gap-3 rounded-3xl border border-[var(--brand-purple)]/15 bg-white/80 p-6 shadow-[0_25px_60px_-35px_rgba(140,82,255,0.4)] backdrop-blur-sm sm:p-8"
+          className="flex w-full flex-col gap-2.5 rounded-[2rem] border border-[var(--brand-purple)]/15 bg-[var(--brand-purple)]/[0.04] p-6 shadow-[0_25px_60px_-35px_rgba(140,82,255,0.4)] sm:p-7"
         >
           {content.body.map((paragraph, i) => {
             const isLast = i === content.body.length - 1;
@@ -150,8 +122,8 @@ export function ClosingSection({
                 key={paragraph}
                 className={
                   isLast
-                    ? "text-lg font-bold leading-relaxed text-[var(--brand-purple)] sm:text-xl"
-                    : "text-lg leading-relaxed text-slate-800 sm:text-xl"
+                    ? "text-base font-bold leading-relaxed text-[var(--brand-purple)] sm:text-lg"
+                    : "text-base leading-relaxed text-slate-800 sm:text-lg"
                 }
               >
                 {paragraph}
@@ -168,22 +140,31 @@ export function ClosingSection({
           transition={{ duration: 0.6, delay: 0.3 }}
           className="flex w-full flex-col items-center gap-4"
         >
-          <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[var(--brand-purple)]">
-            <Sparkles className="size-4" />
-            {content.onboarding.eyebrow}
-          </span>
-          <div className="flex w-full flex-col gap-3">
-            {content.onboarding.steps.map((step, i) => (
-              <div
-                key={step}
-                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm"
-              >
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-purple)]/10 text-sm font-bold text-[var(--brand-purple)]">
-                  {i + 1}
-                </span>
-                <p className="text-base leading-relaxed text-slate-800 sm:text-lg">{step}</p>
-              </div>
-            ))}
+          <div className="flex w-full max-w-sm items-center gap-3">
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--brand-teal)]/50" />
+            <span className="flex items-center gap-1.5 text-base font-extrabold text-slate-900">
+              {content.onboarding.eyebrow}
+            </span>
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--brand-teal)]/50" />
+          </div>
+          <div className="flex w-full flex-col gap-2.5">
+            {content.onboarding.steps.map((step, i) => {
+              const Icon = STEP_ICONS[i % STEP_ICONS.length];
+              return (
+                <div
+                  key={step}
+                  className="flex w-full items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:gap-4 sm:px-4"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-l from-[var(--brand-purple)] via-[var(--brand-teal)] to-[var(--brand-green)] text-sm font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <p className="flex-1 text-center text-sm leading-snug text-slate-800 sm:text-base">{step}</p>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-purple)]/10 text-[var(--brand-purple)]">
+                    <Icon className="size-4.5" />
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
 

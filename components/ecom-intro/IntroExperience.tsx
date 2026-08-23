@@ -94,8 +94,6 @@ function IntroExperienceInner({ content, onFinish }: { content: EcomIntroContent
             <ClosingSection
               content={content.closing}
               brand={content.brand}
-              alumni={content.alumni}
-              industry={content.industry}
               students={content.students}
               onPrev={prev}
               onFinish={onFinish}
