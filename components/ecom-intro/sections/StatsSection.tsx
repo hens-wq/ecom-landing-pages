@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
-import type { IntroBrandContent, IntroIndustryContent, IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
+import type { IntroIndustryContent, IntroStatsContent, IntroStudentsContent } from "@/lib/content/schemas";
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { StudentPhoto } from "@/components/ecom-intro/StudentPhoto";
@@ -52,14 +52,12 @@ function StarRow({ rating }: { rating: number }) {
 
 export function StatsSection({
   content,
-  brand,
   industry,
   students,
   onNext,
   onPrev,
 }: {
   content: IntroStatsContent;
-  brand: IntroBrandContent;
   industry: IntroIndustryContent;
   students: IntroStudentsContent;
   onNext: () => void;
@@ -99,21 +97,6 @@ export function StatsSection({
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: -12, scale: 0.94 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <Image
-            src={brand.logoStackedSrc}
-            alt="Ecom School"
-            width={220}
-            height={121}
-            className="mx-auto h-auto w-36 sm:w-44"
-          />
-        </motion.div>
-
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
