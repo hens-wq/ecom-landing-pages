@@ -13,28 +13,49 @@ export interface FAQItem {
 interface FAQProps {
   items: FAQItem[];
   className?: string;
+  tone?: "dark" | "light";
 }
 
-export function FAQ({ items, className }: FAQProps) {
+const TONE_CLASS = {
+  dark: {
+    container: "divide-white/10 border-white/10",
+    item: "border-white/10",
+    question: "text-off-white",
+    icon: "text-ink-300",
+    iconOpen: "text-brand-400",
+    answer: "text-ink-300",
+  },
+  light: {
+    container: "divide-ink-200 border-ink-200",
+    item: "border-ink-200",
+    question: "text-ink-950",
+    icon: "text-ink-400",
+    iconOpen: "text-brand-600",
+    answer: "text-ink-500",
+  },
+} as const;
+
+export function FAQ({ items, className, tone = "dark" }: FAQProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const t = TONE_CLASS[tone];
 
   return (
-    <div className={cn("divide-y divide-white/10 border-t border-white/10", className)}>
+    <div className={cn("divide-y border-t", t.container, className)}>
       {items.map((item, index) => {
         const isOpen = openIndex === index;
         return (
-          <div key={item.question} className="border-b border-white/10">
+          <div key={item.question} className={cn("border-b", t.item)}>
             <button
               type="button"
               onClick={() => setOpenIndex(isOpen ? null : index)}
               aria-expanded={isOpen}
               className="flex w-full items-center justify-between gap-4 py-5 text-start"
             >
-              <span className="text-[17px] font-medium text-off-white">{item.question}</span>
+              <span className={cn("text-[17px] font-medium", t.question)}>{item.question}</span>
               <ChevronDown
                 className={cn(
-                  "size-5 shrink-0 text-ink-300 transition-transform duration-300",
-                  isOpen && "-rotate-180 text-brand-400",
+                  "size-5 shrink-0 transition-transform duration-300",
+                  isOpen ? cn("-rotate-180", t.iconOpen) : t.icon,
                 )}
                 aria-hidden
               />
@@ -48,7 +69,7 @@ export function FAQ({ items, className }: FAQProps) {
                   transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   className="overflow-hidden"
                 >
-                  <p className="pb-5 pe-8 leading-relaxed text-ink-300">{item.answer}</p>
+                  <p className={cn("pb-5 pe-8 leading-relaxed", t.answer)}>{item.answer}</p>
                 </motion.div>
               )}
             </AnimatePresence>

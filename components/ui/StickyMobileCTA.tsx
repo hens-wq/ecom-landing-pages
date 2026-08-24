@@ -9,6 +9,12 @@ interface StickyMobileCTAProps {
   href: string;
   /** Scroll distance (px) before the bar appears — keeps it out of the way of the hero CTA. */
   revealAfter?: number;
+  /**
+   * Selectors (typically each lead-form section's id) to hide the bar
+   * behind — a page with several forms shouldn't show a floating CTA on
+   * top of a form section's own submit button. Defaults to [href].
+   */
+  hideWhenVisible?: string[];
 }
 
 /**
@@ -16,9 +22,15 @@ interface StickyMobileCTAProps {
  * page — it owns the bottom-of-screen z-index so it must not collide with
  * any other fixed element (e.g. a cookie banner) added later.
  */
-export function StickyMobileCTA({ label, href, revealAfter = 480 }: StickyMobileCTAProps) {
+export function StickyMobileCTA({
+  label,
+  href,
+  revealAfter = 480,
+  hideWhenVisible,
+}: StickyMobileCTAProps) {
   const [pastReveal, setPastReveal] = useState(false);
   const [targetVisible, setTargetVisible] = useState(false);
+  const selectors = (hideWhenVisible ?? [href]).join("|");
 
   useEffect(() => {
     const onScroll = () => setPastReveal(window.scrollY > revealAfter);
@@ -28,18 +40,28 @@ export function StickyMobileCTA({ label, href, revealAfter = 480 }: StickyMobile
   }, [revealAfter]);
 
   useEffect(() => {
-    // If the CTA points at an in-page target (typically the lead form),
-    // hide the bar once that target is already on screen — otherwise it
-    // sits directly on top of the section's own submit button.
-    if (!href.startsWith("#")) return;
-    const target = document.querySelector(href);
-    if (!target) return;
-    const observer = new IntersectionObserver(([entry]) => setTargetVisible(entry.isIntersecting), {
-      threshold: 0.2,
-    });
-    observer.observe(target);
+    // Hide the bar whenever any watched section (typically a lead form) is
+    // already on screen — otherwise it sits directly on top of that
+    // section's own submit button.
+    const targets = selectors
+      .split("|")
+      .filter((selector) => selector.startsWith("#"))
+      .map((selector) => document.querySelector(selector))
+      .filter((el): el is Element => el !== null);
+
+    if (targets.length === 0) return;
+
+    const visibility = new Map<Element, boolean>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) visibility.set(entry.target, entry.isIntersecting);
+        setTargetVisible([...visibility.values()].some(Boolean));
+      },
+      { threshold: 0.2 },
+    );
+    for (const target of targets) observer.observe(target);
     return () => observer.disconnect();
-  }, [href]);
+  }, [selectors]);
 
   const visible = pastReveal && !targetVisible;
 

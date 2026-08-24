@@ -3,8 +3,8 @@ import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImagePlaceholderProps {
-  /** e.g. "9/16", "4/5", "16/9", "1/1" */
-  aspectRatio: string;
+  /** e.g. "9/16", "4/5", "16/9", "1/1". Omit when `fill` is true. */
+  aspectRatio?: string;
   /** Short internal name, shown in the placeholder itself, e.g. "Hero — Cyber operator" */
   label: string;
   /** Composition / art-direction notes for whoever supplies the final asset */
@@ -15,6 +15,8 @@ interface ImagePlaceholderProps {
   alt?: string;
   priority?: boolean;
   sizes?: string;
+  /** Absolutely fills the nearest positioned ancestor instead of sizing by aspect ratio — for full-bleed backgrounds (e.g. a hero). */
+  fill?: boolean;
 }
 
 /**
@@ -32,10 +34,14 @@ export function ImagePlaceholder({
   alt,
   priority,
   sizes,
+  fill = false,
 }: ImagePlaceholderProps) {
+  const sizing = fill ? "absolute inset-0" : "relative";
+  const style = fill ? undefined : { aspectRatio };
+
   if (src) {
     return (
-      <div className={cn("relative overflow-hidden", className)} style={{ aspectRatio }}>
+      <div className={cn(sizing, "overflow-hidden", className)} style={style}>
         <Image
           src={src}
           alt={alt ?? label}
@@ -51,18 +57,21 @@ export function ImagePlaceholder({
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center gap-3 overflow-hidden border border-dashed border-white/15 bg-[linear-gradient(135deg,var(--color-ink-800),var(--color-ink-900))] px-6 text-center",
+        sizing,
+        "flex flex-col items-center justify-center gap-3 overflow-hidden border border-dashed border-white/15 bg-[linear-gradient(135deg,var(--color-ink-800),var(--color-ink-900))] px-6 text-center",
         className,
       )}
-      style={{ aspectRatio }}
+      style={style}
       role="img"
       aria-label={`${label} — placeholder`}
     >
       <ImageIcon className="size-7 text-ink-300" aria-hidden />
-      <div className="max-w-[26ch] space-y-1">
+      <div className="max-w-[32ch] space-y-1">
         <p className="text-sm font-semibold text-ink-100">{label}</p>
         {description ? <p className="text-xs text-ink-400">{description}</p> : null}
-        <p className="text-[11px] uppercase tracking-wider text-ink-500">{aspectRatio}</p>
+        {aspectRatio ? (
+          <p className="text-[11px] uppercase tracking-wider text-ink-500">{aspectRatio}</p>
+        ) : null}
       </div>
     </div>
   );

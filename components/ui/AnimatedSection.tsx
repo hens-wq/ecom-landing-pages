@@ -1,7 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "motion/react";
-import type { ReactNode } from "react";
+import { motion, type Variants } from "motion/react";
+import type { CSSProperties, ReactNode } from "react";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
 
 type Effect = "fade-up" | "fade-in" | "slide-start" | "slide-end" | "scale-in";
@@ -13,6 +14,7 @@ interface AnimatedSectionProps {
   delay?: number;
   duration?: number;
   className?: string;
+  style?: CSSProperties;
   as?: Tag;
   /** Fraction of the element that must enter the viewport before it animates. */
   amount?: number;
@@ -38,20 +40,26 @@ export function AnimatedSection({
   delay = 0,
   duration = 0.7,
   className,
+  style,
   as: Tag = "div",
   amount = 0.3,
 }: AnimatedSectionProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const MotionTag = motion[Tag];
   const StaticTag = Tag;
 
   if (prefersReducedMotion) {
-    return <StaticTag className={className}>{children}</StaticTag>;
+    return (
+      <StaticTag className={className} style={style}>
+        {children}
+      </StaticTag>
+    );
   }
 
   return (
     <MotionTag
       className={cn(className)}
+      style={style}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount }}

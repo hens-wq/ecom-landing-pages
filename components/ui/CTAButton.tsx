@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost";
+type Variant = "primary" | "secondary" | "outline" | "outline-dark" | "ghost";
 type Size = "md" | "lg";
 
 interface BaseProps {
@@ -43,6 +43,8 @@ const VARIANT_STYLES: Record<Variant, string> = {
     "bg-off-white text-ink-950 hover:bg-white active:bg-ink-100",
   outline:
     "border border-white/25 text-white hover:border-white/50 hover:bg-white/5 active:bg-white/10",
+  "outline-dark":
+    "border border-ink-300 text-ink-950 hover:border-ink-400 hover:bg-ink-950/5 active:bg-ink-950/10",
   ghost: "text-white hover:bg-white/10 active:bg-white/15",
 };
 

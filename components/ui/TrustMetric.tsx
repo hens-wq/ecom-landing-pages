@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, useMotionValue, useReducedMotion, useSpring } from "motion/react";
+import { useInView, useMotionValue, useSpring } from "motion/react";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
 
 interface TrustMetricProps {
@@ -12,7 +13,20 @@ interface TrustMetricProps {
   label: string;
   className?: string;
   align?: "start" | "center";
+  size?: "md" | "lg" | "xl";
+  tone?: "dark" | "light";
 }
+
+const SIZE_CLASS: Record<NonNullable<TrustMetricProps["size"]>, string> = {
+  md: "text-display-md",
+  lg: "text-display-lg",
+  xl: "text-display-2xl",
+};
+
+const TONE_CLASS: Record<NonNullable<TrustMetricProps["tone"]>, { value: string; label: string }> = {
+  dark: { value: "text-off-white", label: "text-ink-300" },
+  light: { value: "text-ink-950", label: "text-ink-500" },
+};
 
 /**
  * A single count-up statistic. Compose several in a flex/grid wrapper at
@@ -27,10 +41,12 @@ export function TrustMetric({
   label,
   className,
   align = "start",
+  size = "md",
+  tone = "dark",
 }: TrustMetricProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-10% 0px" });
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const motionValue = useMotionValue(0);
   const spring = useSpring(motionValue, { damping: 28, stiffness: 90 });
   const [display, setDisplay] = useState((0).toFixed(decimals));
@@ -49,12 +65,12 @@ export function TrustMetric({
 
   return (
     <div className={cn("flex flex-col", align === "center" && "items-center text-center", className)}>
-      <span ref={ref} className="text-display-md text-off-white bidi-plaintext">
+      <span ref={ref} className={cn(SIZE_CLASS[size], TONE_CLASS[tone].value, "bidi-plaintext")}>
         {prefix}
         {prefersReducedMotion ? value.toFixed(decimals) : display}
         {suffix}
       </span>
-      <span className="mt-1 text-sm text-ink-300">{label}</span>
+      <span className={cn("mt-1 text-sm", TONE_CLASS[tone].label)}>{label}</span>
     </div>
   );
 }
