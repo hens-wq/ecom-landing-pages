@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/*
+ * Ecom College — performance landing page design tokens.
+ * Tailwind v4 reads this @theme block and generates matching utilities,
+ * e.g. --color-brand-500 -> bg-brand-500 / text-brand-500 / border-brand-500.
+ */
+@theme {
+  --font-heebo: var(--font-heebo), "Segoe UI", Tahoma, sans-serif;
+
+  /* Brand — primary purple scale built around #8c52ff */
+  --color-brand-50: #f5f0ff;
+  --color-brand-100: #ebe0ff;
+  --color-brand-200: #d6c2ff;
+  --color-brand-300: #b799ff;
+  --color-brand-400: #a076ff;
+  --color-brand-500: #8c52ff;
+  --color-brand-600: #7935f0;
+  --color-brand-700: #6423cc;
+  --color-brand-800: #4f1aa3;
+  --color-brand-900: #3a1277;
+  --color-brand-950: #22094d;
+
+  /* Accent — teal, used sparingly for highlights / data / tech overlays */
+  --color-teal-50: #eafbf9;
+  --color-teal-100: #cdf6f0;
+  --color-teal-300: #7ee7dc;
+  --color-teal-400: #52dccd;
+  --color-teal-500: #34d1c3;
+  --color-teal-600: #22a89c;
+  --color-teal-700: #1a7f76;
+
+  /* Accent — lime, used sparingly for positive signals / stats */
+  --color-lime-50: #f2fdec;
+  --color-lime-100: #e0fad2;
+  --color-lime-300: #b5f5a4;
+  --color-lime-400: #9ff187;
+  --color-lime-500: #85ed72;
+  --color-lime-600: #5fce4b;
+  --color-lime-700: #479938;
+
+  /* Neutrals — near-black / charcoal / off-white, the page's real base */
+  --color-ink-950: #08070a;
+  --color-ink-900: #0d0c11;
+  --color-ink-800: #141319;
+  --color-ink-700: #1c1a24;
+  --color-ink-600: #2a2732;
+  --color-ink-500: #423e4d;
+  --color-ink-400: #666074;
+  --color-ink-300: #928da2;
+  --color-ink-200: #c3bfcf;
+  --color-ink-100: #e4e1ea;
+  --color-off-white: #f7f5f2;
+  --color-paper: #fbfaf8;
+
+  /* Fluid display type scale — for editorial / campaign headlines */
+  --text-display-2xl: clamp(2.75rem, 1.6rem + 4.6vw, 6.5rem);
+  --text-display-2xl--line-height: 0.98;
+  --text-display-2xl--letter-spacing: -0.01em;
+  --text-display-2xl--font-weight: 800;
+
+  --text-display-xl: clamp(2.25rem, 1.5rem + 3.4vw, 5rem);
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.01em;
+  --text-display-xl--font-weight: 800;
+
+  --text-display-lg: clamp(1.9rem, 1.4rem + 2.2vw, 3.5rem);
+  --text-display-lg--line-height: 1.05;
+  --text-display-lg--font-weight: 700;
+
+  --text-display-md: clamp(1.5rem, 1.2rem + 1.3vw, 2.4rem);
+  --text-display-md--line-height: 1.1;
+  --text-display-md--font-weight: 700;
+
+  --text-display-sm: clamp(1.25rem, 1.1rem + 0.6vw, 1.65rem);
+  --text-display-sm--line-height: 1.2;
+  --text-display-sm--font-weight: 600;
+
+  --text-eyebrow: 0.8125rem;
+  --text-eyebrow--line-height: 1.2;
+  --text-eyebrow--letter-spacing: 0.08em;
+  --text-eyebrow--font-weight: 600;
+
+  --animate-marquee: marquee 28s linear infinite;
+  --animate-float-slow: float-slow 7s ease-in-out infinite;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-ink-950);
+    color: var(--color-off-white);
+    font-family: var(--font-heebo);
+    font-feature-settings: "tnum" 1, "case" 1;
+  }
+
+  /* Numbers, prices and English terminology read left-to-right even inside
+     RTL copy, without breaking the surrounding Hebrew paragraph direction. */
+  .bidi-plaintext {
+    unicode-bidi: plaintext;
+  }
+
+  ::selection {
+    background: var(--color-brand-500);
+    color: var(--color-ink-950);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
