@@ -68,9 +68,9 @@ export function ImagePlaceholder({
       <ImageIcon className="size-7 text-ink-300" aria-hidden />
       <div className="max-w-[32ch] space-y-1">
         <p className="text-sm font-semibold text-ink-100">{label}</p>
-        {description ? <p className="text-xs text-ink-400">{description}</p> : null}
+        {description ? <p className="text-xs text-ink-200">{description}</p> : null}
         {aspectRatio ? (
-          <p className="text-[11px] uppercase tracking-wider text-ink-500">{aspectRatio}</p>
+          <p className="text-[11px] uppercase tracking-wider text-ink-300">{aspectRatio}</p>
         ) : null}
       </div>
     </div>

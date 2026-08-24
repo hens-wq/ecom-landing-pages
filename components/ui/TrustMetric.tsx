@@ -24,7 +24,7 @@ const SIZE_CLASS: Record<NonNullable<TrustMetricProps["size"]>, string> = {
 };
 
 const TONE_CLASS: Record<NonNullable<TrustMetricProps["tone"]>, { value: string; label: string }> = {
-  dark: { value: "text-off-white", label: "text-ink-300" },
+  dark: { value: "text-off-white", label: "text-ink-200" },
   light: { value: "text-ink-950", label: "text-ink-500" },
 };
 

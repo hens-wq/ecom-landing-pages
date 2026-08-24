@@ -86,14 +86,14 @@ export function HeroSection() {
           className="flex items-baseline gap-2 border-s-2 border-lime-500/60 ps-3"
         >
           <span className="flex flex-col">
-            <span className="text-xs text-ink-300">{hero.salaryLabel}</span>
+            <span className="text-xs font-medium text-ink-200">{hero.salaryLabel}</span>
             <span className="bidi-plaintext text-display-lg leading-none font-extrabold text-lime-400">
               {hero.salaryValue}
               <span className="text-display-sm ms-1.5 font-semibold text-lime-300">
                 {hero.salarySuffix}
               </span>
             </span>
-            <span className="mt-1 text-[11px] text-ink-400">{hero.salaryNote}</span>
+            <span className="mt-1 text-xs text-ink-200">{hero.salaryNote}</span>
           </span>
         </motion.div>
 

@@ -40,7 +40,7 @@ export function FinalSection() {
       <div className="relative mx-auto max-w-lg text-center">
         <AnimatedSection effect="fade-up">
           <h2 className="text-display-xl text-balance text-off-white">{final.headline}</h2>
-          <p className="mt-4 text-lg text-ink-300">{final.subheadline}</p>
+          <p className="mt-4 text-lg text-ink-200">{final.subheadline}</p>
         </AnimatedSection>
 
         <AnimatedSection effect="fade-up" delay={0.15} className="mt-10">

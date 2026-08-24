@@ -22,7 +22,7 @@ export function FormSuccessState({
     >
       <CheckCircle2 className="size-12 text-lime-500" aria-hidden />
       <p className="text-display-sm text-off-white">{title}</p>
-      <p className="text-ink-300">{message}</p>
+      <p className="text-ink-200">{message}</p>
     </motion.div>
   );
 }

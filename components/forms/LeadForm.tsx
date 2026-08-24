@@ -60,7 +60,7 @@ export function LeadForm({
             {(title || subtitle) && (
               <div className="mb-1 space-y-1.5">
                 {title && <p className="text-display-sm text-off-white">{title}</p>}
-                {subtitle && <p className="text-sm text-ink-300">{subtitle}</p>}
+                {subtitle && <p className="text-sm text-ink-200">{subtitle}</p>}
               </div>
             )}
 
@@ -82,7 +82,7 @@ export function LeadForm({
               {ctaLabel}
             </CTAButton>
 
-            <p className="text-center text-xs text-ink-500">
+            <p className="text-center text-xs text-ink-200">
               בשליחת הפרטים אני מאשר/ת יצירת קשר בנוגע לתוכן שביקשתי.
             </p>
           </motion.form>

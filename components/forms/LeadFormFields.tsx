@@ -18,12 +18,15 @@ interface LeadFormFieldsProps {
 }
 
 const TONE_INPUT: Record<Tone, string> = {
+  // Placeholders on dark/transparent fields (glass, underline) use ink-300 —
+  // muted enough to read as a placeholder, still clearly legible on mobile.
+  // Never drop below that on a dark background (see globals.css note).
   glass:
-    "rounded-xl border border-white/15 bg-white/[0.06] text-off-white placeholder:text-ink-400 focus:border-brand-400 focus:bg-white/10",
+    "rounded-xl border border-white/15 bg-white/[0.06] text-off-white placeholder:text-ink-300 focus:border-brand-400 focus:bg-white/10",
   solid:
     "rounded-xl border border-transparent bg-white text-ink-950 placeholder:text-ink-400 shadow-[0_1px_0_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-brand-500",
   underline:
-    "rounded-none border-0 border-b-2 border-white/25 bg-transparent px-1 text-off-white placeholder:text-ink-300 focus:border-brand-400",
+    "rounded-none border-0 border-b-2 border-white/25 bg-transparent px-1 text-off-white placeholder:text-ink-200 focus:border-brand-400",
 };
 
 const TONE_ICON: Record<Tone, string> = {

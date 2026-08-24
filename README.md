@@ -111,3 +111,12 @@ is set — see `components/layout/AnalyticsScripts.tsx` and
   landing page is free to compose them differently (see `AnimatedSection`'s
   `effect` prop, `Testimonial`'s `variant` prop, etc.) so future pages
   don't end up visually identical to Cyber.
+- **No low-contrast grey marketing text on dark backgrounds.** On a dark
+  section, primary text is off-white/white; secondary or supporting text
+  (including disclaimers, labels, captions) is `ink-200` at minimum, or a
+  brand/teal/lime accent color — never `ink-300/400/500`, which read as
+  almost invisible there. Differentiate "secondary" with size, weight,
+  spacing, or accent color, not by darkening the grey. Those darker ink
+  shades stay fine for borders, dividers, icons, and text on light
+  (`paper`/`off-white`) backgrounds. See the note in `app/globals.css`.
+  This applies to every landing page in this project, not just Cyber.

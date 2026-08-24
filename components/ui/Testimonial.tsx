@@ -32,7 +32,7 @@ export function Testimonial({
             src={avatarSrc}
             className="size-10 shrink-0 rounded-full"
           />
-          <span className="text-sm text-ink-300">
+          <span className="text-sm text-ink-200">
             <span className="font-semibold text-off-white">{name}</span>
             <span className="mx-1.5 text-ink-500">·</span>
             {role}
@@ -62,7 +62,7 @@ export function Testimonial({
         />
         <span className="text-sm">
           <span className="block font-semibold text-off-white">{name}</span>
-          <span className="block text-ink-400">{role}</span>
+          <span className="block text-ink-200">{role}</span>
         </span>
       </figcaption>
     </figure>

@@ -39,7 +39,21 @@
   --color-lime-600: #5fce4b;
   --color-lime-700: #479938;
 
-  /* Neutrals — near-black / charcoal / off-white, the page's real base */
+  /* Neutrals — near-black / charcoal / off-white, the page's real base.
+   *
+   * PERMANENT RULE — no low-contrast grey marketing text on dark
+   * backgrounds. ink-400/ink-500 (and ink-300 for anything beyond a
+   * placeholder) read as "almost invisible" on ink-700/800/900/950 and
+   * must never be used for copy, labels, disclaimers, or captions there.
+   * On a dark background: primary text is off-white/white; secondary or
+   * supporting text (including disclaimers) is ink-200 at minimum, or an
+   * accent color (brand/teal/lime) when it fits the hierarchy. Reach for
+   * size, weight, spacing, or an accent color to signal "secondary" —
+   * never a darker grey. ink-300/400/500 stay fine for borders,
+   * dividers, backgrounds, and icons, and for text on LIGHT backgrounds
+   * (paper/off-white), where they have plenty of contrast. This applies
+   * to every current and future Ecom landing page, not just this one.
+   */
   --color-ink-950: #08070a;
   --color-ink-900: #0d0c11;
   --color-ink-800: #141319;

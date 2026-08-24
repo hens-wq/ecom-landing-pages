@@ -66,7 +66,7 @@ export function CyberExperienceSection() {
           <h2 className="text-display-lg mt-3 text-balance text-off-white">
             {cyberExperience.headline}
           </h2>
-          <p className="mt-4 text-lg text-ink-300">{cyberExperience.body}</p>
+          <p className="mt-4 text-lg text-ink-200">{cyberExperience.body}</p>
         </AnimatedSection>
       </div>
 

@@ -23,7 +23,7 @@ const TONE_CLASS = {
     question: "text-off-white",
     icon: "text-ink-300",
     iconOpen: "text-brand-400",
-    answer: "text-ink-300",
+    answer: "text-ink-200",
   },
   light: {
     container: "divide-ink-200 border-ink-200",
