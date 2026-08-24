@@ -6,7 +6,7 @@
  * e.g. --color-brand-500 -> bg-brand-500 / text-brand-500 / border-brand-500.
  */
 @theme {
-  --font-heebo: var(--font-heebo), "Segoe UI", Tahoma, sans-serif;
+  --font-sans: var(--font-assistant), "Segoe UI", Tahoma, sans-serif;
 
   /* Brand — primary purple scale built around #8c52ff */
   --color-brand-50: #f5f0ff;
@@ -62,7 +62,7 @@
   --text-display-xl: clamp(2.25rem, 1.5rem + 3.4vw, 5rem);
   --text-display-xl--line-height: 1;
   --text-display-xl--letter-spacing: -0.01em;
-  --text-display-xl--font-weight: 800;
+  --text-display-xl--font-weight: 700;
 
   --text-display-lg: clamp(1.9rem, 1.4rem + 2.2vw, 3.5rem);
   --text-display-lg--line-height: 1.05;
@@ -70,7 +70,7 @@
 
   --text-display-md: clamp(1.5rem, 1.2rem + 1.3vw, 2.4rem);
   --text-display-md--line-height: 1.1;
-  --text-display-md--font-weight: 700;
+  --text-display-md--font-weight: 600;
 
   --text-display-sm: clamp(1.25rem, 1.1rem + 0.6vw, 1.65rem);
   --text-display-sm--line-height: 1.2;
@@ -93,7 +93,7 @@
   body {
     background: var(--color-ink-950);
     color: var(--color-off-white);
-    font-family: var(--font-heebo);
+    font-family: var(--font-sans);
     font-feature-settings: "tnum" 1, "case" 1;
   }
 

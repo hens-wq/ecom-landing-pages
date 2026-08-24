@@ -12,8 +12,8 @@ import { FaqSection } from "./_sections/FaqSection";
 import { FinalSection } from "./_sections/FinalSection";
 
 export const metadata: Metadata = {
-  title: "קורס Cyber ב-10 חודשים",
-  description: "קורס Cyber ב-10 חודשים, ללא צורך ברקע קודם. בדיקת התאמה קצרה וללא עלות.",
+  title: "קורס סייבר ב-10 חודשים",
+  description: "קורס סייבר ב-10 חודשים, ללא צורך ברקע קודם. בדיקת התאמה קצרה וללא עלות.",
 };
 
 export default function BrandCyberPage() {

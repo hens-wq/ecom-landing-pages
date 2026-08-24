@@ -22,13 +22,16 @@ export function HeroSection() {
     useLeadForm("brand-cyber");
 
   return (
-    <section className="relative flex flex-col overflow-hidden bg-ink-950 lg:min-h-[94vh] lg:flex-row">
-      {/* Mobile + tablet: shorter image band up top, stacked flow below.
-          Desktop (lg+): full-bleed behind the asymmetric split — the tighter
-          tablet width can't fit a fixed-width side panel without cramping. */}
-      <div className="relative h-[46svh] shrink-0 lg:absolute lg:inset-0 lg:h-auto">
+    <section className="relative flex flex-col overflow-hidden bg-ink-950 lg:flex-row lg:min-h-[94vh]">
+      {/* Mobile + tablet: the photo is a true background (absolute, out of
+          flow) so the copy below can overlap its lower half instead of
+          starting fresh after a separate image block — one composition,
+          not an image slab stacked on top of the offer.
+          Desktop (lg+): full-bleed behind the asymmetric split. */}
+      <div className="absolute inset-x-0 top-0 h-[54svh] lg:inset-0 lg:h-auto">
         <ImagePlaceholder fill label={hero.image.label} description={hero.image.description} priority />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/10 to-transparent lg:bg-gradient-to-t lg:from-ink-950 lg:via-ink-950/20 lg:to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 from-[52%] to-transparent lg:hidden" />
+        <div className="absolute inset-0 hidden bg-gradient-to-t from-ink-950 via-ink-950/20 to-transparent lg:block" />
         <div className="absolute inset-0 hidden bg-gradient-to-l from-ink-950/95 via-ink-950/10 to-transparent lg:block" />
       </div>
 
@@ -44,7 +47,7 @@ export function HeroSection() {
         <circle cx="60%" cy="80%" r="3" fill="var(--color-brand-300)" />
       </svg>
 
-      <div className="relative z-10 flex flex-1 flex-col justify-end gap-5 px-5 pb-8 pt-6 sm:px-8 md:px-10 lg:justify-center lg:gap-7 lg:px-16 lg:pb-24 lg:pt-28 lg:pe-[440px] xl:pe-[480px]">
+      <div className="relative z-10 flex flex-1 flex-col gap-4 px-5 pt-[27svh] pb-6 sm:px-8 sm:pt-[24svh] md:px-10 lg:justify-center lg:gap-7 lg:px-16 lg:pt-28 lg:pb-24 lg:pe-[440px] xl:pe-[480px]">
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
