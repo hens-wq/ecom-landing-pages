@@ -3,15 +3,16 @@
 import { AnimatePresence, motion } from "motion/react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { CTAButton } from "@/components/ui/CTAButton";
+import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import { FormSuccessState } from "@/components/forms/FormSuccessState";
 import { LeadFormFields } from "@/components/forms/LeadFormFields";
 import { useLeadForm } from "@/lib/leads/useLeadForm";
 import { cyberContent } from "@/content/landing/brand-cyber";
 
 /**
- * Second conversion opportunity. Intentionally a bold gradient color
- * block with solid white fields — the opposite of the hero's dark glass
- * panel — so the two forms don't read as the same block repeated.
+ * Second conversion opportunity. Intentionally a bold purple photo
+ * background with solid white fields — the opposite of the hero's dark
+ * glass panel — so the two forms don't read as the same block repeated.
  */
 export function MidFormSection() {
   const { midForm } = cyberContent;
@@ -20,6 +21,14 @@ export function MidFormSection() {
 
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(155deg,var(--color-brand-700),var(--color-brand-900)_55%,var(--color-ink-950))] px-5 py-16 sm:px-8 md:px-16 md:py-24">
+      <ImagePlaceholder
+        fill
+        src={midForm.bgSrc}
+        label="רקע איקום סגול"
+        description="רקע מופשט סגול-איקום עשיר לסקשן ההמרה האמצעי."
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-ink-950/15" />
       <div
         className="pointer-events-none absolute -end-24 -top-24 size-[380px] rounded-full bg-teal-400/20 blur-[100px]"
         aria-hidden

@@ -17,6 +17,12 @@ interface ImagePlaceholderProps {
   sizes?: string;
   /** Absolutely fills the nearest positioned ancestor instead of sizing by aspect ratio — for full-bleed backgrounds (e.g. a hero). */
   fill?: boolean;
+  /**
+   * Tailwind object-position utility for the `<Image>` itself, e.g.
+   * `"object-[32%_38%] lg:object-center"` — lets a crop keep a face or
+   * other focal point in frame instead of defaulting to dead-center.
+   */
+  imagePosition?: string;
 }
 
 /**
@@ -35,6 +41,7 @@ export function ImagePlaceholder({
   priority,
   sizes,
   fill = false,
+  imagePosition,
 }: ImagePlaceholderProps) {
   const sizing = fill ? "absolute inset-0" : "relative";
   const style = fill ? undefined : { aspectRatio };
@@ -48,7 +55,7 @@ export function ImagePlaceholder({
           fill
           priority={priority}
           sizes={sizes ?? "100vw"}
-          className="object-cover"
+          className={cn("object-cover", imagePosition)}
         />
       </div>
     );

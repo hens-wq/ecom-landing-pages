@@ -1,5 +1,7 @@
 import type { FAQItem } from "@/components/ui/FAQ";
 
+const ASSETS = "/landing/cyber" as const;
+
 /**
  * Copy for /lp/brand/cyber, kept separate from section components so
  * headlines/hooks/CTA wording/section order can be tested without
@@ -21,6 +23,7 @@ export const cyberContent = {
     ctaLabel: "בדיקת התאמה ללא עלות",
     formTitle: "בדיקת התאמה מהירה",
     image: {
+      src: `${ASSETS}/10-hero-dark-professional.webp`,
       label: "הירו — בוגר/ת צעיר/ה בסביבת SOC",
       description:
         "אדם צעיר (22–27), ישראלי/ת, בסביבת סייבר/SOC מודרנית ואותנטית — לא סטוק קורפורייטי, לא הודי, לא VR. מסכי ניטור ודאטה ברקע, תאורה אווירתית. קרופ פורטרט 4:5 למובייל, פנורמי כ-21:9 לדסקטופ.",
@@ -28,6 +31,7 @@ export const cyberContent = {
   },
 
   trustBar: {
+    bgSrc: `${ASSETS}/07-bg-light.webp`,
     stats: [
       { value: 87, decimals: 0, suffix: "%", label: "מבוגרי המכללה עובדים בהייטק" },
       { value: 300, decimals: 0, suffix: "+", label: "ביקורות Google" },
@@ -36,6 +40,7 @@ export const cyberContent = {
   },
 
   ariel: {
+    bgSrc: `${ASSETS}/02-cyber-bg-dark.webp`,
     eyebrow: "בפיקוח ואישור פדגוגי",
     statement:
       "תכנית הסייבר בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
@@ -46,6 +51,7 @@ export const cyberContent = {
   },
 
   objection: {
+    imageSrc: `${ASSETS}/04-practical-training.webp`,
     headlineLight: "אין לכם רקע בסייבר?",
     headlineBold: "זה בדיוק בסדר",
     body: "התוכנית בנויה כך שאפשר להתחיל גם בלי ניסיון קודם בהייטק או בסייבר — צעד אחרי צעד, בקצב שמתאים למי שמתחיל מאפס.",
@@ -54,6 +60,7 @@ export const cyberContent = {
   },
 
   cyberExperience: {
+    bgSrc: `${ASSETS}/01-soc-wide.webp`,
     eyebrow: "בתוך הקורס",
     headline: "עולם הסייבר, מהיום הראשון",
     body: "עובדים עם כלים ומצבים אמיתיים מהתעשייה — לא רק תיאוריה על הנייר.",
@@ -67,6 +74,7 @@ export const cyberContent = {
       { icon: "Wrench", label: "כלים מהתעשייה" },
     ] as const,
     visual: {
+      src: `${ASSETS}/08-female-analyst.webp`,
       label: "ויזואליזציה — דשבורד ניטור SOC",
       description:
         "צילום מסך אמיתי (מטושטש פרטים רגישים) או ויזואליזציה מעוצבת של דשבורד ניטור/SOC — גרפים, מפת רשת, התרעות. יחס 16:9.",
@@ -74,12 +82,14 @@ export const cyberContent = {
   },
 
   midForm: {
+    bgSrc: `${ASSETS}/03-ecom-bg-purple.webp`,
     headline: "רוצים לבדוק אם התחום מתאים לכם?",
     subheadline: "השאירו פרטים וקבלו ייעוץ לימודים ללא עלות",
     ctaLabel: "בדיקת התאמה ללא עלות",
   },
 
   career: {
+    transitionSrc: `${ASSETS}/06-cyber-team.webp`,
     headlineTop: "לא רק ללמוד סייבר",
     headlineBottom: "להתחיל לבנות קריירה",
     body: "התוכנית בנויה להוביל משלב הלמידה ועד השלב שבו אתם נכנסים לתפקיד ראשון בתחום — עם ליווי אישי לאורך הדרך.",
@@ -88,6 +98,7 @@ export const cyberContent = {
     roles: ["SOC Analyst", "Security Analyst"],
     supportNote: "ליווי אישי בתהליך ההשמה — בלי הבטחת העסקה או שכר.",
     visual: {
+      src: `${ASSETS}/05-career-office.webp`,
       label: "סביבת עבודה הייטק / סייבר",
       description:
         "אדם צעיר בסביבת עבודה הייטק אמיתית (לא סטודיו/סטוק גנרי) — תחושת המשך טבעי לאווירת ההירו. יחס 4:5.",
@@ -113,6 +124,7 @@ export const cyberContent = {
   ] satisfies FAQItem[],
 
   final: {
+    bgSrc: `${ASSETS}/09-final-soc-room.webp`,
     headline: "הצעד הראשון לקריירה בסייבר מתחיל כאן",
     subheadline: "בדיקת התאמה קצרה וללא עלות",
     ctaLabel: "בדיקת התאמה ללא עלות",

@@ -3,15 +3,17 @@
 import { AnimatePresence, motion } from "motion/react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { CTAButton } from "@/components/ui/CTAButton";
+import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import { FormSuccessState } from "@/components/forms/FormSuccessState";
 import { LeadFormFields } from "@/components/forms/LeadFormFields";
 import { useLeadForm } from "@/lib/leads/useLeadForm";
 import { cyberContent } from "@/content/landing/brand-cyber";
 
 /**
- * Closing conversion moment. Symmetric and centered with a radial glow —
- * a deliberate mirror-but-different bookend to the hero's asymmetric,
- * photo-lit composition, using a third (minimal underline) field tone.
+ * Closing conversion moment. Symmetric and centered with a radial glow
+ * over the premium empty SOC room — a deliberate mirror-but-different
+ * bookend to the hero's asymmetric, human-centered composition, using a
+ * third (minimal underline) field tone.
  */
 export function FinalSection() {
   const { final } = cyberContent;
@@ -20,11 +22,27 @@ export function FinalSection() {
 
   return (
     <section className="relative overflow-hidden bg-ink-950 px-5 py-20 sm:px-8 md:px-16 md:py-28">
+      <ImagePlaceholder
+        fill
+        src={final.bgSrc}
+        label="חדר SOC ריק — פרימיום"
+        description="חדר בקרה/SOC ריק ומפואר — רקע קולנועי לסקשן ההמרה הסופי."
+        sizes="100vw"
+        imagePosition="object-[42%_50%]"
+      />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(60% 55% at 50% 35%, color-mix(in oklab, var(--color-brand-600) 35%, transparent), transparent)",
+            "radial-gradient(65% 60% at 50% 42%, color-mix(in oklab, var(--color-ink-950) 82%, transparent) 35%, transparent 90%)",
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(60% 55% at 50% 35%, color-mix(in oklab, var(--color-brand-600) 30%, transparent), transparent)",
         }}
         aria-hidden
       />

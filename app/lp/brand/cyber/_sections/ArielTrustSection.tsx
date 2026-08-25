@@ -12,8 +12,18 @@ export function ArielTrustSection() {
   const { ariel } = cyberContent;
 
   return (
-    <section className="border-b border-white/5 bg-ink-900 px-5 py-16 sm:px-8 md:px-16 md:py-24">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 text-center md:flex-row md:items-center md:gap-14 md:text-start">
+    <section className="relative overflow-hidden border-b border-white/5 bg-ink-900 px-5 py-16 sm:px-8 md:px-16 md:py-24">
+      <ImagePlaceholder
+        fill
+        src={ariel.bgSrc}
+        label="מרקם טכנולוגי כהה"
+        description="רקע טכנולוגי כהה מופשט — טקסטורה בלבד, לא תמונת תוכן."
+        sizes="100vw"
+        className="opacity-70"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink-900/40 via-ink-900/70 to-ink-900" />
+
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 text-center md:flex-row md:items-center md:gap-14 md:text-start">
         <AnimatedSection effect="scale-in" className="shrink-0">
           <ImagePlaceholder
             aspectRatio="16/9"

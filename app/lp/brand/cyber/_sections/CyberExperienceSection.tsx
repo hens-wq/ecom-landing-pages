@@ -42,6 +42,15 @@ export function CyberExperienceSection() {
 
   return (
     <section className="relative overflow-hidden bg-ink-950 px-5 py-16 sm:px-8 md:px-16 md:py-24">
+      <ImagePlaceholder
+        fill
+        src={cyberExperience.bgSrc}
+        label="מרקם SOC רחב"
+        description="חדר בקרה/SOC רחב עם מסכים ואנשי צוות — טקסטורת רקע לסקשן, לא תוכן ראשי."
+        sizes="100vw"
+        className="opacity-30"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink-950 via-ink-950/85 to-ink-950" />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         style={{
@@ -92,8 +101,11 @@ export function CyberExperienceSection() {
             <AnimatedSection effect="scale-in" delay={0.1} className="h-full w-full">
               <ImagePlaceholder
                 aspectRatio="16/9"
+                src={cyberExperience.visual.src}
                 label={cyberExperience.visual.label}
                 description={cyberExperience.visual.description}
+                imagePosition="object-[68%_28%]"
+                sizes="420px"
                 className="h-full w-full border-white/10"
               />
             </AnimatedSection>
@@ -123,9 +135,12 @@ export function CyberExperienceSection() {
       {/* Mobile: visual + horizontal snap-scroll chip strip */}
       <div className="relative mt-10 md:hidden">
         <ImagePlaceholder
-          aspectRatio="16/9"
+          aspectRatio="4/3"
+          src={cyberExperience.visual.src}
           label={cyberExperience.visual.label}
           description={cyberExperience.visual.description}
+          imagePosition="object-[64%_30%]"
+          sizes="100vw"
           className="w-full border-white/10"
         />
         <div className="no-scrollbar mt-6 flex snap-x gap-2.5 overflow-x-auto pb-2">

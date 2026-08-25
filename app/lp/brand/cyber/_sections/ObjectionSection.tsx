@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { CTAButton } from "@/components/ui/CTAButton";
+import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import { cyberContent } from "@/content/landing/brand-cyber";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,17 @@ export function ObjectionSection() {
             <span className="text-display-xl block text-brand-600">{objection.headlineBold}</span>
           </h2>
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-500">{objection.body}</p>
+        </AnimatedSection>
+
+        <AnimatedSection effect="scale-in" delay={0.1} className="mt-10">
+          <ImagePlaceholder
+            aspectRatio="16/8"
+            src={objection.imageSrc}
+            label="תרגול מעשי — למידה בעבודה"
+            description="אדם צעיר עובד על מחשב נייד בסביבת סייבר/הדרכה. יחס רחב, קרופ עדין."
+            imagePosition="object-[60%_25%]"
+            className="w-full border-ink-200"
+          />
         </AnimatedSection>
 
         <AnimatedSection effect="fade-in" delay={0.15} className="relative mt-14 md:mt-20">

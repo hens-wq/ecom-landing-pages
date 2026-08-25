@@ -29,7 +29,15 @@ export function HeroSection() {
           not an image slab stacked on top of the offer.
           Desktop (lg+): full-bleed behind the asymmetric split. */}
       <div className="absolute inset-x-0 top-0 h-[54svh] lg:inset-0 lg:h-auto">
-        <ImagePlaceholder fill label={hero.image.label} description={hero.image.description} priority />
+        <ImagePlaceholder
+          fill
+          src={hero.image.src}
+          label={hero.image.label}
+          description={hero.image.description}
+          priority
+          sizes="100vw"
+          imagePosition="object-[32%_40%] lg:object-[55%_35%]"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 from-[52%] to-transparent lg:hidden" />
         <div className="absolute inset-0 hidden bg-gradient-to-t from-ink-950 via-ink-950/20 to-transparent lg:block" />
         <div className="absolute inset-0 hidden bg-gradient-to-l from-ink-950/95 via-ink-950/10 to-transparent lg:block" />
