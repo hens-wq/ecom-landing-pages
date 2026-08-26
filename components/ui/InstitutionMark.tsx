@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InstitutionMarkProps {
@@ -11,13 +10,12 @@ interface InstitutionMarkProps {
 }
 
 /**
- * A partner/institution credibility mark. Without `src` it renders a
- * clean wordmark badge (name + subtitle) instead of a dashed-border
- * "missing image" placeholder — reads as an intentional design choice,
- * not an unfinished section. Once the official logo asset exists, pass
- * `src` and this becomes a proper logo lockup on a light card (most
- * institutional logos assume a white/light background) — same slot, no
- * other changes needed.
+ * A partner/institution credibility mark. Without `src` it renders as
+ * plain typography only — no icon, no border, no background panel —
+ * specifically so it never reads as a stand-in or invented logo. Once
+ * the official logo asset exists, pass `src` and this becomes a proper
+ * logo lockup on a light card (most institutional logos assume a
+ * white/light background) — same slot, no other changes needed.
  */
 export function InstitutionMark({ name, subtitle, src, alt, className }: InstitutionMarkProps) {
   if (src) {
@@ -36,14 +34,9 @@ export function InstitutionMark({ name, subtitle, src, alt, className }: Institu
   }
 
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-7 py-7 text-center",
-        className,
-      )}
-    >
-      <Landmark className="size-5 text-teal-300" aria-hidden />
-      <p className="text-sm font-semibold tracking-wide text-off-white">{name}</p>
+    <div className={cn("flex flex-col items-center gap-1.5 text-center md:items-start md:text-start", className)}>
+      <span className="h-px w-8 bg-teal-400/50" aria-hidden />
+      <p className="text-lg font-semibold tracking-wide text-off-white">{name}</p>
       {subtitle ? <p className="text-[15px] text-ink-200">{subtitle}</p> : null}
     </div>
   );

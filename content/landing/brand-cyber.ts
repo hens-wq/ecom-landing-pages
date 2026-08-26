@@ -46,8 +46,8 @@ export const cyberContent = {
       "תכנית הסייבר בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
     logo: {
       // No `src` yet — add the official logo file (transparent background)
-      // and set src here once supplied; the wordmark badge is a deliberate
-      // design, not a placeholder, until then.
+      // and set src here once supplied. Until then InstitutionMark renders
+      // plain typography only, deliberately not an invented logo/badge.
       name: "אוניברסיטת אריאל",
       subtitle: "היחידה ללימודי חוץ והמשך",
     },
