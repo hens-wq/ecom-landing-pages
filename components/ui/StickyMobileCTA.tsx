@@ -69,13 +69,13 @@ export function StickyMobileCTA({
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ y: 96, opacity: 0 }}
+          initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 96, opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink-950/90 px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 backdrop-blur-md md:hidden"
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-white/10 bg-ink-950/80 px-3.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-8px_24px_-8px_rgba(0,0,0,0.4)] backdrop-blur-md md:hidden"
         >
-          <CTAButton href={href} fullWidth size="md">
+          <CTAButton href={href} fullWidth size="sm">
             {label}
           </CTAButton>
         </motion.div>

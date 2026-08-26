@@ -78,7 +78,7 @@ export function ObjectionSection() {
           </ol>
         </AnimatedSection>
 
-        <AnimatedSection effect="fade-up" delay={0.1} className="mt-12">
+        <AnimatedSection effect="fade-up" delay={0.1} className="mt-12" id="objection-cta">
           <CTAButton href="#lead-form-mid" variant="outline-dark">
             {objection.ctaLabel}
           </CTAButton>

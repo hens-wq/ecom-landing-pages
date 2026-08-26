@@ -95,26 +95,26 @@ export function CareerSection() {
                     }
                     aria-hidden
                   />
-                  <span className="text-sm font-medium text-ink-700">{step}</span>
+                  <span className="text-base font-medium text-ink-700">{step}</span>
                 </li>
               ))}
             </ol>
 
             <AnimatedSection effect="fade-up" delay={0.25} className="mt-10 space-y-2">
-              <p className="text-xs font-medium tracking-wide text-ink-400 uppercase">
+              <p className="text-[15px] font-medium tracking-wide text-ink-400 uppercase">
                 {career.rolesLabel}
               </p>
               <div className="flex flex-wrap gap-2">
                 {career.roles.map((role) => (
                   <span
                     key={role}
-                    className="bidi-plaintext rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-sm font-medium text-ink-700"
+                    className="bidi-plaintext rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-[15px] font-medium text-ink-700"
                   >
                     {role}
                   </span>
                 ))}
               </div>
-              <p className="pt-2 text-sm text-ink-400">{career.supportNote}</p>
+              <p className="pt-2 text-[15px] text-ink-400">{career.supportNote}</p>
             </AnimatedSection>
           </div>
         </div>

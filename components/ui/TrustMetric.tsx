@@ -12,6 +12,8 @@ interface TrustMetricProps {
   decimals?: number;
   label: string;
   className?: string;
+  /** Overrides the tone's default value color, e.g. for a branded accent number. */
+  valueClassName?: string;
   align?: "start" | "center";
   size?: "md" | "lg" | "xl";
   tone?: "dark" | "light";
@@ -40,6 +42,7 @@ export function TrustMetric({
   decimals = 0,
   label,
   className,
+  valueClassName,
   align = "start",
   size = "md",
   tone = "dark",
@@ -65,12 +68,15 @@ export function TrustMetric({
 
   return (
     <div className={cn("flex flex-col", align === "center" && "items-center text-center", className)}>
-      <span ref={ref} className={cn(SIZE_CLASS[size], TONE_CLASS[tone].value, "bidi-plaintext")}>
+      <span
+        ref={ref}
+        className={cn(SIZE_CLASS[size], TONE_CLASS[tone].value, "bidi-plaintext", valueClassName)}
+      >
         {prefix}
         {prefersReducedMotion ? value.toFixed(decimals) : display}
         {suffix}
       </span>
-      <span className={cn("mt-1 text-sm", TONE_CLASS[tone].label)}>{label}</span>
+      <span className={cn("mt-1.5 text-base font-medium", TONE_CLASS[tone].label)}>{label}</span>
     </div>
   );
 }

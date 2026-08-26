@@ -67,23 +67,31 @@
   --color-off-white: #f7f5f2;
   --color-paper: #fbfaf8;
 
-  /* Fluid display type scale — for editorial / campaign headlines */
-  --text-display-2xl: clamp(2.75rem, 1.6rem + 4.6vw, 6.5rem);
+  /* Fluid display type scale — for editorial / campaign headlines.
+   * Calibrated to land at specific px targets on 390-430px mobile
+   * viewports (the priority breakpoints for this project), then continue
+   * scaling — capped — for larger screens:
+   *   2xl ~50-54px (the single biggest hero line)
+   *   xl  ~46-50px (primary campaign hooks / numeric hooks)
+   *   lg  ~33-36px (major section headlines)
+   *   md  ~22-24px (secondary/muted headline lines)
+   */
+  --text-display-2xl: clamp(3.125rem, 0.6875rem + 10vw, 6.5rem);
   --text-display-2xl--line-height: 0.98;
   --text-display-2xl--letter-spacing: -0.01em;
   --text-display-2xl--font-weight: 800;
 
-  --text-display-xl: clamp(2.25rem, 1.5rem + 3.4vw, 5rem);
-  --text-display-xl--line-height: 1;
+  --text-display-xl: clamp(2.875rem, 0.4375rem + 10vw, 6rem);
+  --text-display-xl--line-height: 1.02;
   --text-display-xl--letter-spacing: -0.01em;
   --text-display-xl--font-weight: 700;
 
-  --text-display-lg: clamp(1.9rem, 1.4rem + 2.2vw, 3.5rem);
-  --text-display-lg--line-height: 1.05;
+  --text-display-lg: clamp(2.0625rem, 0.234rem + 7.5vw, 3.75rem);
+  --text-display-lg--line-height: 1.08;
   --text-display-lg--font-weight: 700;
 
-  --text-display-md: clamp(1.5rem, 1.2rem + 1.3vw, 2.4rem);
-  --text-display-md--line-height: 1.1;
+  --text-display-md: clamp(1.375rem, 0.156rem + 5vw, 2.5rem);
+  --text-display-md--line-height: 1.15;
   --text-display-md--font-weight: 600;
 
   --text-display-sm: clamp(1.25rem, 1.1rem + 0.6vw, 1.65rem);

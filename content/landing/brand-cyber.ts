@@ -45,8 +45,11 @@ export const cyberContent = {
     statement:
       "תכנית הסייבר בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
     logo: {
-      label: "לוגו — היחידה ללימודי חוץ והמשך, אוניברסיטת אריאל",
-      description: "לוגו רשמי בלבד כפי שנמסר על-ידי אוניברסיטת אריאל, על רקע שקוף.",
+      // No `src` yet — add the official logo file (transparent background)
+      // and set src here once supplied; the wordmark badge is a deliberate
+      // design, not a placeholder, until then.
+      name: "אוניברסיטת אריאל",
+      subtitle: "היחידה ללימודי חוץ והמשך",
     },
   },
 

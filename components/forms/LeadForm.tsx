@@ -82,7 +82,7 @@ export function LeadForm({
               {ctaLabel}
             </CTAButton>
 
-            <p className="text-center text-xs text-ink-200">
+            <p className="text-center text-[15px] text-ink-200">
               בשליחת הפרטים אני מאשר/ת יצירת קשר בנוגע לתוכן שביקשתי.
             </p>
           </motion.form>

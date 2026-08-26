@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "outline" | "outline-dark" | "ghost";
-type Size = "md" | "lg";
+type Size = "sm" | "md" | "lg";
 
 interface BaseProps {
   children: ReactNode;
@@ -49,8 +49,9 @@ const VARIANT_STYLES: Record<Variant, string> = {
 };
 
 const SIZE_STYLES: Record<Size, string> = {
-  md: "h-12 px-6 text-[15px]",
-  lg: "h-14 px-8 text-base",
+  sm: "h-10 px-5 text-sm",
+  md: "h-12 px-6 text-base",
+  lg: "h-14 px-8 text-lg",
 };
 
 export function CTAButton(props: CTAButtonProps) {

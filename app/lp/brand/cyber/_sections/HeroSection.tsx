@@ -78,8 +78,8 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.05 }}
           className="text-balance text-off-white"
         >
-          <span className="block text-display-xl">{hero.headlineTop}</span>
-          <span className="text-display-2xl block">{hero.headlineBottom}</span>
+          <span className="block text-display-lg">{hero.headlineTop}</span>
+          <span className="text-display-2xl mt-0.5 block">{hero.headlineBottom}</span>
         </motion.h1>
 
         <motion.div
@@ -88,7 +88,7 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.15 }}
           className="flex flex-wrap items-center gap-2.5"
         >
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-400/40 bg-teal-400/10 px-3.5 py-2 text-sm font-medium text-teal-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-400/40 bg-teal-400/10 px-3.5 py-2 text-base font-medium text-teal-300">
             <BadgeCheck className="size-4" aria-hidden />
             {hero.noBackgroundHook}
           </span>
@@ -101,14 +101,14 @@ export function HeroSection() {
           className="flex items-baseline gap-2 border-s-2 border-lime-500/60 ps-3"
         >
           <span className="flex flex-col">
-            <span className="text-xs font-medium text-ink-200">{hero.salaryLabel}</span>
-            <span className="bidi-plaintext text-display-lg leading-none font-extrabold text-lime-400">
+            <span className="text-[15px] font-medium text-ink-200">{hero.salaryLabel}</span>
+            <span className="bidi-plaintext text-display-xl leading-none font-extrabold text-lime-400">
               {hero.salaryValue}
               <span className="text-display-sm ms-1.5 font-semibold text-lime-300">
                 {hero.salarySuffix}
               </span>
             </span>
-            <span className="mt-1 text-xs text-ink-200">{hero.salaryNote}</span>
+            <span className="mt-1 text-[15px] text-ink-200">{hero.salaryNote}</span>
           </span>
         </motion.div>
 

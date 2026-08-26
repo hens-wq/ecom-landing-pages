@@ -6,9 +6,10 @@ import { cyberContent } from "@/content/landing/brand-cyber";
 
 /**
  * A light, high-contrast beat between the dark cinematic hero and the
- * next section — one oversized hero stat plus a secondary composite
- * review signal, not three identical stat cards. The light tech texture
- * is the page's first deliberate break from the dark rhythm.
+ * next section. One dominant hero stat (87%) plus the two Google-review
+ * numbers merged into a single composite proof point (they're the same
+ * underlying fact — a rating and a review count) rather than three
+ * disconnected figures side by side.
  */
 export function TrustBarSection() {
   const { bgSrc, stats } = cyberContent.trustBar;
@@ -18,7 +19,7 @@ export function TrustBarSection() {
     <AnimatedSection
       as="section"
       effect="fade-in"
-      className="relative overflow-hidden border-y border-ink-200/60 bg-off-white px-5 py-14 sm:px-8 md:px-16 md:py-20"
+      className="relative overflow-hidden border-b border-ink-200/60 bg-off-white px-5 py-16 sm:px-8 md:px-16 md:py-20"
     >
       <ImagePlaceholder
         fill
@@ -26,41 +27,46 @@ export function TrustBarSection() {
         label="רקע טכנולוגי בהיר"
         description="רקע טכנולוגי בהיר/לבנדר לשבירת הקצב הכהה של העמוד."
         sizes="100vw"
+        imagePosition="object-[65%_70%]"
       />
+      {/* Cinematic seam from the Hero's dark bottom into this light section */}
+      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-ink-950 to-transparent" />
 
-      <div className="relative z-10 flex flex-col gap-10 md:flex-row md:items-center md:gap-16">
-        <div className="md:flex-1">
-          <TrustMetric
-            value={placement.value}
-            decimals={placement.decimals}
-            suffix={placement.suffix}
-            label={placement.label}
-            tone="light"
-            size="xl"
-          />
+      <div className="relative z-10 mx-auto max-w-3xl">
+        <TrustMetric
+          value={placement.value}
+          decimals={placement.decimals}
+          suffix={placement.suffix}
+          label={placement.label}
+          tone="light"
+          size="xl"
+          valueClassName="text-brand-600"
+        />
+
+        <div className="mt-8 flex items-center gap-3" aria-hidden>
+          <span className="h-px flex-1 bg-ink-200" />
+          <span className="size-1.5 rotate-45 bg-brand-500" />
+          <span className="size-1.5 rotate-45 bg-teal-400" />
         </div>
 
-        <div className="h-px w-full bg-ink-200 md:h-20 md:w-px" />
-
-        <div className="flex flex-col gap-3 md:flex-1">
-          <div className="flex items-center gap-1.5">
+        <div className="mt-8 flex items-baseline gap-3">
+          <div className="flex items-center gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="size-4 fill-brand-500 text-brand-500" aria-hidden />
+              <Star key={i} className="size-4 fill-teal-500 text-teal-500" aria-hidden />
             ))}
-            <span className="bidi-plaintext ms-1 text-lg font-bold text-ink-950">
-              {rating.value.toFixed(rating.decimals)}
-              {rating.suffix}
-            </span>
           </div>
-          <TrustMetric
-            value={reviewCount.value}
-            decimals={reviewCount.decimals}
-            suffix={reviewCount.suffix}
-            label={reviewCount.label}
-            tone="light"
-            size="md"
-          />
+          <span className="bidi-plaintext text-2xl font-bold text-ink-950">
+            {rating.value.toFixed(rating.decimals)}
+            {rating.suffix}
+          </span>
         </div>
+        <p className="bidi-plaintext mt-1.5 text-base font-medium text-ink-600">
+          <span className="font-bold text-ink-950">
+            {reviewCount.value}
+            {reviewCount.suffix}
+          </span>{" "}
+          {reviewCount.label}
+        </p>
       </div>
     </AnimatedSection>
   );

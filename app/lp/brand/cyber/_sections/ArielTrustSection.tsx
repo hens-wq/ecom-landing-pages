@@ -1,5 +1,6 @@
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { InstitutionMark } from "@/components/ui/InstitutionMark";
 import { cyberContent } from "@/content/landing/brand-cyber";
 
 /**
@@ -25,11 +26,10 @@ export function ArielTrustSection() {
 
       <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 text-center md:flex-row md:items-center md:gap-14 md:text-start">
         <AnimatedSection effect="scale-in" className="shrink-0">
-          <ImagePlaceholder
-            aspectRatio="16/9"
-            label={ariel.logo.label}
-            description={ariel.logo.description}
-            className="w-56 border-white/10 bg-[linear-gradient(135deg,var(--color-ink-800),var(--color-ink-950))] sm:w-64"
+          <InstitutionMark
+            name={ariel.logo.name}
+            subtitle={ariel.logo.subtitle}
+            className="w-56 sm:w-64"
           />
         </AnimatedSection>
 

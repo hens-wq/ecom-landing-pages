@@ -37,7 +37,7 @@ export function MidFormSection() {
       <div id="lead-form-mid" className="relative mx-auto max-w-lg text-center">
         <AnimatedSection effect="fade-up">
           <h2 className="text-display-lg text-balance text-white">{midForm.headline}</h2>
-          <p className="mt-3 text-lg text-brand-100">{midForm.subheadline}</p>
+          <p className="mt-3 text-xl font-medium text-brand-100">{midForm.subheadline}</p>
         </AnimatedSection>
 
         <AnimatedSection effect="fade-up" delay={0.15} className="mt-8">

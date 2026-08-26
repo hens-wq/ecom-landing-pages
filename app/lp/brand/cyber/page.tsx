@@ -32,7 +32,12 @@ export default function BrandCyberPage() {
       <StickyMobileCTA
         label={cyberContent.hero.ctaLabel}
         href="#lead-form-hero"
-        hideWhenVisible={["#lead-form-hero", "#lead-form-mid", "#lead-form-final"]}
+        hideWhenVisible={[
+          "#lead-form-hero",
+          "#lead-form-mid",
+          "#lead-form-final",
+          "#objection-cta",
+        ]}
       />
     </main>
   );

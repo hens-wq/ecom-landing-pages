@@ -15,6 +15,7 @@ interface AnimatedSectionProps {
   duration?: number;
   className?: string;
   style?: CSSProperties;
+  id?: string;
   as?: Tag;
   /** Fraction of the element that must enter the viewport before it animates. */
   amount?: number;
@@ -41,6 +42,7 @@ export function AnimatedSection({
   duration = 0.7,
   className,
   style,
+  id,
   as: Tag = "div",
   amount = 0.3,
 }: AnimatedSectionProps) {
@@ -50,7 +52,7 @@ export function AnimatedSection({
 
   if (prefersReducedMotion) {
     return (
-      <StaticTag className={className} style={style}>
+      <StaticTag id={id} className={className} style={style}>
         {children}
       </StaticTag>
     );
@@ -58,6 +60,7 @@ export function AnimatedSection({
 
   return (
     <MotionTag
+      id={id}
       className={cn(className)}
       style={style}
       initial="hidden"
