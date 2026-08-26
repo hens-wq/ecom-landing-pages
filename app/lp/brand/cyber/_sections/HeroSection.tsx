@@ -38,8 +38,12 @@ export function HeroSection() {
           sizes="100vw"
           imagePosition="object-[32%_40%] lg:object-[55%_35%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 from-[52%] to-transparent lg:hidden" />
-        <div className="absolute inset-0 hidden bg-gradient-to-t from-ink-950 via-ink-950/20 to-transparent lg:block" />
+        {/* Light enough that the subject and monitors stay clearly visible —
+            solid only right at the very bottom edge (seamless blend into
+            the content below), a soft mid tint through the headline zone,
+            fully clear again toward the top of the frame. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 from-[4%] via-ink-950/45 via-[42%] to-transparent to-[75%] lg:hidden" />
+        <div className="absolute inset-0 hidden bg-gradient-to-t from-ink-950/70 via-ink-950/10 to-transparent lg:block" />
         <div className="absolute inset-0 hidden bg-gradient-to-l from-ink-950/95 via-ink-950/10 to-transparent lg:block" />
       </div>
 
@@ -55,7 +59,10 @@ export function HeroSection() {
         <circle cx="60%" cy="80%" r="3" fill="var(--color-brand-300)" />
       </svg>
 
-      <div className="relative z-10 flex flex-1 flex-col gap-4 px-5 pt-[27svh] pb-6 sm:px-8 sm:pt-[24svh] md:px-10 lg:justify-center lg:gap-7 lg:px-16 lg:pt-28 lg:pb-24 lg:pe-[440px] xl:pe-[480px]">
+      <div
+        className="relative z-10 flex flex-1 flex-col gap-4 px-5 pt-[27svh] pb-6 sm:px-8 sm:pt-[24svh] md:px-10 lg:justify-center lg:gap-7 lg:px-16 lg:pt-28 lg:pb-24 lg:pe-[440px] xl:pe-[480px]"
+        style={{ textShadow: "0 2px 14px rgba(0,0,0,0.55)" }}
+      >
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
