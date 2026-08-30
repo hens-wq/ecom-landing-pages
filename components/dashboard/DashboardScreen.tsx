@@ -55,7 +55,7 @@ export function DashboardScreen({
           icon="ClipboardCheck"
         />
         <StatTile
-          label="מי זאת איקום"
+          label="היכרות עם Ecom"
           value={overall.aboutEcomCompleted ? "הושלם" : "טרם הושלם"}
           icon="Building2"
         />

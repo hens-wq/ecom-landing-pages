@@ -17,7 +17,13 @@ export function EcomIntroScreen({ content }: { content: EcomIntroContent }) {
 
   async function handleFinish() {
     if (!user) return;
-    await progressRepository.markIntroComplete(user.id);
+    // markAboutEcomComplete drives the "היכרות עם Ecom" step in the training
+    // roadmap and dashboard next-task card - this Intro is now that step's
+    // content, so finishing it completes the step (see next-task.ts).
+    await Promise.all([
+      progressRepository.markIntroComplete(user.id),
+      progressRepository.markAboutEcomComplete(user.id),
+    ]);
     router.push("/");
   }
 

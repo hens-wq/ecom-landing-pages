@@ -4,9 +4,9 @@
   "steps": [
     {
       "id": "about-ecom",
-      "title": "מי זאת איקום",
+      "title": "היכרות עם Ecom",
       "description": "הכירו את הארגון שאתם מייצגים לפני שיוצאים למכור",
-      "href": "/about-ecom",
+      "href": "/ecom-intro",
       "icon": "Building2"
     },
     {

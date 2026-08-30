@@ -23,10 +23,10 @@ export function computeNextTask(params: {
 
   if (!overall.aboutEcomCompleted) {
     return {
-      title: "מי זאת איקום",
-      description: "לפני שיוצאים למכור, בואו נכיר את הארגון שאתם מייצגים.",
-      href: "/about-ecom",
-      ctaLabel: "מתחילים את ההכשרה",
+      title: "היכרות עם Ecom",
+      description: "הכירו את מכללת Ecom, החוזקות, החיבור לתעשייה והאנשים שמאחורי המספרים",
+      href: "/ecom-intro",
+      ctaLabel: "מתחילים את ההיכרות",
       icon: "Building2",
     };
   }
