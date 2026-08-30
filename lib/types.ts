@@ -162,7 +162,7 @@ export interface QuizAttempt {
   openAnswers: QuizOpenAnswerRecord[];
   /** Points earned on the auto-graded multiple-choice portion (out of pointsAutoMax). */
   pointsEarned: number;
-  /** Max auto-gradable points — the multiple-choice portion (e.g. 80). */
+  /** Max auto-gradable points — the multiple-choice portion (e.g. 50). */
   pointsAutoMax: number;
   /** Full exam point value — multiple-choice + open-text (e.g. 100). */
   pointsTotalPossible: number;

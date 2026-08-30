@@ -8,7 +8,7 @@ import { defaultCourseState, defaultOverallState, type RawProgressState } from "
  */
 
 function makeAttempt(courseSlug: CourseSlug, score: number, passed: boolean): QuizAttempt {
-  const pointsAutoMax = 80;
+  const pointsAutoMax = 50;
   const pointsTotalPossible = 100;
   return {
     id: crypto.randomUUID(),

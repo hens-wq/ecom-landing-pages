@@ -45,7 +45,8 @@ export function QuizIntro({
               {mcqQuestions.length} שאלות אמריקאיות - {mcqPointsEach} נקודות לכל שאלה
             </li>
             <li>
-              {openQuestions.length} שאלות פתוחות - {openPointsEach} נקודות לכל שאלה
+              {openQuestions.length === 1 ? "שאלה פתוחה אחת" : `${openQuestions.length} שאלות פתוחות`} -{" "}
+              {openPointsEach} נקודות
             </li>
             <li className="font-semibold">סה&quot;כ - {total} נקודות</li>
           </ul>

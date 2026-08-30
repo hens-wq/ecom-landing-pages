@@ -76,15 +76,14 @@ export function QuizResult({
           {pending ? (
             <>
               <p className="text-slate-500">
-                ציון ביניים (שאלות אמריקאיות):{" "}
+                ציון ביניים:{" "}
                 <span className="font-bold text-slate-900">
-                  {pointsEarned} מתוך {pointsAutoMax} נקודות
+                  {pointsEarned} מתוך {pointsAutoMax}
                 </span>
               </p>
               <p className="rounded-xl bg-amber-50 px-3.5 py-2 text-xs text-amber-700">
-                {pendingCount} שאלות פתוחות ממתינות להערכה - {openPointsPossible} נקודות נוספות
-                (מתוך {pointsTotalPossible} סה&quot;כ). הציון הסופי ותוצאת עובר/לא עובר יופיעו רק
-                לאחר שהשאלות הפתוחות יוערכו.
+                {pendingCount === 1 ? "שאלה פתוחה אחת ממתינה להערכה" : `${pendingCount} שאלות פתוחות ממתינות להערכה`} -{" "}
+                {openPointsPossible} נקודות נוספות
               </p>
             </>
           ) : (

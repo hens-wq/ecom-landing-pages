@@ -204,12 +204,26 @@ export const quizSchema = z
     closingNote: z.string(),
   })
   .superRefine((quiz, ctx) => {
-    const mcqCount = quiz.questions.filter((q) => q.type === "multipleChoice").length;
-    const openCount = quiz.questions.filter((q) => q.type === "openText").length;
-    if (mcqCount !== 10 || openCount !== 2) {
+    const mcqQuestions = quiz.questions.filter((q) => q.type === "multipleChoice");
+    const openQuestions = quiz.questions.filter((q) => q.type === "openText");
+    if (mcqQuestions.length !== 5 || openQuestions.length !== 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Every exam must have exactly 10 multiple-choice + 2 open-text questions (found ${mcqCount} + ${openCount})`,
+        message: `Every exam must have exactly 5 multiple-choice + 1 open-text question (found ${mcqQuestions.length} + ${openQuestions.length})`,
+        path: ["questions"],
+      });
+    }
+    if (mcqQuestions.some((q) => q.points !== 10)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Every multiple-choice question must be worth exactly 10 points",
+        path: ["questions"],
+      });
+    }
+    if (openQuestions.some((q) => q.points !== 50)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The open-text question must be worth exactly 50 points",
         path: ["questions"],
       });
     }
