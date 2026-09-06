@@ -288,6 +288,8 @@ export const introIndustrySchema = z.object({
   body: z.string(),
   logosCaption: z.string().optional(),
   logos: z.array(introLogoSchema).min(1),
+  /** Real office/team photo for the "Great People Build Amazing Things" card - optional until the asset is provided. */
+  officePhotoSrc: z.string().optional(),
 });
 
 export const introStatSchema = z.object({
