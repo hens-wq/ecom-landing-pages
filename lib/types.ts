@@ -243,6 +243,8 @@ export interface OverallTrainingProgress {
   introCompleted: boolean;
   aboutEcomCompleted: boolean;
   salesMethodCompleted: boolean;
+  /** Index (0-based) of the last Sales Method step the rep reached - lets them resume instead of restarting. */
+  salesMethodStep: number;
   courses: Record<CourseSlug, CourseProgressState>;
   percent: number;
   currentStepId: string;

@@ -416,15 +416,6 @@ export const salesMethodPrincipleSchema = z.object({
   description: z.string(),
 });
 
-export const salesMethodCustomerSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  motivations: z.array(z.string()).min(1),
-  concerns: z.array(z.string()).min(1),
-  profiles: z.array(z.string()).min(1),
-  closingLine: z.string(),
-});
-
 export const salesMethodTrackSalarySchema = z.object({
   entry: z.string(),
   afterExperience: z.string(),
@@ -445,7 +436,8 @@ export const salesMethodTrackDetailSchema = z.object({
   totalCourses: z.number(),
   headline: z.string(),
   salary: salesMethodTrackSalarySchema,
-  whatItIs: z.string(),
+  /** Optional - not every track had a dedicated "what it is" slide in the source deck (see pendingNote when absent). */
+  whatItIs: z.string().optional(),
   whoItSuits: z.string(),
   rolesAfter: z.string().optional(),
   pendingNote: z.string().optional(),
@@ -468,15 +460,6 @@ export const salesMethodRapportItemSchema = z.object({
   description: z.string(),
 });
 
-export const salesMethodAuthorityWarmthSchema = z.object({
-  title: z.string(),
-  warmthLabel: z.string(),
-  warmthExamples: z.array(z.string()).min(1),
-  authorityLabel: z.string(),
-  authorityExamples: z.array(z.string()).min(1),
-  insight: z.string(),
-});
-
 export const salesMethodMentalityItemSchema = z.object({
   number: z.string(),
   title: z.string(),
@@ -489,81 +472,123 @@ export const salesMethodSummaryPhaseSchema = z.object({
   description: z.string(),
 });
 
+const stepBase = {
+  id: z.string(),
+  number: z.number(),
+  title: z.string(),
+};
+
+export const salesMethodMindsetStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("mindset"),
+  description: z.string(),
+  principles: z.array(salesMethodPrincipleSchema).min(1),
+});
+
+export const salesMethodCustomerStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("customer"),
+  description: z.string(),
+  motivations: z.array(z.string()).min(1),
+  concerns: z.array(z.string()).min(1),
+  profiles: z.array(z.string()).min(1),
+  closingLine: z.string(),
+});
+
+export const salesMethodTracksOverviewStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("tracksOverview"),
+  description: z.string(),
+  salaryNote: z.string(),
+  tracks: z.array(salesMethodTrackOverviewRowSchema).min(1),
+});
+
+export const salesMethodTrackCarouselStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("trackCarousel"),
+  description: z.string(),
+  tracks: z.array(salesMethodTrackDetailSchema).min(1),
+});
+
+export const salesMethodMatchingStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("matching"),
+  description: z.string(),
+  axisXLabels: z.object({ dynamic: z.string(), technical: z.string() }),
+  axisYLabels: z.object({ hasEnglish: z.string(), noEnglish: z.string() }),
+  quadrants: z.array(salesMethodMatchingQuadrantSchema).length(4),
+  centerLabel: z.string(),
+  centerNote: z.string(),
+});
+
+export const salesMethodCallTimelineStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("callTimeline"),
+  description: z.string(),
+  steps: z.array(salesMethodCallStepSchema).min(1),
+  sideNote: z.string(),
+});
+
+export const salesMethodTrustStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("trust"),
+  description: z.string(),
+  rapportItems: z.array(salesMethodRapportItemSchema).min(1),
+  energyTitle: z.string(),
+  energyDescription: z.string(),
+  energyDimensions: z.array(z.string()).min(1),
+  warmthLabel: z.string(),
+  warmthExamples: z.array(z.string()).min(1),
+  authorityLabel: z.string(),
+  authorityExamples: z.array(z.string()).min(1),
+  insight: z.string(),
+});
+
+export const salesMethodDiagnosticStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("diagnostic"),
+  description: z.string(),
+  exercise: z.string(),
+  sampleQuestions: z.array(z.string()).min(1),
+  toolConnection: z.string(),
+});
+
+export const salesMethodMentalityStepSchema = z.object({
+  ...stepBase,
+  kind: z.literal("mentality"),
+  description: z.string(),
+  items: z.array(salesMethodMentalityItemSchema).min(1),
+  personalStory: z.string(),
+  objectionsNote: z.string(),
+  summaryTitle: z.string(),
+  summaryDescription: z.string(),
+  summaryPhases: z.array(salesMethodSummaryPhaseSchema).min(1),
+  throughoutTitle: z.string(),
+  throughoutDescription: z.string(),
+});
+
+export const salesMethodStepSchema = z.discriminatedUnion("kind", [
+  salesMethodMindsetStepSchema,
+  salesMethodCustomerStepSchema,
+  salesMethodTracksOverviewStepSchema,
+  salesMethodTrackCarouselStepSchema,
+  salesMethodMatchingStepSchema,
+  salesMethodCallTimelineStepSchema,
+  salesMethodTrustStepSchema,
+  salesMethodDiagnosticStepSchema,
+  salesMethodMentalityStepSchema,
+]);
+
 export const salesMethodSchema = z.object({
-  hero: z.object({
-    kicker: z.string(),
-    title: z.string(),
-    description: z.string(),
-  }),
-  mindset: z.object({
-    title: z.string(),
-    description: z.string(),
-    principles: z.array(salesMethodPrincipleSchema).min(1),
-  }),
-  customer: salesMethodCustomerSchema,
-  tracksOverview: z.object({
-    title: z.string(),
-    description: z.string(),
-    salaryNote: z.string(),
-    tracks: z.array(salesMethodTrackOverviewRowSchema).min(1),
-  }),
-  trackDetails: z.object({
-    title: z.string(),
-    description: z.string(),
-    tracks: z.array(salesMethodTrackDetailSchema).min(1),
-  }),
-  matchingTool: z.object({
-    title: z.string(),
-    description: z.string(),
-    axisXLabels: z.object({ dynamic: z.string(), technical: z.string() }),
-    axisYLabels: z.object({ hasEnglish: z.string(), noEnglish: z.string() }),
-    quadrants: z.array(salesMethodMatchingQuadrantSchema).length(4),
-    centerLabel: z.string(),
-    centerNote: z.string(),
-  }),
-  callStructure: z.object({
-    title: z.string(),
-    description: z.string(),
-    steps: z.array(salesMethodCallStepSchema).min(1),
-    sideNote: z.string(),
-  }),
-  rapport: z.object({
-    title: z.string(),
-    items: z.array(salesMethodRapportItemSchema).min(1),
-  }),
-  energyMatching: z.object({
-    title: z.string(),
-    description: z.string(),
-    dimensions: z.array(z.string()).min(1),
-  }),
-  authorityWarmth: salesMethodAuthorityWarmthSchema,
-  diagnosticExercise: z.object({
-    title: z.string(),
-    exercise: z.string(),
-    sampleQuestions: z.array(z.string()).min(1),
-    toolConnection: z.string(),
-  }),
-  mentality: z.object({
-    title: z.string(),
-    description: z.string(),
-    items: z.array(salesMethodMentalityItemSchema).min(1),
-    personalStory: z.string(),
-    objectionsNote: z.string(),
-  }),
-  summary: z.object({
-    title: z.string(),
-    description: z.string(),
-    phases: z.array(salesMethodSummaryPhaseSchema).min(1),
-    throughoutTitle: z.string(),
-    throughoutDescription: z.string(),
-  }),
-  finalCta: z.object({
+  steps: z.array(salesMethodStepSchema).min(1),
+  completion: z.object({
     title: z.string(),
     description: z.string(),
     buttonLabel: z.string(),
   }),
 });
 
+export type SalesMethodStep = z.infer<typeof salesMethodStepSchema>;
 export type SalesMethodContent = z.infer<typeof salesMethodSchema>;
 
 export const comingSoonPageSchema = z.object({

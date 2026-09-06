@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSalesMethodContent } from "@/lib/content/loader";
-import { SalesMethodScreen } from "@/components/sales-method/SalesMethodScreen";
+import { SalesMethodExperience } from "@/components/sales-method/SalesMethodExperience";
 
 export const metadata: Metadata = {
   title: "שיטת המכירה של Ecom | מכללת Ecom",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 
 export default function SalesMethodPage() {
   const content = getSalesMethodContent();
-  return <SalesMethodScreen content={content} />;
+  return <SalesMethodExperience content={content} />;
 }
