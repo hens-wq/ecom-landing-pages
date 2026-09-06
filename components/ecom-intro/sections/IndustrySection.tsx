@@ -6,7 +6,39 @@ import type { IntroBrandContent, IntroIndustryContent } from "@/lib/content/sche
 import { SectionNav } from "@/components/ecom-intro/SectionNav";
 import { BrandBackdrop } from "@/components/ecom-intro/BrandBackdrop";
 import { HighlightEcom } from "@/components/ecom-intro/HighlightEcom";
-import { DotGrid, FilledTriangle, OutlineTriangle } from "@/components/shared/GeometricDecor";
+import { DotGrid, FilledTriangle } from "@/components/shared/GeometricDecor";
+import { cn } from "@/lib/utils";
+
+/**
+ * A fine-stroke outline triangle whose line weight stays constant in screen
+ * pixels regardless of size (vector-effect="non-scaling-stroke") - the
+ * shared OutlineTriangle scales its stroke with size, which reads too bold
+ * at the large sizes this slide's reference uses. Kept local to this file
+ * so it doesn't change the shared component's look anywhere else.
+ */
+function ThinOutlineTriangle({
+  className,
+  size = 28,
+  rotate = 0,
+}: {
+  className?: string;
+  size?: number;
+  rotate?: number;
+}) {
+  return (
+    <svg
+      aria-hidden
+      className={cn("pointer-events-none absolute", className)}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{ transform: `rotate(${rotate}deg)` }}
+    >
+      <path d="M12 3L21 20H3L12 3Z" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
 
 /**
  * Fixed per-company placement matching the approved reference image
@@ -18,24 +50,24 @@ import { DotGrid, FilledTriangle, OutlineTriangle } from "@/components/shared/Ge
  * here, it is skipped rather than guessed at - see the fallback note below.
  */
 const LOGO_LAYOUT: Record<string, { left: string; top: string; width: number }> = {
-  Microsoft: { left: "21%", top: "29%", width: 168 },
-  "Check Point": { left: "41.5%", top: "29%", width: 168 },
-  Deloitte: { left: "60%", top: "29%", width: 150 },
-  Manpower: { left: "79%", top: "29%", width: 150 },
-  EY: { left: "24.5%", top: "45%", width: 108 },
-  Ness: { left: "74%", top: "45.5%", width: 108 },
-  Citadel: { left: "19.5%", top: "58%", width: 150 },
-  Partner: { left: "82.5%", top: "58%", width: 150 },
-  Radware: { left: "32%", top: "68%", width: 150 },
-  Wix: { left: "50%", top: "70%", width: 130 },
-  Bynet: { left: "68%", top: "68%", width: 168 },
+  Microsoft: { left: "21%", top: "9%", width: 168 },
+  "Check Point": { left: "41.5%", top: "9%", width: 168 },
+  Deloitte: { left: "60%", top: "9%", width: 150 },
+  Manpower: { left: "79%", top: "9%", width: 150 },
+  EY: { left: "24.5%", top: "42%", width: 108 },
+  Ness: { left: "74%", top: "43%", width: 108 },
+  Citadel: { left: "19.5%", top: "68%", width: 150 },
+  Partner: { left: "82.5%", top: "68%", width: 150 },
+  Radware: { left: "32%", top: "89%", width: 150 },
+  Wix: { left: "50%", top: "93%", width: 130 },
+  Bynet: { left: "68%", top: "89%", width: 168 },
 };
 
 function OrbitLogos({ logos, markSrc }: { logos: IntroIndustryContent["logos"]; markSrc: string }) {
   const placed = logos.filter((logo) => LOGO_LAYOUT[logo.name]);
 
   return (
-    <div className="relative mx-auto aspect-[16/9] w-full max-w-6xl">
+    <div className="relative mx-auto aspect-[29/10] w-full max-w-6xl">
       {/* Dashed orbit path + small connector dots, one per logo */}
       <svg
         aria-hidden
@@ -45,9 +77,9 @@ function OrbitLogos({ logos, markSrc }: { logos: IntroIndustryContent["logos"]; 
       >
         <ellipse
           cx="50"
-          cy="49"
-          rx="44"
-          ry="34"
+          cy="51"
+          rx="45"
+          ry="42"
           fill="none"
           stroke="var(--brand-purple)"
           strokeWidth="0.25"
@@ -69,11 +101,15 @@ function OrbitLogos({ logos, markSrc }: { logos: IntroIndustryContent["logos"]; 
         })}
       </svg>
 
-      {/* Soft purple glow behind the center mark */}
+      {/* Soft purple glow behind the center mark - near-white at the core so
+          the mark's opaque white background blends in without a hard edge */}
       <div
         aria-hidden
-        className="absolute left-1/2 top-1/2 size-64 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-3xl sm:size-80"
-        style={{ background: "radial-gradient(circle, rgba(140,82,255,0.35) 0%, rgba(140,82,255,0) 70%)" }}
+        className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full sm:size-96"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(140,82,255,0.32) 38%, rgba(140,82,255,0) 72%)",
+        }}
       />
 
       <motion.div
@@ -86,9 +122,9 @@ function OrbitLogos({ logos, markSrc }: { logos: IntroIndustryContent["logos"]; 
         <Image
           src={markSrc}
           alt="Ecom"
-          width={160}
-          height={160}
-          className="h-20 w-20 object-contain sm:h-28 sm:w-28"
+          width={180}
+          height={180}
+          className="h-24 w-24 object-contain sm:h-32 sm:w-32"
         />
       </motion.div>
 
@@ -135,13 +171,13 @@ function OfficeCultureCard({ photoSrc }: { photoSrc?: string }) {
       className="pointer-events-none absolute -left-6 bottom-0 z-20 hidden sm:-left-10 sm:block"
     >
       <div className="relative">
-        <OutlineTriangle
-          className="-left-10 -top-12 text-[var(--brand-teal)] opacity-70"
-          size={260}
+        <ThinOutlineTriangle
+          className="-left-10 -top-12 text-[var(--brand-teal)] opacity-80"
+          size={280}
           rotate={-8}
         />
         <div
-          className="relative h-56 w-64 overflow-hidden bg-gradient-to-br from-[#0f0b2e] via-[var(--brand-purple)]/70 to-[var(--brand-teal)]/60 shadow-[0_25px_60px_-20px_rgba(15,23,42,0.45)] sm:h-64 sm:w-72"
+          className="relative h-64 w-64 overflow-hidden bg-gradient-to-br from-[#0f0b2e] via-[var(--brand-purple)]/70 to-[var(--brand-teal)]/60 shadow-[0_25px_60px_-20px_rgba(15,23,42,0.45)] sm:h-72 sm:w-72"
           style={{
             borderRadius: "1.75rem",
             clipPath: "polygon(0% 0%, 80% 0%, 100% 20%, 100% 100%, 0% 100%)",
@@ -175,18 +211,19 @@ export function IndustrySection({
       <BrandBackdrop tone="violet" />
 
       {/* Top-right geometric shape */}
-      <OutlineTriangle
-        className="-right-16 -top-14 text-[var(--brand-purple)] opacity-[0.45]"
+      <ThinOutlineTriangle
+        className="-right-16 -top-14 text-[var(--brand-purple)] opacity-[0.5]"
         size={220}
         rotate={10}
       />
 
-      {/* Bottom-right dot-grid + small triangle accents */}
+      {/* Right-edge + bottom-right decorative accents */}
+      <ThinOutlineTriangle className="right-[8%] top-[58%] text-[var(--brand-purple)] opacity-30" size={22} rotate={-100} />
       <DotGrid className="right-8 bottom-16 h-20 w-20 text-slate-400 opacity-[0.22]" />
-      <FilledTriangle className="bottom-[7%] right-[4%] text-[var(--brand-purple)] opacity-50" size={18} rotate={90} />
-      <OutlineTriangle className="bottom-[16%] right-[9%] text-[var(--brand-teal)] opacity-40" size={20} rotate={-10} />
+      <FilledTriangle className="bottom-[7%] right-[4%] text-[var(--brand-purple)] opacity-50" size={16} rotate={90} />
+      <ThinOutlineTriangle className="bottom-[15%] right-[9%] text-[var(--brand-teal)] opacity-45" size={18} rotate={-10} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[90rem] flex-1 flex-col items-center justify-center gap-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-[90rem] flex-1 flex-col items-center justify-center gap-6">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
           <motion.div
             initial={{ opacity: 0 }}
