@@ -25,7 +25,7 @@ export async function generateMetadata({
   const { slug, topic: topicParam } = await params;
   const course = getCourseOrNotFound(slug);
   const topic = resolveTopic(course, topicParam);
-  return { title: `${topic.title} | ${course.meta.title} | אקדמיית איקום` };
+  return { title: `${topic.title} | ${course.meta.title} | מכללת Ecom` };
 }
 
 export default async function PlaybookTopicPage({

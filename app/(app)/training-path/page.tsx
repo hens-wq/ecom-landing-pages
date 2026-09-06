@@ -3,7 +3,7 @@ import { getTrainingPathContent } from "@/lib/content/loader";
 import { TrainingPathScreen } from "@/components/training/TrainingPathScreen";
 
 export const metadata: Metadata = {
-  title: "מסלול ההכשרה שלי | אקדמיית איקום",
+  title: "מסלול ההכשרה שלי | מכללת Ecom",
 };
 
 export default function TrainingPathPage() {

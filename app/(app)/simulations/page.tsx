@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { ComingSoonState } from "@/components/shared/ComingSoonState";
 
 export const metadata: Metadata = {
-  title: "סימולציות AI | אקדמיית איקום",
+  title: "סימולציות AI | מכללת Ecom",
 };
 
 export default function SimulationsPage() {

@@ -28,6 +28,7 @@ export interface ProgressRepository {
   getCourseProgress(userId: string, courseSlug: CourseSlug): Promise<CourseProgress>;
   markIntroComplete(userId: string): Promise<void>;
   markAboutEcomComplete(userId: string): Promise<void>;
+  markSalesMethodComplete(userId: string): Promise<void>;
   markTopicComplete(userId: string, courseSlug: CourseSlug, topicId: string): Promise<void>;
   markVideoWatched(userId: string, courseSlug: CourseSlug): Promise<void>;
   submitQuizAttempt(
@@ -45,6 +46,7 @@ export interface ProgressRepository {
 interface RawProgressState {
   introCompleted: boolean;
   aboutEcomCompleted: boolean;
+  salesMethodCompleted: boolean;
   courses: Record<CourseSlug, CourseProgressState>;
 }
 
@@ -67,6 +69,7 @@ export function defaultOverallState(): RawProgressState {
   return {
     introCompleted: false,
     aboutEcomCompleted: false,
+    salesMethodCompleted: false,
     courses: Object.fromEntries(
       COURSE_SLUGS.map((slug) => [slug, defaultCourseState()])
     ) as Record<CourseSlug, CourseProgressState>,
@@ -94,7 +97,7 @@ function computeOverallProgress(state: RawProgressState): OverallTrainingProgres
   let currentStepId = "about-ecom";
   if (state.aboutEcomCompleted) {
     const nextCourse = COURSE_SLUGS.find((slug) => !state.courses[slug]?.completed);
-    currentStepId = nextCourse ? "courses" : "customer-profile";
+    currentStepId = nextCourse ? "courses" : state.salesMethodCompleted ? "simulations" : "sales-method";
   }
 
   return { ...state, percent, currentStepId };
@@ -119,6 +122,7 @@ class LocalProgressRepository implements ProgressRepository {
       return {
         introCompleted: parsed.introCompleted ?? false,
         aboutEcomCompleted: parsed.aboutEcomCompleted ?? false,
+        salesMethodCompleted: parsed.salesMethodCompleted ?? false,
         courses: {
           ...defaultOverallState().courses,
           ...parsed.courses,
@@ -152,6 +156,12 @@ class LocalProgressRepository implements ProgressRepository {
   async markAboutEcomComplete(userId: string): Promise<void> {
     const state = this.read(userId);
     state.aboutEcomCompleted = true;
+    this.write(userId, state);
+  }
+
+  async markSalesMethodComplete(userId: string): Promise<void> {
+    const state = this.read(userId);
+    state.salesMethodCompleted = true;
     this.write(userId, state);
   }
 

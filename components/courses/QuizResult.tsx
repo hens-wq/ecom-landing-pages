@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Home, X } from "lucide-react";
 import type { Quiz, QuizEvaluationStatus, QuizOpenAnswerRecord } from "@/lib/types";
 import { isMultipleChoice } from "@/lib/quiz";
 import { ThemedAccentBackground } from "@/components/shared/GeometricDecor";
@@ -18,7 +18,6 @@ export function QuizResult({
   passed,
   bestScore,
   attemptsCount,
-  onRetry,
   continueHref,
 }: {
   quiz: Quiz;
@@ -35,7 +34,6 @@ export function QuizResult({
   passed: boolean | null;
   bestScore: number;
   attemptsCount: number;
-  onRetry: () => void;
   continueHref: string;
 }) {
   const pending = evaluationStatus !== "graded";
@@ -62,7 +60,7 @@ export function QuizResult({
             ) : passed ? (
               <Check className="size-8" strokeWidth={2.5} />
             ) : (
-              <RotateCcw className="size-8" />
+              <X className="size-8" strokeWidth={2.5} />
             )}
           </div>
           <h2 className="text-2xl font-bold text-slate-900">
@@ -70,7 +68,7 @@ export function QuizResult({
               ? "המבחן נשלח לבדיקה"
               : passed
                 ? "כל הכבוד, עברת את המבחן!"
-                : "עוד לא הפעם - אפשר לנסות שוב"}
+                : "הציון לא עבר את סף המעבר"}
           </h2>
 
           {pending ? (
@@ -101,24 +99,27 @@ export function QuizResult({
             <span>ניסיון מספר {attemptsCount}</span>
           </div>
 
-          {pending ? (
-            <Button size="lg" variant="outline" className="mt-2" onClick={onRetry}>
-              <RotateCcw className="size-4" />
-              ניסיון נוסף
-            </Button>
-          ) : passed ? (
-            <Button asChild size="lg" className="mt-2">
-              <Link href={continueHref}>
-                לצפייה בסיכום הקורס
-                <ArrowLeft className="size-4" />
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            {passed && (
+              <Button asChild size="lg">
+                <Link href={continueHref}>
+                  לצפייה בסיכום הקורס
+                  <ArrowLeft className="size-4" />
+                </Link>
+              </Button>
+            )}
+            {!passed && !pending && (
+              <p className="max-w-xs text-xs leading-relaxed text-slate-400">
+                התשובה שלכם נשמרה. אפשר לחזור לחומרי הלמידה ולנסות שוב בהמשך דרך המנחה שלכם.
+              </p>
+            )}
+            <Button asChild size="lg" variant={passed ? "outline" : "default"}>
+              <Link href="/">
+                <Home className="size-4" />
+                חזרה לדף הראשי
               </Link>
             </Button>
-          ) : (
-            <Button size="lg" className="mt-2" onClick={onRetry}>
-              <RotateCcw className="size-4" />
-              לנסות שוב
-            </Button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ export function QuizResult({
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium text-slate-800">
-                        {i + 1}. {q.question}
+                        {i + 1}. {q.scenario}
                       </p>
                       <span
                         className={cn(

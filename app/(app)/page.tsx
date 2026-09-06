@@ -5,7 +5,7 @@ import { getAllCourseMetas, getCourseTheme, getHomeContent } from "@/lib/content
 import { DashboardScreen } from "@/components/dashboard/DashboardScreen";
 
 export const metadata: Metadata = {
-  title: "בית | אקדמיית איקום",
+  title: "בית | מכללת Ecom",
 };
 
 export default function DashboardPage() {

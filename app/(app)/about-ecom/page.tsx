@@ -5,7 +5,7 @@ import { getAboutEcomContent, getAllCourseMetas, getCourseTheme } from "@/lib/co
 import { AboutEcomScreen } from "@/components/about/AboutEcomScreen";
 
 export const metadata: Metadata = {
-  title: "מי זאת איקום | אקדמיית איקום",
+  title: "מי זאת איקום | מכללת Ecom",
 };
 
 export default function AboutEcomPage() {

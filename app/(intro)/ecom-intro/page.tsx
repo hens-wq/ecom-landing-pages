@@ -3,7 +3,7 @@ import { getEcomIntroContent } from "@/lib/content/loader";
 import { EcomIntroScreen } from "@/components/ecom-intro/EcomIntroScreen";
 
 export const metadata: Metadata = {
-  title: "מי זאת Ecom | אקדמיית איקום",
+  title: "מי זאת Ecom | מכללת Ecom",
 };
 
 export default function EcomIntroPage() {

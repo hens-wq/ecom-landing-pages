@@ -21,6 +21,7 @@ import {
   Handshake,
   PlayCircle,
   HelpCircle,
+  PartyPopper,
   type LucideIcon,
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Award,
   Handshake,
   PlayCircle,
+  PartyPopper,
 };
 
 export const DEFAULT_ICON: LucideIcon = HelpCircle;

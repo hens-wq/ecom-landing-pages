@@ -177,7 +177,9 @@ export const multipleChoiceQuestionSchema = z
 export const openTextQuestionSchema = z.object({
   id: z.string(),
   type: z.literal("openText"),
-  question: z.string(),
+  scenario: z.string(),
+  promptIntro: z.string(),
+  topics: z.array(z.string()).min(1),
   points: z.number().positive(),
   rubric: z.array(z.string()).min(1),
 });
@@ -398,6 +400,169 @@ export type IntroClosingContent = z.infer<typeof introClosingSchema>;
 export type IntroAudioContent = z.infer<typeof introAudioSchema>;
 export type IntroStudentPhoto = z.infer<typeof introStudentPhotoSchema>;
 export type IntroStudentsContent = z.infer<typeof introStudentsSchema>;
+
+// ---------------------------------------------------------------------------
+// Sales Method module ("שיטת המכירה של Ecom") - built from the approved
+// "שבוע הכשרה - נציגי מכירות" training-week deck. Every field here traces
+// back to a specific slide; see content/site/sales-method.json comments in
+// CONTENT_GUIDE.md before editing.
+// ---------------------------------------------------------------------------
+
+export const salesMethodPrincipleSchema = z.object({
+  number: z.string(),
+  title: z.string(),
+  description: z.string(),
+});
+
+export const salesMethodCustomerSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  motivations: z.array(z.string()).min(1),
+  concerns: z.array(z.string()).min(1),
+  profiles: z.array(z.string()).min(1),
+  closingLine: z.string(),
+});
+
+export const salesMethodTrackSalarySchema = z.object({
+  entry: z.string(),
+  afterExperience: z.string(),
+  advanced: z.string(),
+});
+
+export const salesMethodTrackOverviewRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  suits: z.string(),
+  salary: salesMethodTrackSalarySchema,
+});
+
+export const salesMethodTrackDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  courseNumber: z.number(),
+  totalCourses: z.number(),
+  headline: z.string(),
+  salary: salesMethodTrackSalarySchema,
+  whatItIs: z.string(),
+  whoItSuits: z.string(),
+  rolesAfter: z.string().optional(),
+  pendingNote: z.string().optional(),
+});
+
+export const salesMethodMatchingQuadrantSchema = z.object({
+  id: z.string(),
+  column: z.enum(["dynamic", "technical"]),
+  row: z.enum(["hasEnglish", "noEnglish"]),
+  trackName: z.string(),
+});
+
+export const salesMethodCallStepSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+});
+
+export const salesMethodRapportItemSchema = z.object({
+  label: z.string(),
+  description: z.string(),
+});
+
+export const salesMethodAuthorityWarmthSchema = z.object({
+  title: z.string(),
+  warmthLabel: z.string(),
+  warmthExamples: z.array(z.string()).min(1),
+  authorityLabel: z.string(),
+  authorityExamples: z.array(z.string()).min(1),
+  insight: z.string(),
+});
+
+export const salesMethodMentalityItemSchema = z.object({
+  number: z.string(),
+  title: z.string(),
+  description: z.string(),
+});
+
+export const salesMethodSummaryPhaseSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  description: z.string(),
+});
+
+export const salesMethodSchema = z.object({
+  hero: z.object({
+    kicker: z.string(),
+    title: z.string(),
+    description: z.string(),
+  }),
+  mindset: z.object({
+    title: z.string(),
+    description: z.string(),
+    principles: z.array(salesMethodPrincipleSchema).min(1),
+  }),
+  customer: salesMethodCustomerSchema,
+  tracksOverview: z.object({
+    title: z.string(),
+    description: z.string(),
+    salaryNote: z.string(),
+    tracks: z.array(salesMethodTrackOverviewRowSchema).min(1),
+  }),
+  trackDetails: z.object({
+    title: z.string(),
+    description: z.string(),
+    tracks: z.array(salesMethodTrackDetailSchema).min(1),
+  }),
+  matchingTool: z.object({
+    title: z.string(),
+    description: z.string(),
+    axisXLabels: z.object({ dynamic: z.string(), technical: z.string() }),
+    axisYLabels: z.object({ hasEnglish: z.string(), noEnglish: z.string() }),
+    quadrants: z.array(salesMethodMatchingQuadrantSchema).length(4),
+    centerLabel: z.string(),
+    centerNote: z.string(),
+  }),
+  callStructure: z.object({
+    title: z.string(),
+    description: z.string(),
+    steps: z.array(salesMethodCallStepSchema).min(1),
+    sideNote: z.string(),
+  }),
+  rapport: z.object({
+    title: z.string(),
+    items: z.array(salesMethodRapportItemSchema).min(1),
+  }),
+  energyMatching: z.object({
+    title: z.string(),
+    description: z.string(),
+    dimensions: z.array(z.string()).min(1),
+  }),
+  authorityWarmth: salesMethodAuthorityWarmthSchema,
+  diagnosticExercise: z.object({
+    title: z.string(),
+    exercise: z.string(),
+    sampleQuestions: z.array(z.string()).min(1),
+    toolConnection: z.string(),
+  }),
+  mentality: z.object({
+    title: z.string(),
+    description: z.string(),
+    items: z.array(salesMethodMentalityItemSchema).min(1),
+    personalStory: z.string(),
+    objectionsNote: z.string(),
+  }),
+  summary: z.object({
+    title: z.string(),
+    description: z.string(),
+    phases: z.array(salesMethodSummaryPhaseSchema).min(1),
+    throughoutTitle: z.string(),
+    throughoutDescription: z.string(),
+  }),
+  finalCta: z.object({
+    title: z.string(),
+    description: z.string(),
+    buttonLabel: z.string(),
+  }),
+});
+
+export type SalesMethodContent = z.infer<typeof salesMethodSchema>;
 
 export const comingSoonPageSchema = z.object({
   icon: z.string(),

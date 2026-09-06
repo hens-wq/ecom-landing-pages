@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Course, QuizDraft, QuizEvaluationStatus, QuizOpenAnswerRecord } from "@/lib/types";
+import type { Course, QuizDraft, QuizOpenAnswerRecord } from "@/lib/types";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useCourseProgress } from "@/lib/hooks/use-course-progress";
-import { isOpenText, scoreMultipleChoice, totalPossiblePoints } from "@/lib/quiz";
+import { isMultipleChoice, isOpenText, openTextFullPrompt, scoreMultipleChoice, totalPossiblePoints } from "@/lib/quiz";
 import { CourseThemeProvider } from "@/components/courses/CourseThemeProvider";
 import { Breadcrumbs } from "@/components/shared/PageHeader";
 import { QuizIntro } from "@/components/courses/QuizIntro";
@@ -14,19 +14,6 @@ import { ReturnToMaterialsMenu } from "@/components/courses/ReturnToMaterialsMen
 import { FullScreenLoader } from "@/components/shared/FullScreenLoader";
 
 type DraftShape = Pick<QuizDraft, "currentIndex" | "mcqAnswers" | "openAnswers">;
-
-interface AttemptView {
-  mcqAnswers: Record<string, string>;
-  openAnswers: QuizOpenAnswerRecord[];
-  pointsEarned: number;
-  pointsAutoMax: number;
-  pointsTotalPossible: number;
-  evaluationStatus: QuizEvaluationStatus;
-  score: number | null;
-  passed: boolean | null;
-  bestScore: number;
-  attemptsCount: number;
-}
 
 type Phase = "intro" | "in-progress" | "result";
 
@@ -48,8 +35,6 @@ export function QuizScreen({ course }: { course: Course }) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
-  const [attemptView, setAttemptView] = useState<AttemptView | null>(null);
-  const [engineKey, setEngineKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -70,6 +55,15 @@ export function QuizScreen({ course }: { course: Course }) {
 
   const quiz = course.quiz;
 
+  // Once submitted, an attempt is retained for good - reopening the exam
+  // (or just having finished one) must show its existing pending/graded
+  // state, never a fresh intro that could look like a second attempt is
+  // starting (Task 4D: no rep-facing retry). `progress` is the single
+  // source of truth here, so this is derived on every render rather than
+  // synced into local state.
+  const lastAttempt = progress.attempts[progress.attempts.length - 1];
+  const effectivePhase: Phase = lastAttempt ? "result" : phase;
+
   function handleDraftChange(next: QuizEngineResult & { currentIndex: number }) {
     saveQuizDraft({ ...next, updatedAt: new Date().toISOString() });
   }
@@ -84,7 +78,7 @@ export function QuizScreen({ course }: { course: Course }) {
       status: "pending" as const,
     }));
 
-    const updated = await submitQuiz({
+    await submitQuiz({
       mcqAnswers: result.mcqAnswers,
       openAnswers,
       pointsEarned,
@@ -93,30 +87,49 @@ export function QuizScreen({ course }: { course: Course }) {
       passScore: quiz.passScore,
     });
 
-    // The repository is the source of truth for evaluationStatus/score/passed -
-    // no final score or pass/fail is computed here from the MCQ portion alone.
-    const submittedAttempt = updated?.attempts[updated.attempts.length - 1];
-    setAttemptView({
-      mcqAnswers: result.mcqAnswers,
-      openAnswers: submittedAttempt?.openAnswers ?? openAnswers,
-      pointsEarned,
-      pointsAutoMax,
-      pointsTotalPossible: totalPossiblePoints(quiz),
-      evaluationStatus: submittedAttempt?.evaluationStatus ?? "pending_review",
-      score: submittedAttempt?.score ?? null,
-      passed: submittedAttempt?.passed ?? null,
-      bestScore: updated?.bestScore ?? 0,
-      attemptsCount: updated?.attempts.length ?? 1,
-    });
-    setDraft(null);
-    setPhase("result");
-  }
+    // Fire-and-forget: hands the submission to the server-side review
+    // pipeline (AI evaluation recommendation + review email, Task 4E/4F).
+    // The attempt above is already persisted, so a failure here must never
+    // surface as an error to the rep or affect what they just submitted.
+    const openQuestion = quiz.questions.find(isOpenText);
+    if (openQuestion) {
+      const mcqRows = quiz.questions.filter(isMultipleChoice).map((q) => {
+        const selectedId = result.mcqAnswers[q.id];
+        const selectedOption = q.options.find((o) => o.id === selectedId);
+        const correctOption = q.options.find((o) => o.id === q.correctOptionId);
+        return {
+          question: q.question,
+          selectedAnswer: selectedOption?.text ?? "לא נענתה",
+          correctAnswer: correctOption?.text ?? "",
+          isCorrect: selectedId === q.correctOptionId,
+          points: q.points,
+        };
+      });
 
-  function handleRetry() {
-    setAttemptView(null);
+      fetch("/api/quiz/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseSlug: course.meta.slug,
+          quizTitle: quiz.title,
+          repName: user?.name ?? "",
+          submittedAt: new Date().toISOString(),
+          mcqRows,
+          mcqScore: pointsEarned,
+          mcqScoreMax: pointsAutoMax,
+          openQuestionPrompt: openTextFullPrompt(openQuestion),
+          openAnswerText: result.openAnswers[openQuestion.id] ?? "",
+          rubric: openQuestion.rubric,
+        }),
+      }).catch((err) => {
+        console.warn("[quiz-review] failed to notify review pipeline (attempt already saved)", err);
+      });
+    }
+
+    // submitQuiz already refreshed `progress` - the newly submitted attempt
+    // now shows up as `lastAttempt` above and effectivePhase switches to
+    // "result" on its own; no local view state to set here.
     setDraft(null);
-    setEngineKey((k) => k + 1);
-    setPhase("in-progress");
   }
 
   const closingNote = quiz.closingNote.replace(/\{\{courseName\}\}/g, course.meta.title);
@@ -133,7 +146,7 @@ export function QuizScreen({ course }: { course: Course }) {
               { label: "מבחן ידע" },
             ]}
           />
-          {phase !== "result" && <ReturnToMaterialsMenu courseSlug={course.meta.slug} />}
+          {effectivePhase !== "result" && <ReturnToMaterialsMenu courseSlug={course.meta.slug} />}
         </div>
 
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
@@ -144,7 +157,7 @@ export function QuizScreen({ course }: { course: Course }) {
         </div>
 
         <div className="mx-auto w-full max-w-2xl">
-          {phase === "intro" && (
+          {effectivePhase === "intro" && (
             <QuizIntro
               quiz={quiz}
               courseName={course.meta.title}
@@ -153,9 +166,8 @@ export function QuizScreen({ course }: { course: Course }) {
             />
           )}
 
-          {phase === "in-progress" && (
+          {effectivePhase === "in-progress" && (
             <QuizEngine
-              key={engineKey}
               quiz={quiz}
               initialDraft={draft}
               closingNote={closingNote}
@@ -164,20 +176,19 @@ export function QuizScreen({ course }: { course: Course }) {
             />
           )}
 
-          {phase === "result" && attemptView && (
+          {effectivePhase === "result" && lastAttempt && (
             <QuizResult
               quiz={quiz}
-              mcqAnswers={attemptView.mcqAnswers}
-              openAnswers={attemptView.openAnswers}
-              pointsEarned={attemptView.pointsEarned}
-              pointsAutoMax={attemptView.pointsAutoMax}
-              pointsTotalPossible={attemptView.pointsTotalPossible}
-              evaluationStatus={attemptView.evaluationStatus}
-              score={attemptView.score}
-              passed={attemptView.passed}
-              bestScore={attemptView.bestScore}
-              attemptsCount={attemptView.attemptsCount}
-              onRetry={handleRetry}
+              mcqAnswers={lastAttempt.mcqAnswers}
+              openAnswers={lastAttempt.openAnswers}
+              pointsEarned={lastAttempt.pointsEarned}
+              pointsAutoMax={lastAttempt.pointsAutoMax}
+              pointsTotalPossible={lastAttempt.pointsTotalPossible}
+              evaluationStatus={lastAttempt.evaluationStatus}
+              score={lastAttempt.score}
+              passed={lastAttempt.passed}
+              bestScore={progress.bestScore}
+              attemptsCount={progress.attempts.length}
               continueHref={`/courses/${course.meta.slug}/complete`}
             />
           )}

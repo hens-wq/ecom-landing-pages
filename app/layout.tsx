@@ -10,7 +10,7 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "אקדמיית איקום | מערכת ההכשרה לנציגי מכירות",
+  title: "מכללת Ecom | מערכת ההכשרה לנציגי מכירות",
   description: "מערכת הלמידה וההכשרה הפנימית לנציגי המכירות של איקום קולג'",
 };
 

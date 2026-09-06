@@ -26,7 +26,7 @@ export function CourseHubScreen({
       <PageHeader
         crumbs={[{ label: "בית", href: "/" }, { label: "הקורסים" }]}
         title="הקורסים"
-        description="חמישה קורסים, חמישה עולמות תוכן. בכל קורס תמצאו Playbook, סרטון של עוז ומבחן ידע קצר."
+        description="חמישה קורסים, חמישה עולמות תוכן. בכל קורס תמצאו חומרי למידה, סרטון של עוז ומבחן ידע קצר."
       />
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {courseMetas.map((meta) => (

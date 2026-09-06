@@ -41,7 +41,7 @@ export function CourseOverviewScreen({ course }: { course: Course }) {
           <SectionHeader
             kicker="מסע הלמידה בקורס"
             title="מה למדנו ומה נשאר"
-            description="Playbook בשלושה נושאים, סרטון של עוז ומבחן ידע קצר בסוף."
+            description="חומרי למידה בשלושה נושאים, סרטון של עוז ומבחן ידע קצר בסוף."
             action={
               currentItem && (
                 <Button asChild>

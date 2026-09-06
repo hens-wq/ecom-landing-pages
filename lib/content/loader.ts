@@ -36,6 +36,7 @@ import {
   introWelcomeSchema,
   navigationSchema,
   quizSchema,
+  salesMethodSchema,
   topicFrontmatterSchema,
   trainingPathSchema,
   videoLessonSchema,
@@ -103,8 +104,12 @@ export function getTrainingPathContent() {
   return readJson("site/training-path.json", trainingPathSchema);
 }
 
-export function getComingSoonPage(fileName: "customer-profile" | "sales-method" | "simulations") {
+export function getComingSoonPage(fileName: "simulations") {
   return readJson(`site/${fileName}.json`, comingSoonPageSchema);
+}
+
+export function getSalesMethodContent() {
+  return readJson("site/sales-method.json", salesMethodSchema);
 }
 
 // ---------------------------------------------------------------------------

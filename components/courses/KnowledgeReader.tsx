@@ -62,7 +62,7 @@ export function KnowledgeReader({
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <div className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Playbook - {course.meta.title}
+                חומרי הלמידה - {course.meta.title}
               </div>
               <TopicNavigator
                 courseSlug={course.meta.slug}

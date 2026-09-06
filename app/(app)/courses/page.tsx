@@ -5,7 +5,7 @@ import { getAllCourseMetas, getCourseTheme } from "@/lib/content/loader";
 import { CourseHubScreen } from "@/components/courses/CourseHubScreen";
 
 export const metadata: Metadata = {
-  title: "הקורסים | אקדמיית איקום",
+  title: "הקורסים | מכללת Ecom",
 };
 
 export default function CoursesPage() {

@@ -118,7 +118,12 @@ export interface MultipleChoiceQuestion {
 export interface OpenTextQuestion {
   id: string;
   type: "openText";
-  question: string;
+  /** Short scenario/intro framing the question (e.g. "a customer asks you..."). */
+  scenario: string;
+  /** The connecting line before the topic list, e.g. "ענה במילים שלך והתייחס לנקודות הבאות:". */
+  promptIntro: string;
+  /** The topics the rep is asked to address, rendered as separate bullets — never the hidden rubric. */
+  topics: string[];
   points: number;
   /** Internal grading notes for a human or future AI reviewer — never shown to the rep. */
   rubric: string[];
@@ -237,6 +242,7 @@ export interface OverallTrainingProgress {
   /** Has the rep finished the branded "who is Ecom" opening experience? */
   introCompleted: boolean;
   aboutEcomCompleted: boolean;
+  salesMethodCompleted: boolean;
   courses: Record<CourseSlug, CourseProgressState>;
   percent: number;
   currentStepId: string;

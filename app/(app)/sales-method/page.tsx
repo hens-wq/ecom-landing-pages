@@ -1,26 +1,12 @@
 import type { Metadata } from "next";
-import { getComingSoonPage } from "@/lib/content/loader";
-import { DEFAULT_ICON, ICON_MAP } from "@/lib/icon-map";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { ComingSoonState } from "@/components/shared/ComingSoonState";
+import { getSalesMethodContent } from "@/lib/content/loader";
+import { SalesMethodScreen } from "@/components/sales-method/SalesMethodScreen";
 
 export const metadata: Metadata = {
-  title: "שיטת המכירה | אקדמיית איקום",
+  title: "שיטת המכירה של Ecom | מכללת Ecom",
 };
 
 export default function SalesMethodPage() {
-  const content = getComingSoonPage("sales-method");
-  const Icon = ICON_MAP[content.icon] ?? DEFAULT_ICON;
-
-  return (
-    <div className="flex flex-col gap-8 pb-10">
-      <PageHeader crumbs={[{ label: "בית", href: "/" }, { label: content.title }]} title={content.title} />
-      <ComingSoonState
-        icon={Icon}
-        title={content.title}
-        description={content.description}
-        upcoming={content.upcoming}
-      />
-    </div>
-  );
+  const content = getSalesMethodContent();
+  return <SalesMethodScreen content={content} />;
 }

@@ -52,8 +52,8 @@ export function SidebarBrand() {
         <GraduationCap className="size-5" />
       </div>
       <div className="flex flex-col leading-tight">
-        <span className="text-sm font-bold text-slate-900">אקדמיית איקום</span>
-        <span className="text-[11px] text-slate-400">מערכת הכשרת מכירות</span>
+        <span className="text-sm font-bold text-slate-900">מערכת הכשרת מכירות</span>
+        <span className="text-[11px] text-slate-400">מכללת Ecom</span>
       </div>
     </div>
   );

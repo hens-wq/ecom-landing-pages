@@ -120,9 +120,15 @@ export function AlumniVideosSection({
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="relative order-1 mx-auto w-full max-w-sm overflow-hidden rounded-[2rem] border-4 border-white/10 shadow-[0_0_100px_-20px_rgba(140,82,255,0.4)] lg:order-2 lg:max-w-none"
+              className="relative order-1 mx-auto w-full max-w-sm overflow-hidden rounded-[2rem] border-4 border-white/10 shadow-[0_0_100px_-20px_rgba(140,82,255,0.4)] lg:order-2"
             >
-              <div className="relative aspect-[9/16] w-full bg-black lg:aspect-auto lg:h-[32rem]">
+              {/*
+                Source videos are true 9:16 portrait (1080x1920, verified for
+                all 4 graduates) - the container keeps that ratio at every
+                breakpoint so playback never resizes/crops relative to the
+                poster state, and object-contain never crops the graduate.
+              */}
+              <div className="relative aspect-[9/16] w-full bg-black">
                 {!playing && (
                   <button
                     type="button"
@@ -143,7 +149,7 @@ export function AlumniVideosSection({
                     autoPlay
                     controls
                     playsInline
-                    className="size-full object-cover"
+                    className="size-full object-contain"
                     onPlay={duck}
                     onPause={unduck}
                     onEnded={unduck}

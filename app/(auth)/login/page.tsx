@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { ThemedAccentBackground } from "@/components/shared/GeometricDecor";
 
 export const metadata: Metadata = {
-  title: "התחברות | אקדמיית איקום",
+  title: "התחברות | מכללת Ecom",
 };
 
 const COURSE_ICONS = [ShieldCheck, BrainCircuit, Code2, PenTool, TrendingUp];
@@ -19,7 +19,7 @@ export default function LoginPage() {
             <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
               <GraduationCap className="size-5" />
             </div>
-            <span className="text-lg font-bold">אקדמיית איקום</span>
+            <span className="text-lg font-bold">מכללת Ecom</span>
           </div>
 
           <div className="flex flex-col gap-5">

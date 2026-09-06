@@ -39,7 +39,7 @@ export function computeNextTask(params: {
     if (!cp || cp.topicsCompleted.length === 0) {
       return {
         title: `היכרות עם ${nextCourseMeta.title}`,
-        description: `בואו נתחיל ללמוד את ה-Playbook של קורס ${nextCourseMeta.title}.`,
+        description: `בואו נתחיל ללמוד את חומרי הלמידה של קורס ${nextCourseMeta.title}.`,
         href: `/courses/${nextCourseMeta.slug}`,
         ctaLabel: "התחל את הקורס",
         icon: nextCourseMeta.icon,
@@ -47,7 +47,7 @@ export function computeNextTask(params: {
     }
     if (cp.topicsCompleted.length < 3) {
       return {
-        title: `להמשיך את ה-Playbook - ${nextCourseMeta.title}`,
+        title: `להמשיך את חומרי הלמידה - ${nextCourseMeta.title}`,
         description: "עוד כמה נושאים ותסיימו את חומר הרקע המקצועי של הקורס.",
         href: `/courses/${nextCourseMeta.slug}`,
         ctaLabel: "המשך ללמוד",
@@ -72,11 +72,21 @@ export function computeNextTask(params: {
     };
   }
 
+  if (!overall.salesMethodCompleted) {
+    return {
+      title: "שיטת המכירה של Ecom",
+      description: "אפיון לקוח, התאמת מסלול וניהול שיחת מכירה - המודול המסכם של ההכשרה.",
+      href: "/sales-method",
+      ctaLabel: "להתחיל את המודול",
+      icon: "Target",
+    };
+  }
+
   return {
-    title: "סיימתם את כל הקורסים!",
-    description: "השלבים הבאים - פרופיל לקוח ושיטת המכירה - ייפתחו בקרוב.",
-    href: "/customer-profile",
-    ctaLabel: "לצפייה בפרופיל לקוח",
-    icon: "UserSearch",
+    title: "סיימתם את ההכשרה!",
+    description: "כל הכבוד - השלמתם את כל שלבי ההכשרה. סימולציות AI ייפתחו בקרוב.",
+    href: "/",
+    ctaLabel: "חזרה לדף הראשי",
+    icon: "PartyPopper",
   };
 }

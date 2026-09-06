@@ -31,7 +31,7 @@ export function ReturnToMaterialsMenu({ courseSlug }: { courseSlug: string }) {
         <DropdownMenuItem asChild>
           <Link href={`/courses/${courseSlug}`}>
             <BookOpen className="size-4" />
-            חזרה ל-Playbook
+            חזרה לחומרי הלמידה
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

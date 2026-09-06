@@ -11,9 +11,7 @@ const STEP_ORDER = [
   "courses",
   "oz-videos",
   "knowledge-exams",
-  "customer-profile",
   "sales-method",
-  "additional-exams",
   "simulations",
 ] as const;
 
@@ -41,9 +39,7 @@ export function computeStepStatuses(
     courses: playbooksPercent,
     "oz-videos": videosPercent,
     "knowledge-exams": quizzesPercent,
-    "customer-profile": 0,
-    "sales-method": 0,
-    "additional-exams": 0,
+    "sales-method": overall.salesMethodCompleted ? 100 : 0,
     simulations: 0,
   };
 
@@ -52,9 +48,7 @@ export function computeStepStatuses(
     courses: playbooksPercent === 100,
     "oz-videos": videosPercent === 100,
     "knowledge-exams": quizzesPercent === 100,
-    "customer-profile": false,
-    "sales-method": false,
-    "additional-exams": false,
+    "sales-method": overall.salesMethodCompleted,
     simulations: false,
   };
 

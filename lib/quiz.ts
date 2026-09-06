@@ -36,3 +36,15 @@ export function questionPointsLabel(question: QuizQuestion): string {
     ? `אמריקאית (${question.points} נקודות)`
     : `פתוחה (${question.points} נקודות)`;
 }
+
+/**
+ * Reconstructs the open-text question as one flattened prompt (scenario +
+ * intro line + topics) - used anywhere the full question text is needed as
+ * a single string rather than its structured display form: the results
+ * review, the review email (Task 4E), and the AI evaluator (Task 4F).
+ * Never includes the hidden rubric.
+ */
+export function openTextFullPrompt(question: OpenTextQuestion): string {
+  const bullets = question.topics.map((t) => `- ${t}`).join("\n");
+  return `${question.scenario}\n\n${question.promptIntro}\n${bullets}`;
+}

@@ -31,25 +31,11 @@
       "icon": "ClipboardCheck"
     },
     {
-      "id": "customer-profile",
-      "title": "פרופיל לקוח",
-      "description": "להבין מי הלקוח שמולכם, מה מניע אותו וממה הוא חושש",
-      "href": "/customer-profile",
-      "icon": "UserSearch"
-    },
-    {
       "id": "sales-method",
-      "title": "שיטת המכירה",
-      "description": "שיטת המכירה הרשמית של איקום, שלב אחרי שלב",
+      "title": "שיטת המכירה של Ecom",
+      "description": "אפיון לקוח, התאמת מסלול וניהול שיחת מכירה",
       "href": "/sales-method",
       "icon": "Target"
-    },
-    {
-      "id": "additional-exams",
-      "title": "מבחנים נוספים",
-      "description": "מבחנים על תהליך המכירה ושיטת העבודה",
-      "href": "/sales-method",
-      "icon": "FileCheck2"
     },
     {
       "id": "simulations",

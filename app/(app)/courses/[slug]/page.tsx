@@ -9,7 +9,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const course = getCourseOrNotFound(slug);
-  return { title: `${course.meta.title} | אקדמיית איקום` };
+  return { title: `${course.meta.title} | מכללת Ecom` };
 }
 
 export default async function CourseOverviewPage({
