@@ -22,7 +22,6 @@ export const cyberContent = {
     salaryLabel: "פוטנציאל שכר של",
     salaryValue: "15,000 ₪",
     salarySuffix: "ומעלה",
-    salaryNote: "פוטנציאל שכר בתחום — לא הבטחת שכר",
     ctaLabel: "בדיקת התאמה ללא עלות",
     formTitle: "בדיקת התאמה מהירה",
     image: {
@@ -48,8 +47,7 @@ export const cyberContent = {
       "תכנית הסייבר בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
     logo: {
       src: `${ASSETS}/logo-ariel.webp`,
-      name: "אוניברסיטת אריאל",
-      subtitle: "היחידה ללימודי חוץ והמשך",
+      alt: "אוניברסיטת אריאל בשומרון — היחידה ללימודי חוץ והמשך",
     },
   },
 

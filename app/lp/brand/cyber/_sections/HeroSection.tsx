@@ -116,7 +116,6 @@ export function HeroSection() {
                 {hero.salarySuffix}
               </span>
             </span>
-            <span className="mt-1 text-[15px] text-ink-200">{hero.salaryNote}</span>
           </span>
         </motion.div>
 
