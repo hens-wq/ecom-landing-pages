@@ -14,6 +14,8 @@ interface TrustMetricProps {
   className?: string;
   /** Overrides the tone's default value color, e.g. for a branded accent number. */
   valueClassName?: string;
+  /** Overrides the label's default size/weight/color, e.g. to make it more prominent. */
+  labelClassName?: string;
   align?: "start" | "center";
   /** `hero` is reserved for a single campaign-hook-scale stat per section. */
   size?: "md" | "lg" | "xl" | "hero";
@@ -29,7 +31,7 @@ const SIZE_CLASS: Record<NonNullable<TrustMetricProps["size"]>, string> = {
 
 const TONE_CLASS: Record<NonNullable<TrustMetricProps["tone"]>, { value: string; label: string }> = {
   dark: { value: "text-off-white", label: "text-ink-200" },
-  light: { value: "text-ink-950", label: "text-ink-500" },
+  light: { value: "text-ink-950", label: "text-ink-950" },
 };
 
 /**
@@ -45,6 +47,7 @@ export function TrustMetric({
   label,
   className,
   valueClassName,
+  labelClassName,
   align = "start",
   size = "md",
   tone = "dark",
@@ -78,7 +81,9 @@ export function TrustMetric({
         {prefersReducedMotion ? value.toFixed(decimals) : display}
         {suffix}
       </span>
-      <span className={cn("mt-1.5 text-base font-medium", TONE_CLASS[tone].label)}>{label}</span>
+      <span className={cn("mt-1.5 text-base font-medium", TONE_CLASS[tone].label, labelClassName)}>
+        {label}
+      </span>
     </div>
   );
 }

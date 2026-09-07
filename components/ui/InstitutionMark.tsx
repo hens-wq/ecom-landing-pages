@@ -22,12 +22,12 @@ export function InstitutionMark({ name, subtitle, src, alt, className }: Institu
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-2xl bg-white px-6 py-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]",
+          "inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 shadow-[0_1px_0_rgba(0,0,0,0.04)]",
           className,
         )}
       >
-        <div className="relative h-12 w-full">
-          <Image src={src} alt={alt ?? name} fill sizes="260px" className="object-contain" />
+        <div className="relative h-12 w-40">
+          <Image src={src} alt={alt ?? name} fill sizes="160px" className="object-contain" />
         </div>
       </div>
     );

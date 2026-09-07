@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { BadgeCheck } from "lucide-react";
 import { CTAButton } from "@/components/ui/CTAButton";
@@ -59,19 +60,26 @@ export function HeroSection() {
         <circle cx="60%" cy="80%" r="3" fill="var(--color-brand-300)" />
       </svg>
 
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="absolute top-4 start-5 z-20 sm:top-5 sm:start-8 md:start-10"
+      >
+        <Image
+          src={hero.logo.src}
+          alt={hero.logo.alt}
+          width={140}
+          height={108}
+          priority
+          className="h-8 w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] sm:h-10"
+        />
+      </motion.div>
+
       <div
         className="relative z-10 flex flex-1 flex-col gap-4 px-5 pt-[27svh] pb-6 sm:px-8 sm:pt-[24svh] md:px-10 lg:justify-center lg:gap-7 lg:px-16 lg:pt-28 lg:pb-24 lg:pe-[440px] xl:pe-[480px]"
         style={{ textShadow: "0 2px 14px rgba(0,0,0,0.55)" }}
       >
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-eyebrow text-brand-300 uppercase"
-        >
-          {hero.eyebrow}
-        </motion.p>
-
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

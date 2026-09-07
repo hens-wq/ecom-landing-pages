@@ -19,13 +19,8 @@ export function ObjectionSection() {
     <section className="bg-paper px-5 py-16 sm:px-8 md:px-16 md:py-24">
       <div className="mx-auto max-w-4xl">
         <AnimatedSection effect="fade-up">
-          <h2 className="text-balance text-ink-950">
-            <span className="text-display-md block font-medium text-ink-400">
-              {objection.headlineLight}
-            </span>
-            <span className="text-display-xl block text-brand-600">{objection.headlineBold}</span>
-          </h2>
-          <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-500">{objection.body}</p>
+          <h2 className="text-display-xl text-balance text-brand-600">{objection.headline}</h2>
+          <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-950">{objection.body}</p>
         </AnimatedSection>
 
         <AnimatedSection effect="scale-in" delay={0.1} className="mt-10">
@@ -59,7 +54,7 @@ export function ObjectionSection() {
                       "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
                       isLast
                         ? "border-brand-600 bg-brand-600 text-white"
-                        : "border-ink-300 bg-paper text-ink-500",
+                        : "border-ink-300 bg-paper text-ink-950",
                     )}
                   >
                     {index + 1}
@@ -67,7 +62,7 @@ export function ObjectionSection() {
                   <span
                     className={cn(
                       "text-base md:text-lg",
-                      isLast ? "font-bold text-ink-950" : "font-medium text-ink-500",
+                      isLast ? "font-bold text-ink-950" : "font-medium text-ink-950",
                     )}
                   >
                     {step}

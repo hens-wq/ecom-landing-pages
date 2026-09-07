@@ -31,7 +31,7 @@ const TONE_CLASS = {
     question: "text-ink-950",
     icon: "text-ink-400",
     iconOpen: "text-brand-600",
-    answer: "text-ink-500",
+    answer: "text-ink-950",
   },
 } as const;
 

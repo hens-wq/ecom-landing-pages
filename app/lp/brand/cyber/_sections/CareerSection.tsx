@@ -1,4 +1,4 @@
-import { TrendingUp } from "lucide-react";
+import { Check, TrendingUp } from "lucide-react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import { cyberContent } from "@/content/landing/brand-cyber";
@@ -44,13 +44,20 @@ export function CareerSection() {
 
           <div className="md:order-1 md:flex-1">
             <AnimatedSection effect="fade-up">
-              <h2 className="text-balance text-ink-950">
-                <span className="text-display-md block font-medium text-ink-400">
-                  {career.headlineTop}
-                </span>
-                <span className="text-display-xl block text-ink-950">{career.headlineBottom}</span>
-              </h2>
-              <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-500">{career.body}</p>
+              <p className="text-eyebrow text-brand-600 uppercase">{career.eyebrow}</p>
+              <h2 className="text-display-xl mt-2 text-balance text-ink-950">{career.headline}</h2>
+              <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-950">{career.body}</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {career.benefits.map((benefit) => (
+                  <span
+                    key={benefit}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3.5 py-2 text-[15px] font-semibold text-ink-950"
+                  >
+                    <Check className="size-4 text-lime-600" aria-hidden />
+                    {benefit}
+                  </span>
+                ))}
+              </div>
             </AnimatedSection>
 
             {/* Desktop: ascending staircase */}
@@ -69,12 +76,12 @@ export function CareerSection() {
                     className={
                       index === career.steps.length - 1
                         ? "flex size-9 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white"
-                        : "flex size-9 items-center justify-center rounded-full border border-ink-300 text-xs font-bold text-ink-500"
+                        : "flex size-9 items-center justify-center rounded-full border border-ink-300 text-xs font-bold text-ink-950"
                     }
                   >
                     {index + 1}
                   </span>
-                  <span className="max-w-[6.5rem] text-center text-xs font-medium text-ink-600">
+                  <span className="max-w-[6.5rem] text-center text-xs font-medium text-ink-950">
                     {step}
                   </span>
                 </div>
@@ -94,26 +101,26 @@ export function CareerSection() {
                     }
                     aria-hidden
                   />
-                  <span className="text-base font-medium text-ink-700">{step}</span>
+                  <span className="text-base font-medium text-ink-950">{step}</span>
                 </li>
               ))}
             </ol>
 
             <AnimatedSection effect="fade-up" delay={0.25} className="mt-8 space-y-2">
-              <p className="text-[15px] font-medium tracking-wide text-ink-400 uppercase">
+              <p className="text-[15px] font-medium tracking-wide text-ink-950 uppercase">
                 {career.rolesLabel}
               </p>
               <div className="flex flex-wrap gap-2">
                 {career.roles.map((role) => (
                   <span
                     key={role}
-                    className="bidi-plaintext rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-[15px] font-medium text-ink-700"
+                    className="bidi-plaintext rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-[15px] font-medium text-ink-950"
                   >
                     {role}
                   </span>
                 ))}
               </div>
-              <p className="pt-2 text-[15px] text-ink-400">{career.supportNote}</p>
+              <p className="pt-2 text-[15px] text-ink-950">{career.supportNote}</p>
             </AnimatedSection>
           </div>
         </div>
