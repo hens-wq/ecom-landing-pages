@@ -39,7 +39,7 @@ export function ObjectionSection() {
           />
         </AnimatedSection>
 
-        <AnimatedSection effect="fade-in" delay={0.15} className="relative mt-14 md:mt-20">
+        <AnimatedSection effect="fade-in" delay={0.15} className="relative mt-10 md:mt-20">
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
@@ -49,7 +49,7 @@ export function ObjectionSection() {
             className="absolute inset-x-0 top-[13px] hidden h-px bg-gradient-to-l from-ink-200 via-brand-300 to-brand-600 md:block"
             aria-hidden
           />
-          <ol className="flex flex-col gap-8 md:flex-row md:justify-between md:gap-4">
+          <ol className="flex flex-col gap-6 md:flex-row md:justify-between md:gap-4">
             {objection.steps.map((step, index) => {
               const isLast = index === objection.steps.length - 1;
               return (

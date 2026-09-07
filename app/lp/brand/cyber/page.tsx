@@ -37,6 +37,8 @@ export default function BrandCyberPage() {
           "#lead-form-mid",
           "#lead-form-final",
           "#objection-cta",
+          "#career-section",
+          "#faq-section",
         ]}
       />
     </main>

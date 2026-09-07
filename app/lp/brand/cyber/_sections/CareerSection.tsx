@@ -12,7 +12,7 @@ export function CareerSection() {
   const { career } = cyberContent;
 
   return (
-    <section className="bg-paper">
+    <section id="career-section" className="bg-paper">
       {/* Full-bleed transition band — bridges the practical/technical
           sections above into the career story, distinct from the
           contained portrait photo lower in this same section. */}
@@ -29,17 +29,16 @@ export function CareerSection() {
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-paper" />
       </div>
 
-      <div className="px-5 py-16 sm:px-8 md:px-16 md:py-24">
-        <div className="mx-auto flex max-w-6xl flex-col gap-12 md:flex-row md:items-center md:gap-16">
+      <div className="px-5 py-12 sm:px-8 md:px-16 md:py-24">
+        <div className="mx-auto flex max-w-6xl flex-col gap-9 md:flex-row md:items-center md:gap-16">
           <AnimatedSection effect="slide-end" className="md:order-2 md:w-[38%] md:shrink-0">
             <ImagePlaceholder
-              aspectRatio="4/5"
               src={career.visual.src}
               label={career.visual.label}
               description={career.visual.description}
               imagePosition="object-[62%_22%]"
               sizes="(min-width: 768px) 38vw, 100vw"
-              className="w-full border-ink-200"
+              className="aspect-square w-full border-ink-200 md:aspect-[4/5]"
             />
           </AnimatedSection>
 
@@ -84,9 +83,9 @@ export function CareerSection() {
             </AnimatedSection>
 
             {/* Mobile: vertical connected list */}
-            <ol className="mt-10 flex flex-col gap-0 border-s-2 border-ink-200 ps-4 md:hidden">
+            <ol className="mt-8 flex flex-col gap-0 border-s-2 border-ink-200 ps-4 md:hidden">
               {career.steps.map((step, index) => (
-                <li key={step} className="relative pb-6 last:pb-0">
+                <li key={step} className="relative pb-4 last:pb-0">
                   <span
                     className={
                       index === career.steps.length - 1
@@ -100,7 +99,7 @@ export function CareerSection() {
               ))}
             </ol>
 
-            <AnimatedSection effect="fade-up" delay={0.25} className="mt-10 space-y-2">
+            <AnimatedSection effect="fade-up" delay={0.25} className="mt-8 space-y-2">
               <p className="text-[15px] font-medium tracking-wide text-ink-400 uppercase">
                 {career.rolesLabel}
               </p>

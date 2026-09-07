@@ -4,7 +4,7 @@ import { cyberContent } from "@/content/landing/brand-cyber";
 
 export function FaqSection() {
   return (
-    <section className="border-t border-ink-200/60 bg-paper px-5 py-14 sm:px-8 md:px-16">
+    <section id="faq-section" className="border-t border-ink-200/60 bg-paper px-5 py-14 sm:px-8 md:px-16">
       <div className="mx-auto max-w-2xl">
         <AnimatedSection effect="fade-up">
           <h2 className="text-display-sm text-ink-950">שאלות שכדאי לענות עליהן מראש</h2>

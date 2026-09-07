@@ -40,9 +40,13 @@ export function StickyMobileCTA({
   }, [revealAfter]);
 
   useEffect(() => {
-    // Hide the bar whenever any watched section (typically a lead form) is
-    // already on screen — otherwise it sits directly on top of that
-    // section's own submit button.
+    // Hide the pill whenever any watched section (a lead form, a CTA, the
+    // Career journey, FAQ, ...) occupies the *lower* portion of the
+    // viewport — not just anywhere on screen. Shrinking the observer's
+    // root from the top (via rootMargin) so only the bottom band remains
+    // means a section can be scrolled through entirely without ever
+    // tripping this, and only counts once it actually reaches the zone
+    // the pill floats over.
     const targets = selectors
       .split("|")
       .filter((selector) => selector.startsWith("#"))
@@ -57,7 +61,7 @@ export function StickyMobileCTA({
         for (const entry of entries) visibility.set(entry.target, entry.isIntersecting);
         setTargetVisible([...visibility.values()].some(Boolean));
       },
-      { threshold: 0.2 },
+      { rootMargin: "-80% 0px 0px 0px", threshold: 0 },
     );
     for (const target of targets) observer.observe(target);
     return () => observer.disconnect();
@@ -73,9 +77,9 @@ export function StickyMobileCTA({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 60, opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed inset-x-6 bottom-[max(env(safe-area-inset-bottom),0.875rem)] z-40 md:hidden"
+          className="fixed inset-x-6 bottom-[max(env(safe-area-inset-bottom),1rem)] z-40 md:hidden"
         >
-          <CTAButton href={href} fullWidth size="sm" className="h-9">
+          <CTAButton href={href} fullWidth size="md" className="h-[54px]">
             {label}
           </CTAButton>
         </motion.div>

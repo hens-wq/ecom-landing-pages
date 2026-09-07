@@ -15,14 +15,16 @@ interface TrustMetricProps {
   /** Overrides the tone's default value color, e.g. for a branded accent number. */
   valueClassName?: string;
   align?: "start" | "center";
-  size?: "md" | "lg" | "xl";
+  /** `hero` is reserved for a single campaign-hook-scale stat per section. */
+  size?: "md" | "lg" | "xl" | "hero";
   tone?: "dark" | "light";
 }
 
 const SIZE_CLASS: Record<NonNullable<TrustMetricProps["size"]>, string> = {
   md: "text-display-md",
   lg: "text-display-lg",
-  xl: "text-display-2xl",
+  xl: "text-display-xl",
+  hero: "text-display-3xl",
 };
 
 const TONE_CLASS: Record<NonNullable<TrustMetricProps["tone"]>, { value: string; label: string }> = {

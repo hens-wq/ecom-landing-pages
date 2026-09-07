@@ -71,11 +71,19 @@
    * Calibrated to land at specific px targets on 390-430px mobile
    * viewports (the priority breakpoints for this project), then continue
    * scaling — capped — for larger screens:
+   *   3xl ~60-64px (a single stat used as a campaign-hook-scale number,
+   *       e.g. the dominant Trust section figure — bigger than any
+   *       headline on the page on purpose)
    *   2xl ~50-54px (the single biggest hero line)
    *   xl  ~46-50px (primary campaign hooks / numeric hooks)
    *   lg  ~33-36px (major section headlines)
    *   md  ~22-24px (secondary/muted headline lines)
    */
+  --text-display-3xl: clamp(3.5rem, 1.3125rem + 10vw, 7rem);
+  --text-display-3xl--line-height: 0.95;
+  --text-display-3xl--letter-spacing: -0.02em;
+  --text-display-3xl--font-weight: 800;
+
   --text-display-2xl: clamp(3.125rem, 0.6875rem + 10vw, 6.5rem);
   --text-display-2xl--line-height: 0.98;
   --text-display-2xl--letter-spacing: -0.01em;
