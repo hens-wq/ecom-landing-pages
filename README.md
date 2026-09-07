@@ -120,3 +120,33 @@ is set — see `components/layout/AnalyticsScripts.tsx` and
   shades stay fine for borders, dividers, icons, and text on light
   (`paper`/`off-white`) backgrounds. See the note in `app/globals.css`.
   This applies to every landing page in this project, not just Cyber.
+
+## Deploying to Vercel
+
+- Framework: Next.js (App Router). Vercel auto-detects it — no `vercel.json`
+  or other config needed; connect the repo (or `vercel deploy`) and go.
+- `/` responds with a 307 redirect to `/lp/brand/cyber` (see `app/page.tsx`)
+  — intentional for now, since the project has no marketing homepage yet
+  and all paid traffic lands directly on a campaign URL.
+- Environment variables (Project Settings → Environment Variables — see
+  `.env.example` for the full list with comments):
+  - `LEAD_WEBHOOK_URL` — server-side only, never sent to the client. Leave
+    unset to keep leads validated + logged only; no real lead is sent
+    anywhere until this is set to a real endpoint.
+  - `NEXT_PUBLIC_GTM_ID`, `NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_META_PIXEL_ID`
+    — each analytics integration activates independently once its ID is
+    set; all three are optional and the page works cleanly with none set.
+  - `NEXT_PUBLIC_*` vars are inlined into the client bundle at **build**
+    time, not read at request time — set them before the first deploy, and
+    **redeploy** after adding/changing one (saving the env var alone does
+    not update an already-built deployment). Set them per-environment
+    (Production vs. Preview) if the IDs differ.
+- Images: every image on the page is local
+  (`public/landing/cyber/*.webp`), served through `next/image`'s built-in
+  optimizer — no `images.remotePatterns`/external image config required.
+- `app/layout.tsx` sets `robots: { index: false, follow: false }` (a
+  paid-traffic-only page, not meant to be organically indexed today).
+  Revisit that if/when organic discovery of this URL is wanted.
+- No database and no serverless config beyond the standard
+  `app/api/lead/route.ts` route handler — a default Vercel Next.js
+  deployment covers the whole app.
