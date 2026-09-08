@@ -77,8 +77,19 @@ export function HeroSection() {
           className="text-balance text-off-white"
         >
           <span className="block text-display-lg">{hero.headlineTop}</span>
-          <span className="text-display-2xl mt-0.5 block">{hero.headlineBottom}</span>
+          <span className="text-display-2xl mt-0.5 block whitespace-pre-line">
+            {hero.headlineBottom}
+          </span>
         </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="max-w-md text-lg font-medium text-ink-100"
+        >
+          {hero.supportingHook}
+        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

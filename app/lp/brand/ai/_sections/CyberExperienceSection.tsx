@@ -1,39 +1,25 @@
 "use client";
 
-import {
-  Lock,
-  MonitorCheck,
-  Network,
-  Radar,
-  ShieldCheck,
-  Terminal,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { Bot, Brain, Code2, Workflow, type LucideIcon } from "lucide-react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import { aiContent } from "@/content/landing/brand-ai";
 
 const ICONS: Record<string, LucideIcon> = {
-  ShieldCheck,
-  Network,
-  MonitorCheck,
-  Radar,
-  Lock,
-  Terminal,
-  Wrench,
+  Code2,
+  Workflow,
+  Brain,
+  Bot,
 };
 
-// Scattered desktop positions (% of the visual stage), tuned so labels sit
-// around the central visual without overlapping it.
+// Scattered desktop positions (% of the visual stage) for the 4 topic
+// chips — one per corner, tuned so labels sit around the central visual
+// without overlapping it.
 const POSITIONS = [
   { top: "4%", left: "2%" },
   { top: "0%", left: "62%" },
-  { top: "26%", left: "84%" },
-  { top: "40%", left: "22%" },
   { top: "68%", left: "0%" },
   { top: "74%", left: "66%" },
-  { top: "92%", left: "36%" },
 ];
 
 /**
@@ -53,8 +39,8 @@ export function CyberExperienceSection() {
       <ImagePlaceholder
         fill
         src={cyberExperience.bgSrc}
-        label="מרקם SOC רחב"
-        description="חדר בקרה/SOC רחב עם מסכים ואנשי צוות — טקסטורת רקע לסקשן, לא תוכן ראשי."
+        label="מרקם AI רחב"
+        description="סביבת עבודה/מסכים עם ויזואליזציית AI — טקסטורת רקע לסקשן, לא תוכן ראשי."
         sizes="100vw"
         className="opacity-30"
       />
@@ -80,7 +66,7 @@ export function CyberExperienceSection() {
       <div className="relative mx-auto max-w-3xl text-center">
         <AnimatedSection effect="fade-up">
           <p className="text-eyebrow text-teal-300 uppercase">{cyberExperience.eyebrow}</p>
-          <h2 className="text-display-lg mt-3 text-balance text-off-white">
+          <h2 className="text-display-lg mt-3 text-balance whitespace-pre-line text-off-white">
             {cyberExperience.headline}
           </h2>
           <p className="mt-4 text-lg text-ink-200">{cyberExperience.body}</p>
@@ -140,7 +126,10 @@ export function CyberExperienceSection() {
         </div>
       </div>
 
-      {/* Mobile: visual + horizontal snap-scroll chip strip */}
+      {/* Mobile: visual + wrapping chip grid (only 4 chips now — no need
+          for the horizontal snap-scroll strip the longer 7-chip Cyber
+          list used; wrapping avoids any risk of a chip cropping off the
+          390/430px viewport edge). */}
       <div className="relative mt-10 md:hidden">
         <ImagePlaceholder
           aspectRatio="4/3"
@@ -151,13 +140,13 @@ export function CyberExperienceSection() {
           sizes="100vw"
           className="w-full border-white/10"
         />
-        <div className="no-scrollbar mt-6 flex snap-x gap-2.5 overflow-x-auto pb-2">
+        <div className="mt-6 flex flex-wrap gap-2.5">
           {topics.map((topic) => {
             const Icon = ICONS[topic.icon];
             return (
               <span
                 key={topic.label}
-                className="inline-flex shrink-0 snap-start items-center gap-2 rounded-full border border-white/10 bg-ai-dark/80 px-3.5 py-2 text-sm whitespace-nowrap text-ink-100"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-ai-dark/80 px-3.5 py-2 text-sm text-ink-100"
               >
                 <Icon className="size-4 text-teal-400" aria-hidden />
                 {topic.label}

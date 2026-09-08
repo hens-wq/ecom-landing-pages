@@ -27,8 +27,8 @@ export function FinalSection() {
       <ImagePlaceholder
         fill
         src={final.bgSrc}
-        label="חדר SOC ריק — פרימיום"
-        description="חדר בקרה/SOC ריק ומפואר — רקע קולנועי לסקשן ההמרה הסופי."
+        label="חדר עתידני ריק — פרימיום"
+        description="חדר עתידני ריק ומפואר — רקע קולנועי לסקשן ההמרה הסופי."
         sizes="100vw"
         imagePosition="object-[42%_50%]"
       />
@@ -59,7 +59,9 @@ export function FinalSection() {
 
       <div className="relative mx-auto max-w-lg text-center">
         <AnimatedSection effect="fade-up">
-          <h2 className="text-display-xl text-balance text-off-white">{final.headline}</h2>
+          <h2 className="text-display-xl text-balance whitespace-pre-line text-off-white">
+            {final.headline}
+          </h2>
           <p className="mt-4 text-xl font-medium text-ink-200">{final.subheadline}</p>
         </AnimatedSection>
 

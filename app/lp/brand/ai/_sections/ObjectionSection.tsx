@@ -22,7 +22,9 @@ export function ObjectionSection() {
     <section className="bg-ai-light px-5 py-16 sm:px-8 md:px-16 md:py-24">
       <div className="mx-auto max-w-4xl">
         <AnimatedSection effect="fade-up">
-          <h2 className="text-display-xl text-balance text-brand-600">{objection.headline}</h2>
+          <h2 className="text-display-xl text-balance whitespace-pre-line text-brand-600">
+            {objection.headline}
+          </h2>
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-950">{objection.body}</p>
         </AnimatedSection>
 
@@ -31,7 +33,7 @@ export function ObjectionSection() {
             aspectRatio="16/8"
             src={objection.imageSrc}
             label="תרגול מעשי — למידה בעבודה"
-            description="אדם צעיר עובד על מחשב נייד בסביבת סייבר/הדרכה. יחס רחב, קרופ עדין."
+            description="אדם צעיר עובד על מחשב נייד בסביבת AI/הדרכה. יחס רחב, קרופ עדין."
             imagePosition="object-[60%_25%]"
             className="w-full border-ink-200"
           />

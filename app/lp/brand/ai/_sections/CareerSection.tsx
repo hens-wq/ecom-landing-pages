@@ -19,8 +19,8 @@ export function CareerSection() {
         <ImagePlaceholder
           aspectRatio="16/7"
           src={career.transitionSrc}
-          label="מעבר — צוות סייבר"
-          description="צוות מקצועי עובד יחד סביב מערכות סייבר — רצועה רחבה למעבר בין למידה לקריירה."
+          label="מעבר — צוות עובד עם AI"
+          description="צוות מקצועי עובד יחד סביב כלי AI — רצועה רחבה למעבר בין למידה לקריירה."
           imagePosition="object-[50%_32%]"
           sizes="100vw"
           className="w-full"
@@ -44,7 +44,9 @@ export function CareerSection() {
           <div className="md:order-1 md:flex-1">
             <AnimatedSection effect="fade-up">
               <p className="text-eyebrow text-brand-600 uppercase">{career.eyebrow}</p>
-              <h2 className="text-display-xl mt-2 text-balance text-ink-950">{career.headline}</h2>
+              <h2 className="text-display-xl mt-2 text-balance whitespace-pre-line text-ink-950">
+                {career.headline}
+              </h2>
               <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-950">{career.body}</p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {career.benefits.map((benefit) => (

@@ -11,11 +11,9 @@ import { CareerSection } from "./_sections/CareerSection";
 import { FaqSection } from "./_sections/FaqSection";
 import { FinalSection } from "./_sections/FinalSection";
 
-// Same title/description as Cyber (copy hasn't been rewritten yet — see
-// content/landing/brand-ai.ts).
 export const metadata: Metadata = {
-  title: "קורס סייבר ב-10 חודשים",
-  description: "קורס סייבר ב-10 חודשים, ללא צורך ברקע קודם. בדיקת התאמה קצרה וללא עלות.",
+  title: "קורס AI למפתחים",
+  description: "קורס AI למפתחים, ללא צורך ברקע קודם. בדיקת התאמה קצרה וללא עלות.",
 };
 
 export default function BrandAiPage() {
