@@ -39,6 +39,17 @@
   --color-lime-600: #5fce4b;
   --color-lime-700: #479938;
 
+  /* AI campaign (/lp/brand/ai) — background roles only. Turquoise
+   * (teal) and purple (brand) above are shared with Cyber and already
+   * match the AI brief's hex values, so no new hue scale is needed — just
+   * these three flat backgrounds the AI page's dark/light sections swap
+   * in for ink-950, ink-900, paper and off-white. Additive only: Cyber
+   * keeps using those existing tokens untouched.
+   */
+  --color-ai-dark: #0b1c1d;
+  --color-ai-light: #f2fbf8;
+  --color-ai-plum: #181126;
+
   /* Neutrals — near-black / charcoal / off-white, the page's real base.
    *
    * PERMANENT RULE — no low-contrast grey marketing text on dark

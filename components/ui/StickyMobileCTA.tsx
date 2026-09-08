@@ -15,6 +15,8 @@ interface StickyMobileCTAProps {
    * top of a form section's own submit button. Defaults to [href].
    */
   hideWhenVisible?: string[];
+  /** Forwarded to the internal CTAButton. Defaults to "brand" (Cyber) — pass "teal" for the AI page. */
+  accent?: "brand" | "teal";
 }
 
 /**
@@ -27,6 +29,7 @@ export function StickyMobileCTA({
   href,
   revealAfter = 480,
   hideWhenVisible,
+  accent = "brand",
 }: StickyMobileCTAProps) {
   const [pastReveal, setPastReveal] = useState(false);
   const [targetVisible, setTargetVisible] = useState(false);
@@ -79,7 +82,7 @@ export function StickyMobileCTA({
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-x-6 bottom-[max(env(safe-area-inset-bottom),1rem)] z-40 md:hidden"
         >
-          <CTAButton href={href} fullWidth size="md" className="h-[54px]">
+          <CTAButton href={href} fullWidth size="md" accent={accent} className="h-[54px]">
             {label}
           </CTAButton>
         </motion.div>

@@ -27,7 +27,9 @@ Every campaign page lives under `/lp`, grouped by campaign type:
 
 ```
 /lp/brand/cyber              <- built
-/lp/brand/ai                    not yet built
+/lp/brand/ai                  <- built (structural clone of Cyber —
+                                  same copy, new AI color system/assets;
+                                  real AI copy is a future pass)
 /lp/brand/digital-marketing     not yet built
 /lp/brand/hightech               not yet built
 /lp/general/cyber                not yet built
@@ -54,6 +56,8 @@ app/
   lp/
     layout.tsx              Shared shell for all campaign pages (analytics)
     brand/cyber/page.tsx      The Brand Cyber landing page
+    brand/ai/page.tsx          The Brand AI landing page (structural clone
+                                 of Cyber — see content/landing/brand-ai.ts)
 
 components/
   ui/                 Presentation primitives (CTAButton, AnimatedSection,
@@ -78,9 +82,15 @@ content/
   landing/brand-cyber.ts    Cyber page copy, kept separate from layout code
                              so headlines/CTAs/social proof can be swapped
                              without touching components
+  landing/brand-ai.ts        AI page copy — currently identical Hebrew text
+                              to brand-cyber.ts (a real rewrite is a future
+                              pass), asset paths repointed to landing/ai/
 
 public/
   landing/cyber/            Cyber-page-only image assets
+  landing/ai/                AI-page-only image assets (10-slot set, same
+                               slot roles as Cyber's; logos are NOT
+                               duplicated here — see that folder's README)
   landing/shared/            Assets shared across landing pages
   lead-config.js             Static-export lead endpoint — a plain file,
                               not part of the JS bundle, editable directly
@@ -129,6 +139,14 @@ is set — see `components/layout/AnalyticsScripts.tsx` and
   landing page is free to compose them differently (see `AnimatedSection`'s
   `effect` prop, `Testimonial`'s `variant` prop, etc.) so future pages
   don't end up visually identical to Cyber.
+- The AI page reuses the same `brand-*`/`teal-*`/`lime-*` hue tokens (its
+  turquoise/purple/lime already match those hex values) but swaps
+  backgrounds to the `ai-dark` / `ai-light` / `ai-plum` tokens in
+  `app/globals.css`, so it reads turquoise-dominant with purple as a
+  genuine but supporting accent, not a purple page. `CTAButton` (and
+  `StickyMobileCTA`, which forwards it) takes an `accent="teal"` prop for
+  this — `variant="primary"` defaults to `accent="brand"` (Cyber's purple)
+  unchanged.
 - **No low-contrast grey marketing text on dark backgrounds.** On a dark
   section, primary text is off-white/white; secondary or supporting text
   (including disclaimers, labels, captions) is `ink-200` at minimum, or a

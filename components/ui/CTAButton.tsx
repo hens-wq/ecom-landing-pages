@@ -8,11 +8,15 @@ import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "outline" | "outline-dark" | "ghost";
 type Size = "sm" | "md" | "lg";
+/** Color the `primary` variant renders in — other variants are already neutral/bg-agnostic. */
+type Accent = "brand" | "teal";
 
 interface BaseProps {
   children: ReactNode;
   variant?: Variant;
   size?: Size;
+  /** Only affects the `primary` variant. Defaults to "brand" (Cyber's purple) — pass "teal" for the AI page. */
+  accent?: Accent;
   icon?: boolean;
   fullWidth?: boolean;
   className?: string;
@@ -36,9 +40,18 @@ interface ButtonAsLink extends BaseProps {
 
 type CTAButtonProps = ButtonAsButton | ButtonAsLink;
 
-const VARIANT_STYLES: Record<Variant, string> = {
-  primary:
+// primary is the only variant with brand-specific color — every other
+// variant is already neutral (white/black/transparent) so it reads fine
+// against any section background without needing an accent.
+const PRIMARY_ACCENT_STYLES: Record<Accent, string> = {
+  brand:
     "bg-brand-500 text-white shadow-[0_8px_30px_-8px_rgba(140,82,255,0.65)] hover:bg-brand-400 active:bg-brand-600",
+  teal:
+    "bg-teal-500 text-ink-950 shadow-[0_8px_30px_-8px_rgba(52,209,195,0.55)] hover:bg-teal-400 active:bg-teal-600",
+};
+
+const VARIANT_STYLES: Record<Variant, string> = {
+  primary: PRIMARY_ACCENT_STYLES.brand,
   secondary:
     "bg-off-white text-ink-950 hover:bg-white active:bg-ink-100",
   outline:
@@ -59,6 +72,7 @@ export function CTAButton(props: CTAButtonProps) {
     children,
     variant = "primary",
     size = "lg",
+    accent = "brand",
     icon = true,
     fullWidth = false,
     className,
@@ -66,7 +80,7 @@ export function CTAButton(props: CTAButtonProps) {
 
   const shared = cn(
     "inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold tracking-tight transition-colors duration-200",
-    VARIANT_STYLES[variant],
+    variant === "primary" ? PRIMARY_ACCENT_STYLES[accent] : VARIANT_STYLES[variant],
     SIZE_STYLES[size],
     fullWidth && "w-full",
     "disabled:pointer-events-none disabled:opacity-50",
