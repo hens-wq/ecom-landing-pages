@@ -37,6 +37,7 @@ export default function BrandAiPage() {
           "#lead-form-hero",
           "#lead-form-mid",
           "#lead-form-final",
+          "#ariel-section",
           "#objection-cta",
           "#career-section",
           "#faq-section",

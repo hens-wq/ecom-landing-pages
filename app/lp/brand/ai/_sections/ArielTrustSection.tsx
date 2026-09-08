@@ -13,7 +13,10 @@ export function ArielTrustSection() {
   const { ariel } = aiContent;
 
   return (
-    <section className="relative overflow-hidden border-b border-white/5 bg-ai-dark px-5 py-16 sm:px-8 md:px-16 md:py-24">
+    <section
+      id="ariel-section"
+      className="relative overflow-hidden border-b border-white/5 bg-ai-dark px-5 py-16 sm:px-8 md:px-16 md:py-24"
+    >
       <ImagePlaceholder
         fill
         src={ariel.bgSrc}
