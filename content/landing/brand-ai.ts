@@ -52,7 +52,7 @@ export const aiContent = {
   ariel: {
     bgSrc: `${ASSETS}/02-ai-bg-dark.webp`,
     statement:
-      "תכנית AI למפתחים בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
+      "קורס AI למפתחים של מכללת Ecom נמצא בפיקוח ואישור פדגוגי של היחידה ללימודי חוץ והמשך אוניברסיטת אריאל",
     logo: {
       src: `${SHARED_ASSETS}/logo-ariel.webp`,
       alt: "אוניברסיטת אריאל בשומרון — היחידה ללימודי חוץ והמשך",
@@ -159,5 +159,6 @@ export const aiContent = {
     headline: "רוצים להיות אלה שבונים עם AI\nולא רק אלה שמשתמשים בו?",
     subheadline: "בדיקת התאמה קצרה וללא עלות",
     ctaLabel: "בדיקת התאמה ללא עלות",
+    brandSignature: "מכללת Ecom - לימודי הייטק פרקטיים לעולם העבודה",
   },
 } as const;

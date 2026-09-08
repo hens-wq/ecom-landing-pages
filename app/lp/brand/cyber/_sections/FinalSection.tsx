@@ -100,6 +100,10 @@ export function FinalSection() {
             </AnimatePresence>
           </div>
         </AnimatedSection>
+
+        <AnimatedSection effect="fade-up" delay={0.25} className="mt-8">
+          <p className="text-sm text-ink-200">{final.brandSignature}</p>
+        </AnimatedSection>
       </div>
     </section>
   );

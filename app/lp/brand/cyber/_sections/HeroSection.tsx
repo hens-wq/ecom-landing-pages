@@ -64,16 +64,17 @@ export function HeroSection() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="absolute top-4 start-5 z-20 sm:top-5 sm:start-8 md:start-10"
+        className="absolute top-4 start-5 z-20 flex items-center gap-2 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] sm:top-5 sm:start-8 sm:gap-2.5 md:start-10"
       >
         <Image
           src={hero.logo.src}
           alt={hero.logo.alt}
-          width={140}
-          height={108}
+          width={421}
+          height={330}
           priority
-          className="h-8 w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] sm:h-10"
+          className="h-8 w-auto sm:h-10"
         />
+        <span className="text-lg font-bold text-white sm:text-xl">מכללת Ecom</span>
       </motion.div>
 
       <div
