@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { AnalyticsScripts } from "@/components/layout/AnalyticsScripts";
 
 /**
@@ -17,6 +18,15 @@ import { AnalyticsScripts } from "@/components/layout/AnalyticsScripts";
 export default function LandingPagesLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      {process.env.NEXT_PUBLIC_STATIC_EXPORT === "1" ? (
+        // next/script's beforeInteractive strategy does not apply
+        // basePath prefixing the way regular asset URLs do — prefix by
+        // hand (empty in the normal build, where this block never renders).
+        <Script
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/lead-config.js`}
+          strategy="beforeInteractive"
+        />
+      ) : null}
       {children}
       <AnalyticsScripts />
     </>

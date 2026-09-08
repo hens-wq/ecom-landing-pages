@@ -1,6 +1,13 @@
 import type { FAQItem } from "@/components/ui/FAQ";
 
-const ASSETS = "/landing/cyber" as const;
+// next/image's `unoptimized: true` (required for static export — see
+// next.config.ts) renders <img src> verbatim, bypassing the basePath
+// prefixing Next normally applies to asset URLs — so every image path
+// built from ASSETS needs it prepended by hand. NEXT_PUBLIC_BASE_PATH is
+// only ever set (via next.config.ts's `env`) during the static-export
+// build; it's empty in the normal Node.js/Vercel build, where this is a
+// no-op.
+const ASSETS = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/landing/cyber`;
 
 /**
  * Copy for /lp/brand/cyber, kept separate from section components so

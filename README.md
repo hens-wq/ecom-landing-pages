@@ -45,8 +45,12 @@ has no marketing homepage — traffic always lands directly on a campaign URL.
 app/
   layout.tsx            Root layout: Heebo font, lang="he" dir="rtl"
   page.tsx               Redirects "/" -> the current live campaign page
+                          (renders the Cyber page directly there instead,
+                          in a static export — see "Deploying as a static
+                          export" below)
   globals.css             Design tokens (colors, fluid type scale) for Tailwind v4
   api/lead/route.ts        Receives + validates leads, forwards to LEAD_WEBHOOK_URL
+                            (Node.js-only — excluded from static exports)
   lp/
     layout.tsx              Shared shell for all campaign pages (analytics)
     brand/cyber/page.tsx      The Brand Cyber landing page
@@ -63,7 +67,8 @@ lib/
   types.ts               Shared types (LandingPageId, LeadFormValues, ...)
   utils.ts                cn() class-merging helper
   validation.ts            Field validation, incl. Israeli phone numbers
-  leads/submitLead.ts       Client -> /api/lead submission call
+  leads/submitLead.ts       Client -> /api/lead (Node.js build) or ->
+                             window.LEAD_SUBMIT_URL (static export build)
   tracking/
     utm.ts                 Captures + persists UTM/fbclid/gclid for the visit
     useTrackingContext.ts    Hook: current tracking context for a landing page
@@ -77,14 +82,27 @@ content/
 public/
   landing/cyber/            Cyber-page-only image assets
   landing/shared/            Assets shared across landing pages
+  lead-config.js             Static-export lead endpoint — a plain file,
+                              not part of the JS bundle, editable directly
+                              on a static host with no rebuild
+
+scripts/
+  build-static.sh            Produces the static export (see below)
 ```
 
 ## Lead flow
 
-`LeadForm` → `POST /api/lead` (server-side validation) → forwards to
-`LEAD_WEBHOOK_URL` if set, otherwise logs and simulates success. The
-intended production path is Landing Page → Google Sheets/webhook → Make →
-Fireberry CRM; nothing is wired to a real destination yet.
+**Node.js build** (`npm run build` / Vercel): `LeadForm` → `POST /api/lead`
+(server-side validation) → forwards to `LEAD_WEBHOOK_URL` if set, otherwise
+logs and simulates success. The intended production path is Landing Page →
+Google Sheets/webhook → Make → Fireberry CRM; nothing is wired to a real
+destination yet.
+
+**Static export build** (`npm run build:static`): there is no server to run
+`/api/lead` on, so `LeadForm` posts straight to `window.LEAD_SUBMIT_URL`
+instead (set in `public/lead-config.js`, empty by default). While empty, a
+submission shows an honest "not connected yet" message — it never fakes a
+success. See "Deploying as a static export" below.
 
 UTM params (`utm_source/medium/campaign/content/term`), `fbclid` and
 `gclid` are captured from the URL on first touch and persisted in
@@ -150,3 +168,64 @@ is set — see `components/layout/AnalyticsScripts.tsx` and
 - No database and no serverless config beyond the standard
   `app/api/lead/route.ts` route handler — a default Vercel Next.js
   deployment covers the whole app.
+
+## Deploying as a static export (no Node.js host)
+
+For hosting with **no Node.js runtime** — plain shared/cPanel Apache
+hosting, for example — build a plain HTML/CSS/JS export instead:
+
+```bash
+npm run build:static                       # deploys under /<domain>/cyber/
+STATIC_BASE_PATH="" npm run build:static    # deploys at the domain root
+```
+
+This produces `./out`. Upload **the contents of `out/`** (not the folder
+itself) into the target directory on the host — `index.html` must sit
+directly inside it. Nothing else on the server is required; no database,
+no build step, no `npm install` on the host.
+
+How it differs from the normal build, and why:
+
+- `app/api/lead/route.ts` can't run without a server, so
+  `scripts/build-static.sh` moves it out of `app/` for the duration of
+  this one build only and restores it immediately after (success or
+  failure) — `git status` is clean before and after every run. Lead forms
+  post to `window.LEAD_SUBMIT_URL` instead (see "Lead flow" above and
+  "Activating the lead forms later" below).
+- `next.config.ts` sets `output: "export"` and `images: { unoptimized: true }`
+  only when `STATIC_EXPORT=1` — the normal `npm run build` / Vercel path
+  is entirely unaffected, and both builds share this one config file.
+- `STATIC_BASE_PATH` (default `/cyber`) controls where the exported site
+  expects to live. Every asset URL in the build is prefixed with it at
+  build time — `next/image`'s `unoptimized` mode and `next/script`'s
+  `beforeInteractive` strategy don't apply Next's usual automatic
+  basePath prefixing, so `content/landing/brand-cyber.ts` and
+  `app/lp/layout.tsx` prepend it by hand via `NEXT_PUBLIC_BASE_PATH`
+  (also injected only for this build). If the deployment target changes,
+  re-run the command with a different `STATIC_BASE_PATH` — nothing else
+  needs to change.
+- `/` renders the Cyber page directly (see `app/page.tsx`) instead of
+  redirecting, since a static host has no server to issue that redirect
+  from — the normal build's `/` still redirects to `/lp/brand/cyber`,
+  unchanged. `/lp/brand/cyber/` also still works in the static export
+  (both point at the same page).
+- All the page's client-side behavior — Motion animations, the FAQ
+  accordion, the sticky mobile CTA, form validation, UTM/fbclid/gclid
+  capture — is plain client-side React with no server dependency, so all
+  of it works identically in the static export.
+
+### Activating the lead forms later
+
+Submissions do nothing but show an honest "not connected yet" message
+until `public/lead-config.js` has a real endpoint:
+
+```js
+window.LEAD_SUBMIT_URL = "https://hook.eu1.make.com/xxxxxxxxxxxx";
+```
+
+Edit that one file (locally and rebuild+re-upload, or directly on the
+server — it's a plain file, not part of the JS bundle) — no Node.js and no
+rebuild is required just to change the endpoint. Verify the destination
+(Make.com webhook, or similar) accepts a cross-origin `POST` from the
+browser (CORS) before relying on it; if it doesn't, front it with a small
+same-origin relay.
