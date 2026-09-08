@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:static": "bash scripts/build-static.sh",
+    "build:static:ai": "bash scripts/build-static-ai.sh",
     "start": "next start",
     "lint": "eslint"
   },

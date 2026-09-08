@@ -8,7 +8,7 @@ import { AnalyticsScripts } from "@/components/layout/AnalyticsScripts";
  *
  * Planned routes under this group (see project README for status):
  *   /lp/brand/cyber            <- built
- *   /lp/brand/ai                 not yet built
+ *   /lp/brand/ai               <- built
  *   /lp/brand/digital-marketing  not yet built
  *   /lp/brand/hightech            not yet built
  *   /lp/general/cyber             not yet built

@@ -193,23 +193,34 @@ For hosting with **no Node.js runtime** — plain shared/cPanel Apache
 hosting, for example — build a plain HTML/CSS/JS export instead:
 
 ```bash
-npm run build:static                       # deploys under /<domain>/cyber/
-STATIC_BASE_PATH="" npm run build:static    # deploys at the domain root
+npm run build:static                          # Cyber, deploys under /<domain>/cyber/
+STATIC_BASE_PATH="" npm run build:static       # Cyber, deploys at the domain root
+
+npm run build:static:ai                        # AI, deploys under /<domain>/ai/
+STATIC_BASE_PATH="" npm run build:static:ai    # AI, deploys at the domain root
 ```
 
-This produces `./out`. Upload **the contents of `out/`** (not the folder
-itself) into the target directory on the host — `index.html` must sit
-directly inside it. Nothing else on the server is required; no database,
-no build step, no `npm install` on the host.
+Each produces `./out` (one command at a time — re-run for the other page,
+`out/` is overwritten). `output: "export"` builds every route in the app
+regardless of which command you ran, so `out/` also contains the *other*
+page's `/lp/brand/...` folder — that copy is non-functional (its assets
+resolve against the wrong basePath) and should not be uploaded; upload
+only `index.html`, `_next/`, `landing/`, `lead-config.js`, `favicon.ico`,
+and the one `lp/brand/<page>/` folder that matches the command you ran.
+Upload **those contents** (not a wrapping folder) into the target
+directory on the host — `index.html` must sit directly inside it. Nothing
+else on the server is required; no database, no build step, no
+`npm install` on the host.
 
 How it differs from the normal build, and why:
 
 - `app/api/lead/route.ts` can't run without a server, so
-  `scripts/build-static.sh` moves it out of `app/` for the duration of
-  this one build only and restores it immediately after (success or
-  failure) — `git status` is clean before and after every run. Lead forms
-  post to `window.LEAD_SUBMIT_URL` instead (see "Lead flow" above and
-  "Activating the lead forms later" below).
+  `scripts/build-static.sh` (Cyber) / `scripts/build-static-ai.sh` (AI)
+  moves it out of `app/` for the duration of this one build only and
+  restores it immediately after (success or failure) — `git status` is
+  clean before and after every run. Lead forms post to
+  `window.LEAD_SUBMIT_URL` instead (see "Lead flow" above and "Activating
+  the lead forms later" below).
 - `next.config.ts` sets `output: "export"` and `images: { unoptimized: true }`
   only when `STATIC_EXPORT=1` — the normal `npm run build` / Vercel path
   is entirely unaffected, and both builds share this one config file.
@@ -222,11 +233,12 @@ How it differs from the normal build, and why:
   (also injected only for this build). If the deployment target changes,
   re-run the command with a different `STATIC_BASE_PATH` — nothing else
   needs to change.
-- `/` renders the Cyber page directly (see `app/page.tsx`) instead of
+- `/` renders the target page directly (Cyber or AI, picked by
+  `STATIC_PAGE` — see `app/page.tsx` / `next.config.ts`) instead of
   redirecting, since a static host has no server to issue that redirect
   from — the normal build's `/` still redirects to `/lp/brand/cyber`,
-  unchanged. `/lp/brand/cyber/` also still works in the static export
-  (both point at the same page).
+  unchanged. `/lp/brand/cyber/` (or `/lp/brand/ai/`) also still works in
+  the static export (both point at the same page as `/`).
 - All the page's client-side behavior — Motion animations, the FAQ
   accordion, the sticky mobile CTA, form validation, UTM/fbclid/gclid
   capture — is plain client-side React with no server dependency, so all
