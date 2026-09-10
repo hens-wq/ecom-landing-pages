@@ -22,10 +22,14 @@ export type LeadSourceType = "meta_standard_form" | "meta_rich_form" | "landing_
 
 /**
  * Coarse bucket for how long it took a lead to become a sale. The thresholds that
- * define each bucket live in `TIME_TO_SALE_BUCKET_DEFS` (lib/calculations.ts) as
- * configurable hour cutoffs - e.g. "One Shot" is currently "within 24 hours", but
- * that can be redefined (a stricter "within 3 hours") without touching this type
- * or anything that reads `timeToSaleBucket`.
+ * define each bucket - including what counts as "One Shot" - live in
+ * `TIME_TO_SALE_BUCKET_DEFS` (lib/calculations.ts) as configurable hour cutoffs.
+ *
+ * IMPORTANT: those thresholds (24h for One Shot in particular) are a Phase 1
+ * placeholder, not a confirmed business rule - see the comment on
+ * `TIME_TO_SALE_BUCKET_DEFS` before treating this bucket as authoritative. The
+ * exact duration (`timeToSaleMinutes` / `timeToSaleDays`) is always available
+ * independent of whatever the current bucket cutoffs are.
  */
 export type TimeToSaleBucket = "one_shot" | "1_3_days" | "4_7_days" | "8_plus_days";
 
@@ -158,6 +162,14 @@ export interface SalesMatch {
   sale: Sale;
   lead: Lead | null;
   matchStatus: MatchStatus;
+  /**
+   * Informational only (see lib/name-match.ts) - true when the sale's customer
+   * name looks like a different person than the attributed lead's name. Never
+   * affects `matchStatus`: phone is still the sole basis for the match, this is
+   * just a flag for a human to sanity-check (invoice under a spouse/household
+   * name, a nickname, etc). Always false when there is no lead.
+   */
+  nameMismatch: boolean;
 
   leadDate: string | null;
   sourceType: LeadSourceType | null;

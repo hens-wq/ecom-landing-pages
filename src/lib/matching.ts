@@ -1,5 +1,6 @@
 import type { Lead, Sale, SalesMatch } from "@/lib/types";
 import { calcTimeToSaleMinutes, timeToSaleBucket, timeToSaleDaysFromMinutes } from "@/lib/calculations";
+import { hasNameMismatch } from "@/lib/name-match";
 
 /**
  * Mock phone-based sale <-> lead matching engine.
@@ -15,7 +16,9 @@ import { calcTimeToSaleMinutes, timeToSaleBucket, timeToSaleDaysFromMinutes } fr
  *      candidate for a sale. Customer name is never required to match - it's
  *      stored and displayed for context, but a name spelled differently (a
  *      nickname, a spouse's name on the invoice) never turns a valid phone match
- *      into "needs review".
+ *      into "needs review". A name that looks like a different person still gets
+ *      surfaced, just as a non-blocking `nameMismatch` flag (see
+ *      lib/name-match.ts) - informational only, never part of this decision.
  *   2. A phone number can have submitted multiple leads over time (see leads.ts -
  *      they are never deduplicated). Among every lead sharing the sale's phone,
  *      attribute the sale to the MOST RECENT lead dated at or before the sale.
@@ -48,6 +51,7 @@ function buildMatch(sale: Sale, lead: Lead | null, matchStatus: SalesMatch["matc
   const attribution = {
     leadDate: lead?.leadDate ?? null,
     sourceType: lead?.sourceType ?? null,
+    nameMismatch: lead ? hasNameMismatch(lead.name, sale.customerName) : false,
     campaignId: lead?.campaignId ?? null,
     campaignName: lead?.campaignName ?? null,
     adSetId: lead?.adSetId ?? null,

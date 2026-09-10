@@ -118,8 +118,26 @@ export interface TimeToSaleBucketDef {
   maxHours: number;
 }
 
+/**
+ * ⚠️ PLACEHOLDER BUSINESS RULE - NOT FINAL. ⚠️
+ *
+ * Ecom has not yet decided where the real "One Shot" vs. "needs follow-up" line
+ * sits - that decision should be made later, after reviewing actual sales data
+ * (Phase 2+), not baked in now. 24 hours is a reasonable-looking Phase 1 default
+ * so the mock data has *something* to bucket by, nothing more. Do not treat it,
+ * or the other cutoffs below, as agreed product behavior.
+ *
+ * When the real definition is decided, change this one number (or restructure
+ * TIME_TO_SALE_BUCKET_DEFS entirely) - every UI column that shows a bucket reads
+ * from that table, so nothing else needs to change. Either way, the exact elapsed
+ * time (`timeToSaleMinutes` / `timeToSaleDays`) is always computed and displayed
+ * regardless of these buckets (see calcTimeToSaleMinutes above), so no precision
+ * is ever hidden behind a bucket label.
+ */
+const ONE_SHOT_MAX_HOURS_PLACEHOLDER = 24;
+
 export const TIME_TO_SALE_BUCKET_DEFS: TimeToSaleBucketDef[] = [
-  { id: "one_shot", label: "סגירה מיידית (One Shot)", maxHours: 24 },
+  { id: "one_shot", label: "סגירה מיידית (One Shot)", maxHours: ONE_SHOT_MAX_HOURS_PLACEHOLDER },
   { id: "1_3_days", label: "1-3 ימים", maxHours: 72 },
   { id: "4_7_days", label: "4-7 ימים", maxHours: 168 },
   { id: "8_plus_days", label: "8+ ימים", maxHours: Infinity },
