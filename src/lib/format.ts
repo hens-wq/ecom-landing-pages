@@ -1,0 +1,55 @@
+const NBSP = " ";
+
+/** ₪12,345 - no decimals, thousands separator, "-" for missing data. */
+export function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return `₪${NBSP}${Math.round(value).toLocaleString("he-IL")}`;
+}
+
+export function formatNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return Math.round(value).toLocaleString("he-IL");
+}
+
+export function formatPercent(value: number | null | undefined, decimals = 1): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return `${value.toLocaleString("he-IL", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}%`;
+}
+
+export function formatDecimal(value: number | null | undefined, decimals = 2): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return value.toLocaleString("he-IL", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+/** ROAS reads best as a multiplier: "3.2x". */
+export function formatMultiplier(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "-";
+  return `${formatDecimal(value, 2)}x`;
+}
+
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return `${formatDate(iso)} ${date.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+export function formatTimeToSale(days: number | null | undefined): string {
+  if (days === null || days === undefined) return "-";
+  if (days <= 0) return "מיידי (One Shot)";
+  if (days === 1) return "יום אחד";
+  return `${formatNumber(days)} ימים`;
+}
