@@ -17,8 +17,14 @@ export type EntityStatus = "active" | "paused" | "ended";
  * Standard and Rich Meta forms are kept distinct (not grouped under one generic
  * "meta_form" value) because lead quality and close rate differ meaningfully
  * between them.
+ *
+ * "unknown" exists for real Meta-sourced ads (Phase 2A): the Marketing API's
+ * campaign/adset/ad endpoints don't expose which form type an ad uses without
+ * extra per-ad creative calls, which is out of scope for now - "unknown" is the
+ * honest answer rather than guessing. Mock data always uses one of the three
+ * real values.
  */
-export type LeadSourceType = "meta_standard_form" | "meta_rich_form" | "landing_page";
+export type LeadSourceType = "meta_standard_form" | "meta_rich_form" | "landing_page" | "unknown";
 
 /**
  * Coarse bucket for how long it took a lead to become a sale. The thresholds that
@@ -189,6 +195,12 @@ export interface SalesMatch {
 export interface DateRangePreset {
   id: string;
   label: string;
-  /** Multiplier applied to the 30-day baseline mock dataset, purely for Phase 1 UI interactivity. */
-  scale: number;
+  /**
+   * How many trailing days (including today) this preset covers. Turned into
+   * concrete since/until dates at request time (lib/advertising/date-range.ts)
+   * anchored to the real current date - this is what actually gets sent to
+   * Meta Insights, and what the mock provider uses to scale its 30-day
+   * baseline (Phase 1 behavior, unchanged).
+   */
+  days: number;
 }

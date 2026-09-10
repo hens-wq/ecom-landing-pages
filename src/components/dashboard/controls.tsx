@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CalendarRange, ChevronDown, Lock, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,17 +16,14 @@ import { cn } from "@/lib/utils";
 interface DashboardControlsProps {
   presetId: string;
   onPresetChange: (presetId: string) => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  /** Real Meta ad account name once connected; falls back to the Phase 1 placeholder otherwise. */
+  accountLabel?: string;
 }
 
-export function DashboardControls({ presetId, onPresetChange }: DashboardControlsProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
+export function DashboardControls({ presetId, onPresetChange, onRefresh, isRefreshing, accountLabel }: DashboardControlsProps) {
   const activePreset = DATE_RANGE_PRESETS.find((preset) => preset.id === presetId) ?? DATE_RANGE_PRESETS[0];
-
-  function handleRefresh() {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    window.setTimeout(() => setIsRefreshing(false), 900);
-  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -58,13 +54,17 @@ export function DashboardControls({ presetId, onPresetChange }: DashboardControl
         <TooltipTrigger asChild>
           <Button variant="outline" size="sm" disabled className="gap-2 text-muted-foreground">
             <Lock className="size-3.5" />
-            {AD_ACCOUNTS[0].name}
+            {accountLabel ?? AD_ACCOUNTS[0].name}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>חיבור חשבון פרסום בפועל יתאפשר לאחר חיבור Meta Ads (שלב הבא)</TooltipContent>
+        <TooltipContent>
+          {accountLabel
+            ? "מחובר לחשבון Meta Ads אמיתי - החלפת חשבון תתאפשר בשלב הבא"
+            : "חיבור חשבון פרסום בפועל יתאפשר לאחר הגדרת Meta Ads"}
+        </TooltipContent>
       </Tooltip>
 
-      <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2">
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing} className="gap-2">
         <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
         {isRefreshing ? "מרענן..." : "רענון נתונים"}
       </Button>

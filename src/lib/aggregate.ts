@@ -1,11 +1,14 @@
-import { computeMetrics, scaleRawMetrics, sumRawMetrics } from "@/lib/calculations";
+import { computeMetrics, sumRawMetrics } from "@/lib/calculations";
 import type { Campaign, EntityStatus, LeadSourceType, PerformanceMetrics } from "@/lib/types";
 
 /**
- * The performance hierarchy (Campaign -> AdSet -> Ad) with every raw metric scaled
- * by the selected date-range preset and every derived KPI recomputed on top of it.
- * Ad Set / Campaign rows are always a straight sum of their children's raw metrics,
- * so the tree can never show numbers at the parent level that disagree with the
+ * The performance hierarchy (Campaign -> AdSet -> Ad), with every derived KPI
+ * computed on top of whatever raw metrics the active advertising provider
+ * (mock or Meta) returned for the requested date range - this function has no
+ * idea which provider that was, or that a date range was even involved; any
+ * range-based scaling already happened inside the provider itself. Ad Set /
+ * Campaign rows are always a straight sum of their children's raw metrics, so
+ * the tree can never show numbers at the parent level that disagree with the
  * children - there is exactly one source of truth (each Ad's RawMetrics).
  */
 export interface AdRow {
@@ -36,7 +39,7 @@ export interface CampaignRow {
   adSets: AdSetRow[];
 }
 
-export function buildPerformanceTree(campaigns: Campaign[], scale: number): CampaignRow[] {
+export function buildPerformanceTree(campaigns: Campaign[]): CampaignRow[] {
   return campaigns.map((campaign) => {
     const adSetRows: AdSetRow[] = campaign.adSets.map((adSet) => {
       const adRows: AdRow[] = adSet.ads.map((ad) => ({
@@ -45,7 +48,7 @@ export function buildPerformanceTree(campaigns: Campaign[], scale: number): Camp
         name: ad.name,
         status: ad.status,
         destinationType: ad.destinationType,
-        metrics: computeMetrics(scaleRawMetrics(ad.metrics, scale)),
+        metrics: computeMetrics(ad.metrics),
       }));
 
       return {
