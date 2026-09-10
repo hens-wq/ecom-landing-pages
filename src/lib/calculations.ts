@@ -1,4 +1,4 @@
-import type { PerformanceMetrics, RawMetrics } from "@/lib/types";
+import type { PerformanceMetrics, RawMetrics, TimeToSaleBucket } from "@/lib/types";
 
 /**
  * Divides two numbers, returning `null` instead of NaN/Infinity when the result
@@ -81,33 +81,53 @@ export function sumRawMetrics(items: RawMetrics[]): RawMetrics {
   );
 }
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+/**
+ * Exact elapsed time between a lead entering the system and the matched sale, to
+ * the minute. This is the precise value everything else (days, hour/minute
+ * display, the One Shot bucket) derives from - a sale 20 minutes after midnight
+ * the day after the lead is ~20 minutes, not "1 day".
+ */
+export function calcTimeToSaleMinutes(leadDateIso: string, saleDateIso: string): number | null {
+  const leadTime = new Date(leadDateIso).getTime();
+  const saleTime = new Date(saleDateIso).getTime();
+  if (Number.isNaN(leadTime) || Number.isNaN(saleTime)) return null;
+  return Math.round((saleTime - leadTime) / (1000 * 60));
+}
+
+/** Whole days elapsed (floor), derived from the exact minute count. Negative input (bad data) clamps to null. */
+export function timeToSaleDaysFromMinutes(minutes: number | null): number | null {
+  if (minutes === null || minutes < 0) return null;
+  return Math.floor(minutes / (60 * 24));
+}
+
+/** Convenience wrapper kept for callers that only have the two ISO timestamps on hand. */
+export function calcTimeToSaleDays(leadDateIso: string, saleDateIso: string): number | null {
+  return timeToSaleDaysFromMinutes(calcTimeToSaleMinutes(leadDateIso, saleDateIso));
+}
 
 /**
- * Days between a lead entering the system and the matched sale, using full calendar-day
- * precision (a sale minutes after the lead is day 0 - "one shot").
+ * Bucket thresholds are configurable hour cutoffs rather than hardcoded "same
+ * calendar day" logic, specifically so "One Shot" can later be redefined (e.g. to
+ * "within 3 hours") by editing this array - nothing that calls `timeToSaleBucket`
+ * needs to change.
  */
-export function calcTimeToSaleDays(leadDateIso: string, saleDateIso: string): number | null {
-  const leadDate = new Date(leadDateIso);
-  const saleDate = new Date(saleDateIso);
-  if (Number.isNaN(leadDate.getTime()) || Number.isNaN(saleDate.getTime())) return null;
-
-  const leadDay = Date.UTC(leadDate.getUTCFullYear(), leadDate.getUTCMonth(), leadDate.getUTCDate());
-  const saleDay = Date.UTC(saleDate.getUTCFullYear(), saleDate.getUTCMonth(), saleDate.getUTCDate());
-  return Math.round((saleDay - leadDay) / MS_PER_DAY);
+export interface TimeToSaleBucketDef {
+  id: TimeToSaleBucket;
+  label: string;
+  /** Upper bound in hours (inclusive). The last entry should be Infinity. */
+  maxHours: number;
 }
 
-export function timeToSaleBucket(days: number | null) {
-  if (days === null) return null;
-  if (days <= 0) return "one_shot" as const;
-  if (days <= 3) return "1_3_days" as const;
-  if (days <= 7) return "4_7_days" as const;
-  return "8_plus_days" as const;
-}
+export const TIME_TO_SALE_BUCKET_DEFS: TimeToSaleBucketDef[] = [
+  { id: "one_shot", label: "סגירה מיידית (One Shot)", maxHours: 24 },
+  { id: "1_3_days", label: "1-3 ימים", maxHours: 72 },
+  { id: "4_7_days", label: "4-7 ימים", maxHours: 168 },
+  { id: "8_plus_days", label: "8+ ימים", maxHours: Infinity },
+];
 
-export const TIME_TO_SALE_BUCKET_LABELS: Record<string, string> = {
-  one_shot: "סגירה מיידית (One Shot)",
-  "1_3_days": "1-3 ימים",
-  "4_7_days": "4-7 ימים",
-  "8_plus_days": "8+ ימים",
-};
+export function timeToSaleBucket(minutes: number | null): TimeToSaleBucket | null {
+  if (minutes === null || minutes < 0) return null;
+  const hours = minutes / 60;
+  const bucket = TIME_TO_SALE_BUCKET_DEFS.find((def) => hours <= def.maxHours);
+  return (bucket ?? TIME_TO_SALE_BUCKET_DEFS[TIME_TO_SALE_BUCKET_DEFS.length - 1]).id;
+}

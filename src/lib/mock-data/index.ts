@@ -1,5 +1,5 @@
 export { campaigns, allAdSets, allAds, findCampaign, findAdSet, findAd } from "@/lib/mock-data/campaigns";
-export { leads, findLeadById } from "@/lib/mock-data/leads";
+export { leads, findLeadById } from "@/lib/mock-data/leads-with-outcomes";
 export { sales } from "@/lib/mock-data/sales";
 export { salesMatches, salesMatchStats } from "@/lib/mock-data/sales-matches";
 export { dailyTrend } from "@/lib/mock-data/daily-trend";

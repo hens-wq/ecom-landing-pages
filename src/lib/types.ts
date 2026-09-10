@@ -10,12 +10,23 @@
 
 export type EntityStatus = "active" | "paused" | "ended";
 
-/** How the ad ultimately captures a lead. More types can be added later. */
-export type DestinationType = "standard_form" | "rich_form" | "landing_page";
+/**
+ * How the lead was captured. Used both as the Ad's destination (what the ad sends
+ * traffic to) and the Lead's own source - the two are always the same value for a
+ * given lead, since the lead's source *is* whatever its ad was configured to use.
+ * Standard and Rich Meta forms are kept distinct (not grouped under one generic
+ * "meta_form" value) because lead quality and close rate differ meaningfully
+ * between them.
+ */
+export type LeadSourceType = "meta_standard_form" | "meta_rich_form" | "landing_page";
 
-export type SourceType = "meta_form" | "landing_page";
-
-/** Coarse bucket for how long it took a lead to become a sale. Phase 2 will use this for cohort analysis. */
+/**
+ * Coarse bucket for how long it took a lead to become a sale. The thresholds that
+ * define each bucket live in `TIME_TO_SALE_BUCKET_DEFS` (lib/calculations.ts) as
+ * configurable hour cutoffs - e.g. "One Shot" is currently "within 24 hours", but
+ * that can be redefined (a stricter "within 3 hours") without touching this type
+ * or anything that reads `timeToSaleBucket`.
+ */
 export type TimeToSaleBucket = "one_shot" | "1_3_days" | "4_7_days" | "8_plus_days";
 
 export type MatchStatus = "matched" | "unmatched" | "needs_review";
@@ -53,7 +64,7 @@ export interface Ad {
   name: string;
   adSetId: string;
   status: EntityStatus;
-  destinationType: DestinationType;
+  destinationType: LeadSourceType;
   metrics: RawMetrics;
 }
 
@@ -77,13 +88,20 @@ export interface Campaign {
  * A lead as captured at the moment of entry. Attribution is carried by ID first
  * (campaignId/adSetId/adId) - names are convenience/display fields only and must
  * never be relied on for matching, since campaign/ad names can be renamed or reused.
+ *
+ * The same phone number can submit multiple leads over time (e.g. one lead per
+ * campaign they clicked into) - every one of them is kept as its own record,
+ * never deduplicated or overwritten. `normalizedPhone` is the primary key used to
+ * find *candidate* leads for a sale; which candidate actually gets credit for the
+ * sale is decided by the attribution rule in lib/matching.ts (currently: the most
+ * recent lead dated at or before the sale), not by this record in isolation.
  */
 export interface Lead {
   id: string;
   name: string;
   phone: string;
   normalizedPhone: string;
-  leadDate: string; // ISO datetime
+  leadDate: string; // full ISO datetime (date + time)
 
   campaignId: string;
   campaignName: string;
@@ -92,7 +110,7 @@ export interface Lead {
   adId: string;
   adName: string;
 
-  sourceType: SourceType;
+  sourceType: LeadSourceType;
 
   // Future tracking fields (Meta Pixel / Conversions API, Phase 2) - captured in the
   // shape now so the matching engine never has to be re-architected to add them.
@@ -100,10 +118,19 @@ export interface Lead {
   fbc?: string;
   fbp?: string;
 
+  /**
+   * Sale outcome for THIS specific lead record. In Phase 1 mock data this is
+   * derived from the matching engine (see mock-data/leads-with-outcomes.ts), not
+   * hand-authored, so it can never disagree with what the Sales & Matching page
+   * shows: a lead is "sold" only if it's the lead a SalesMatch actually attributed
+   * a sale to.
+   */
   saleStatus: "sold" | "not_sold";
-  saleDate?: string; // ISO datetime
+  saleDate?: string; // full ISO datetime
   saleAmount?: number;
-  /** Sale date - lead date, in days. Same calendar day (or same session) => 0. */
+  /** Exact minutes between leadDate and saleDate. The precise value hours/days derive from. */
+  timeToSaleMinutes?: number | null;
+  /** Whole days elapsed (floor of timeToSaleMinutes / 1440) - kept for simple display/sorting. */
   timeToSaleDays?: number | null;
   timeToSaleBucket?: TimeToSaleBucket | null;
 }
@@ -118,7 +145,14 @@ export interface Sale {
   saleAmount: number;
 }
 
-/** The result of matching one incoming Sale to a Lead by (normalized) phone number. */
+/**
+ * The result of matching one incoming Sale to a Lead by (normalized) phone number.
+ * Phone is the sole basis for candidacy; customer name is never required to agree
+ * and is shown only as supporting context. When a phone number has multiple
+ * leads on file, `lead` is whichever one the attribution rule in lib/matching.ts
+ * picked (currently: the most recent lead at or before the sale date) - see that
+ * file for the exact rule and how to change it.
+ */
 export interface SalesMatch {
   id: string;
   sale: Sale;
@@ -126,6 +160,9 @@ export interface SalesMatch {
   matchStatus: MatchStatus;
 
   leadDate: string | null;
+  sourceType: LeadSourceType | null;
+  /** Only populated for matchStatus "matched" - a lead dated after the sale has no meaningful time-to-sale. */
+  timeToSaleMinutes: number | null;
   timeToSaleDays: number | null;
   timeToSaleBucket: TimeToSaleBucket | null;
 

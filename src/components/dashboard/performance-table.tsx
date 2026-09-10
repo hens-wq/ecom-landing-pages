@@ -9,14 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AdRow, AdSetRow, CampaignRow } from "@/lib/aggregate";
 import { DEFAULT_VISIBLE_COLUMN_KEYS, PERFORMANCE_COLUMNS } from "@/lib/columns";
-import type { DestinationType, PerformanceMetrics } from "@/lib/types";
+import { LEAD_SOURCE_LABELS } from "@/lib/constants";
+import type { PerformanceMetrics } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const DESTINATION_LABELS: Record<DestinationType, string> = {
-  standard_form: "טופס סטנדרטי (Standard Form)",
-  rich_form: "טופס מורחב (Rich Form)",
-  landing_page: "דף נחיתה (Landing Page)",
-};
 
 type FlatRow =
   | { type: "campaign"; row: CampaignRow }
@@ -135,10 +130,10 @@ export function PerformanceTable({ campaignRows }: { campaignRows: CampaignRow[]
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
-                            {DESTINATION_LABELS[flat.row.destinationType].split(" ")[0]}
+                            {LEAD_SOURCE_LABELS[flat.row.destinationType].short}
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>{DESTINATION_LABELS[flat.row.destinationType]}</TooltipContent>
+                        <TooltipContent>{LEAD_SOURCE_LABELS[flat.row.destinationType].full}</TooltipContent>
                       </Tooltip>
                     )}
                   </div>

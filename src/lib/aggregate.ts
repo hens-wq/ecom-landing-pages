@@ -1,5 +1,5 @@
 import { computeMetrics, scaleRawMetrics, sumRawMetrics } from "@/lib/calculations";
-import type { Campaign, DestinationType, EntityStatus, PerformanceMetrics } from "@/lib/types";
+import type { Campaign, EntityStatus, LeadSourceType, PerformanceMetrics } from "@/lib/types";
 
 /**
  * The performance hierarchy (Campaign -> AdSet -> Ad) with every raw metric scaled
@@ -13,7 +13,7 @@ export interface AdRow {
   id: string;
   name: string;
   status: EntityStatus;
-  destinationType: DestinationType;
+  destinationType: LeadSourceType;
   metrics: PerformanceMetrics;
 }
 

@@ -47,9 +47,13 @@ export function formatDateTime(iso: string | null | undefined): string {
   return `${formatDate(iso)} ${date.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-export function formatTimeToSale(days: number | null | undefined): string {
-  if (days === null || days === undefined) return "-";
-  if (days <= 0) return "מיידי (One Shot)";
+/** Exact duration display: minutes/hours within the first day ("One Shot"), otherwise whole days. */
+export function formatTimeToSale(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || minutes < 0) return "-";
+  if (minutes < 60) return `${formatNumber(minutes)} דקות (One Shot)`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${formatDecimal(hours, 1)} שעות (One Shot)`;
+  const days = Math.floor(hours / 24);
   if (days === 1) return "יום אחד";
   return `${formatNumber(days)} ימים`;
 }

@@ -1,4 +1,4 @@
-import type { DateRangePreset } from "@/lib/types";
+import type { DateRangePreset, LeadSourceType } from "@/lib/types";
 
 export const NAV_ITEMS = [
   { href: "/", label: "דשבורד", labelEn: "Dashboard" },
@@ -18,3 +18,10 @@ export const DEFAULT_DATE_RANGE_PRESET_ID = "last_30";
 
 /** Placeholder only - Phase 2 will populate this from the Meta Ads API. */
 export const AD_ACCOUNTS = [{ id: "act_ecom_main", name: "Ecom - חשבון פרסום ראשי" }];
+
+/** Shared display labels for LeadSourceType - single source used by the performance table (ad destination) and the Sales & Matching table (lead source). */
+export const LEAD_SOURCE_LABELS: Record<LeadSourceType, { short: string; full: string }> = {
+  meta_standard_form: { short: "טופס סטנדרטי", full: "טופס Meta סטנדרטי (Meta Standard Form)" },
+  meta_rich_form: { short: "טופס מורחב", full: "טופס Meta מורחב (Meta Rich Form)" },
+  landing_page: { short: "דף נחיתה", full: "דף נחיתה (Landing Page)" },
+};
