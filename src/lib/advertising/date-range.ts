@@ -1,3 +1,4 @@
+import { isoDateInTimezone } from "@/lib/advertising/timezone";
 import type { DateRange } from "@/lib/advertising/types";
 
 function toIsoDate(date: Date): string {
@@ -9,12 +10,18 @@ function toIsoDate(date: Date): string {
  * to the real current date (never the fixed 2026-09-10 date the mock dataset's
  * own content happens to be written around - that date only matters for how the
  * mock data was authored, not for how date-range math works).
+ *
+ * "Today" is resolved in REPORTING_TIMEZONE (see lib/advertising/timezone.ts),
+ * not the server's own UTC clock - a Vercel server's `new Date()` is always
+ * UTC, so without this, "Today" would silently use a 00:00-24:00 UTC window
+ * instead of matching Ads Manager's 00:00-24:00 Israel-time "Today".
  */
 export function presetDaysToDateRange(days: number, today: Date = new Date()): DateRange {
-  const until = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const untilIso = isoDateInTimezone(today);
+  const until = new Date(`${untilIso}T00:00:00Z`); // used only as a calendar-date container for the subtraction below
   const since = new Date(until);
   since.setUTCDate(since.getUTCDate() - (days - 1));
-  return { since: toIsoDate(since), until: toIsoDate(until) };
+  return { since: toIsoDate(since), until: untilIso };
 }
 
 /** Inclusive day count spanned by a date range, e.g. since=until -> 1 day. */

@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AdRow, AdSetRow, CampaignRow } from "@/lib/aggregate";
-import { DEFAULT_VISIBLE_COLUMN_KEYS, PERFORMANCE_COLUMNS } from "@/lib/columns";
+import { DEFAULT_VISIBLE_COLUMN_KEYS, PERFORMANCE_COLUMNS, SALES_METRIC_KEYS } from "@/lib/columns";
 import { LEAD_SOURCE_LABELS } from "@/lib/constants";
 import type { PerformanceMetrics } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,13 @@ function flattenRows(campaignRows: CampaignRow[], expanded: Set<string>): FlatRo
   return flat;
 }
 
-export function PerformanceTable({ campaignRows }: { campaignRows: CampaignRow[] }) {
+interface PerformanceTableProps {
+  campaignRows: CampaignRow[];
+  /** False when the advertising source is Meta Live and no real sales data is connected yet - see lib/columns.ts SALES_METRIC_KEYS. Defaults to true (Phase 1 mock behavior, unchanged). */
+  salesDataConnected?: boolean;
+}
+
+export function PerformanceTable({ campaignRows, salesDataConnected = true }: PerformanceTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(campaignRows.map((c) => c.id)));
   const [visibleKeys, setVisibleKeys] = useState<Set<keyof PerformanceMetrics>>(
     () => new Set(DEFAULT_VISIBLE_COLUMN_KEYS)
@@ -141,17 +147,20 @@ export function PerformanceTable({ campaignRows }: { campaignRows: CampaignRow[]
                 <TableCell>
                   <StatusBadge status={flat.row.status} />
                 </TableCell>
-                {visibleColumns.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    className={cn(
-                      "text-left tabular-nums-he",
-                      column.highlight ? "font-semibold text-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    {column.format(flat.row.metrics)}
-                  </TableCell>
-                ))}
+                {visibleColumns.map((column) => {
+                  const isDisconnected = !salesDataConnected && SALES_METRIC_KEYS.has(column.key);
+                  return (
+                    <TableCell
+                      key={column.key}
+                      className={cn(
+                        "text-left tabular-nums-he",
+                        column.highlight ? "font-semibold text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      {isDisconnected ? "-" : column.format(flat.row.metrics)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             );
           })}

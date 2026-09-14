@@ -8,7 +8,7 @@ import { InsightsCallout } from "@/components/dashboard/insights-callout";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { MetaSalesNote } from "@/components/dashboard/meta-sales-note";
 import { PerformanceTable } from "@/components/dashboard/performance-table";
-import { AdvertisingErrorPanel, AdvertisingLoadingPanel, EmptyCampaignsPanel } from "@/components/dashboard/status-panels";
+import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { aggregateTotals, buildPerformanceTree } from "@/lib/aggregate";
 import { presetDaysToDateRange } from "@/lib/advertising/date-range";
@@ -86,8 +86,20 @@ export default function DashboardPage() {
     [state]
   );
 
+  const source = state.phase === "ready" ? state.data.source : undefined;
+  // Sales/Revenue/Close Rate/Cost per Sale/ROAS only ever come from the
+  // internal/mock sales layer, which has no real attribution to live Meta
+  // campaigns. In mock mode that cross-join is the whole point of the demo;
+  // in Meta Live mode showing those mock numbers next to real spend/leads
+  // would look like real performance, so they're left disconnected ("טרם
+  // חובר") until a real sales-attribution source is wired up.
+  const salesDataConnected = source !== "meta";
+
   const totals: PerformanceMetrics = useMemo(() => {
     const advTotals = aggregateTotals(campaignRows);
+    if (!salesDataConnected) {
+      return { ...advTotals, sales: 0, revenue: 0, closeRate: null, costPerSale: null, roas: null };
+    }
     // Scaled by the same day-count factor as the mock advertising baseline, so
     // Sales stays proportional to whatever period is selected (a 1-day view
     // shouldn't carry a full 30-day sales total, which would blow up Close
@@ -104,9 +116,7 @@ export default function DashboardPage() {
       costPerSale: calcCostPerSale(advTotals.spend, internalSales.sales),
       roas: calcROAS(internalSales.revenue, advTotals.spend),
     };
-  }, [campaignRows, preset.days]);
-
-  const source = state.phase === "ready" ? state.data.source : undefined;
+  }, [campaignRows, preset.days, salesDataConnected]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -124,10 +134,10 @@ export default function DashboardPage() {
         <DataSourceBadge source={source} />
       </div>
 
-      {state.phase === "loading" && <AdvertisingLoadingPanel />}
+      {state.phase === "loading" && <LoadingPanel />}
 
       {state.phase === "error" && (
-        <AdvertisingErrorPanel
+        <ApiErrorPanel
           code={state.code}
           message={state.message}
           onRetry={() => {
@@ -139,16 +149,16 @@ export default function DashboardPage() {
 
       {state.phase === "ready" && (
         <>
-          <KpiCards metrics={totals} />
+          <KpiCards metrics={totals} salesDataConnected={salesDataConnected} />
           {state.data.source === "mock" && <TrendChart data={dailyTrend} />}
           {state.data.source === "meta" && <MetaSalesNote />}
 
           {state.data.campaigns.length === 0 ? (
-            <EmptyCampaignsPanel />
+            <EmptyStatePanel title="לא נמצאו קמפיינים" description="לא נמצאו קמפיינים פעילים בטווח התאריכים שנבחר." />
           ) : (
             <>
               <InsightsCallout campaignRows={campaignRows} />
-              <PerformanceTable campaignRows={campaignRows} />
+              <PerformanceTable campaignRows={campaignRows} salesDataConnected={salesDataConnected} />
             </>
           )}
         </>

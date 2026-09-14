@@ -38,3 +38,18 @@ export const PERFORMANCE_COLUMNS: PerformanceColumnDef[] = [
 export const DEFAULT_VISIBLE_COLUMN_KEYS = new Set(
   PERFORMANCE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key)
 );
+
+/**
+ * The metric keys sourced from the internal/mock sales layer, never from Meta
+ * (see lib/advertising/internal-sales.ts). Shared between KpiCards and
+ * PerformanceTable so both show the same "טרם חובר" treatment for these five
+ * columns whenever the advertising data source is Meta Live and no real sales
+ * attribution exists yet.
+ */
+export const SALES_METRIC_KEYS = new Set<keyof PerformanceMetrics>([
+  "sales",
+  "closeRate",
+  "costPerSale",
+  "revenue",
+  "roas",
+]);

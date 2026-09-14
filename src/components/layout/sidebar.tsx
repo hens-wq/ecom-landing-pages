@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Link2, Plug, TrendingUp } from "lucide-react";
+import { BarChart3, Link2, Plug, TrendingUp, UserRound } from "lucide-react";
 
 import { NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const NAV_ICONS = {
   "/": BarChart3,
+  "/leads": UserRound,
   "/sales-matching": Link2,
   "/integrations": Plug,
 } satisfies Record<string, React.ComponentType<{ className?: string }>>;

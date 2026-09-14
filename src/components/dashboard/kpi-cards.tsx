@@ -1,11 +1,12 @@
 import { Banknote, Gauge, Percent, Receipt, ShoppingCart, Tags, Target, Users } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { SALES_METRIC_KEYS } from "@/lib/columns";
 import { formatCurrency, formatMultiplier, formatNumber, formatPercent } from "@/lib/format";
 import type { PerformanceMetrics } from "@/lib/types";
 
 interface KpiDef {
-  key: string;
+  key: keyof PerformanceMetrics;
   labelHe: string;
   labelEn: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -23,11 +24,18 @@ const KPI_DEFS: KpiDef[] = [
   { key: "roas", labelHe: "החזר על הוצאות פרסום", labelEn: "ROAS", icon: Gauge, format: (m) => formatMultiplier(m.roas) },
 ];
 
-export function KpiCards({ metrics }: { metrics: PerformanceMetrics }) {
+interface KpiCardsProps {
+  metrics: PerformanceMetrics;
+  /** False when the advertising source is Meta Live and no real sales data is connected yet - see lib/columns.ts SALES_METRIC_KEYS. Defaults to true (Phase 1 mock behavior, unchanged). */
+  salesDataConnected?: boolean;
+}
+
+export function KpiCards({ metrics, salesDataConnected = true }: KpiCardsProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {KPI_DEFS.map((kpi) => {
         const Icon = kpi.icon;
+        const isDisconnected = !salesDataConnected && SALES_METRIC_KEYS.has(kpi.key);
         return (
           <Card key={kpi.key}>
             <CardContent className="flex flex-col gap-2 px-4 py-3.5">
@@ -38,7 +46,11 @@ export function KpiCards({ metrics }: { metrics: PerformanceMetrics }) {
                 </span>
                 <Icon className="size-3.5 shrink-0 text-muted-foreground" />
               </div>
-              <span className="tabular-nums-he text-xl font-bold">{kpi.format(metrics)}</span>
+              {isDisconnected ? (
+                <span className="text-sm font-semibold text-muted-foreground">טרם חובר (Not Connected)</span>
+              ) : (
+                <span className="tabular-nums-he text-xl font-bold">{kpi.format(metrics)}</span>
+              )}
             </CardContent>
           </Card>
         );

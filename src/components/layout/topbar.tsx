@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const PAGE_TITLES: Record<string, { he: string; en: string }> = {
   "/": { he: "דשבורד", en: "Dashboard" },
+  "/leads": { he: "לידים", en: "Leads" },
   "/sales-matching": { he: "מכירות והתאמות", en: "Sales & Matching" },
   "/integrations": { he: "חיבורים", en: "Integrations" },
 };
