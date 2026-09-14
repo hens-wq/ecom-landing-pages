@@ -1,8 +1,10 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { AdvertisingApiError, httpStatusForErrorCode } from "@/lib/advertising";
 import { isValidDateRange } from "@/lib/advertising/date-range";
 import { getLeadsData } from "@/lib/leads";
+import { LEADS_CACHE_TAG } from "@/lib/leads/meta/cache";
 
 // Same guarantees as /api/advertising: never statically cached, Node runtime
 // only (never Edge) so the Meta access token's request path never touches
@@ -19,6 +21,14 @@ export async function GET(request: NextRequest) {
       { error: { code: "bad_request", message: "פרמטרי טווח תאריכים (since/until) חסרים או לא תקינים." } },
       { status: 400 }
     );
+  }
+
+  // Only when the user explicitly clicks "רענון נתונים" (never automatically -
+  // see app/leads/page.tsx) - forces the next read of the leads cache to be a
+  // genuine blocking re-fetch from Meta ({ expire: 0 }) instead of serving
+  // the up-to-60s-stale cached snapshot (see lib/leads/meta/cache.ts).
+  if (request.nextUrl.searchParams.get("refresh") === "1") {
+    revalidateTag(LEADS_CACHE_TAG, { expire: 0 });
   }
 
   try {

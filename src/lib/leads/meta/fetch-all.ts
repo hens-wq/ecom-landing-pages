@@ -15,6 +15,27 @@ const OVERFLOW_CONCURRENCY = 5;
 
 const LEAD_FIELDS = "id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,field_data";
 
+/**
+ * Every non-deleted ad status Meta defines, requested explicitly rather than
+ * relying on whatever the `/ads` edge's undocumented default filtering is -
+ * a lead submitted while its ad was still active must still show up today
+ * even if that ad has since been paused or archived. DELETED ads genuinely
+ * can't be fetched via this edge at all, so that's the only status left out.
+ */
+const AD_EFFECTIVE_STATUSES = [
+  "ACTIVE",
+  "PAUSED",
+  "PENDING_REVIEW",
+  "DISAPPROVED",
+  "PREAPPROVED",
+  "PENDING_BILLING_INFO",
+  "CAMPAIGN_PAUSED",
+  "ARCHIVED",
+  "ADSET_PAUSED",
+  "IN_PROCESS",
+  "WITH_ISSUES",
+];
+
 interface MetaAdWithEmbeddedLeads {
   id: string;
   leads?: { data: MetaLeadgenNode[]; paging?: { next?: string } };
@@ -39,6 +60,12 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
 function logOverflowFetchFailure(adId: string, error: unknown): void {
   const code = error instanceof AdvertisingApiError ? error.code : "unknown_error";
   console.warn(`[meta leads] ad ${adId}: overflow lead page fetch failed (${code})`);
+}
+
+/** Counts only, never personal data - gated behind META_DEBUG_ACTIONS=1 (the same flag actions.ts uses) so it's opt-in, not noise in every deploy's logs. Use this to check completeness: does adCount match the account's real ad count in Ads Manager, and does totalLeadNodes look right relative to what Ads Manager shows for the account's whole history. */
+function logFetchSummary(adCount: number, overflowAdCount: number, totalLeadNodes: number): void {
+  if (process.env.META_DEBUG_ACTIONS !== "1") return;
+  console.log(`[meta leads] fetched ${adCount} ads (${overflowAdCount} needed overflow paging), ${totalLeadNodes} lead records total (all-time, unfiltered by date)`);
 }
 
 /**
@@ -74,6 +101,7 @@ function logOverflowFetchFailure(adId: string, error: unknown): void {
 export async function fetchAllLeadsFromMeta(config: MetaConfig): Promise<MetaFormLead[]> {
   const url = buildGraphUrl(config, `${config.adAccountId}/ads`, {
     fields: `id,leads.limit(${LEADS_PER_AD_LIMIT}){${LEAD_FIELDS}}`,
+    effective_status: JSON.stringify(AD_EFFECTIVE_STATUSES),
     limit: AD_LIST_PAGE_LIMIT,
   });
   const adNodes = await fetchAllPages<MetaAdWithEmbeddedLeads>(url);
@@ -98,5 +126,6 @@ export async function fetchAllLeadsFromMeta(config: MetaConfig): Promise<MetaFor
     leadNodes.push(...overflowResults.flat());
   }
 
+  logFetchSummary(adNodes.length, overflowAds.length, leadNodes.length);
   return leadNodes.map(mapMetaLeadgenNode);
 }

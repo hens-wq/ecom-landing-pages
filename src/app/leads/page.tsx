@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Info, RefreshCw, Search } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
@@ -52,6 +52,11 @@ export default function LeadsPage() {
   const [trackedRangeKey, setTrackedRangeKey] = useState(rangeKey);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  // Set right before bumping refreshTick from the manual "רענון נתונים" button
+  // only - read (and reset) inside the fetch effect to force a real Meta
+  // round-trip past the server-side cache. A date-range change bumps state
+  // via a different path and never touches this, so it stays false there.
+  const forceRefreshOnNextFetch = useRef(false);
 
   const [phoneSearch, setPhoneSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState<string | null>(null);
@@ -72,7 +77,12 @@ export default function LeadsPage() {
 
     async function run() {
       try {
-        const response = await fetch(`/api/leads?since=${range.since}&until=${range.until}`, { cache: "no-store" });
+        const forceRefresh = forceRefreshOnNextFetch.current;
+        forceRefreshOnNextFetch.current = false;
+        const refreshParam = forceRefresh ? "&refresh=1" : "";
+        const response = await fetch(`/api/leads?since=${range.since}&until=${range.until}${refreshParam}`, {
+          cache: "no-store",
+        });
         const json = await response.json();
         if (cancelled) return;
 
@@ -165,6 +175,7 @@ export default function LeadsPage() {
             variant="outline"
             size="sm"
             onClick={() => {
+              forceRefreshOnNextFetch.current = true;
               setIsRefreshing(true);
               setRefreshTick((tick) => tick + 1);
             }}

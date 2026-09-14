@@ -13,12 +13,17 @@ import type { MetaFormLead } from "@/lib/leads/types";
  * called again. This is the primary fix for the "changing the date range
  * re-triggers the whole fetch" rate-limit bug: every date range and filter
  * combination the Leads page can show within this window is served from the
- * same cached snapshot, with zero additional Meta calls. Tune this up if 5
- * minutes is too stale for how the team actually watches new leads come in,
- * or down if the account's lead volume is low enough that fresher data
- * matters more than call volume.
+ * same cached snapshot, with zero additional Meta calls. Kept short (rather
+ * than e.g. 5+ minutes) because "Today" is exactly the kind of fast-moving
+ * bucket someone will want to cross-check against Ads Manager - the manual
+ * "רענון נתונים" button (see app/leads/page.tsx + api/leads/route.ts) bypasses
+ * this entirely via revalidateTag(LEADS_CACHE_TAG) for an on-demand fresh
+ * pull, so this number only bounds how stale *automatic* loads can be.
  */
-const CACHE_REVALIDATE_SECONDS = 300;
+const CACHE_REVALIDATE_SECONDS = 60;
+
+/** Shared with api/leads/route.ts, which calls revalidateTag(LEADS_CACHE_TAG) on an explicit user-triggered refresh (never automatically). */
+export const LEADS_CACHE_TAG = "meta-leads";
 
 /**
  * Deliberately takes no arguments and re-derives config from checkMetaConfig()
@@ -56,7 +61,7 @@ async function fetchAndCache(): Promise<MetaFormLead[]> {
 
 const getCachedLeadsInternal = unstable_cache(fetchAndCache, ["meta-all-leads"], {
   revalidate: CACHE_REVALIDATE_SECONDS,
-  tags: ["meta-leads"],
+  tags: [LEADS_CACHE_TAG],
 });
 
 /**
