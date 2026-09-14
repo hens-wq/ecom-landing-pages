@@ -55,12 +55,15 @@ export class AdvertisingApiError extends Error {
   code: AdvertisingErrorCode;
   /** Non-sensitive technical detail (Meta's own error message/fbtrace_id), safe to log or show to a developer - never a token. */
   detail?: string;
+  /** Meta's own "try again in N minutes" hint for rate-limited errors, when it provided one - see meta/rate-limit.ts. Null when Meta didn't say (the generic message is used instead). */
+  retryAfterMinutes: number | null;
 
-  constructor(code: AdvertisingErrorCode, message: string, detail?: string) {
+  constructor(code: AdvertisingErrorCode, message: string, detail?: string, retryAfterMinutes: number | null = null) {
     super(message);
     this.name = "AdvertisingApiError";
     this.code = code;
     this.detail = detail;
+    this.retryAfterMinutes = retryAfterMinutes;
   }
 }
 

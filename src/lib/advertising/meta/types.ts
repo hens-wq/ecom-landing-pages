@@ -23,6 +23,8 @@ export interface MetaErrorBody {
     code?: number;
     error_subcode?: number;
     fbtrace_id?: string;
+    /** Present on some ad-account-level rate-limit errors - see meta/rate-limit.ts. */
+    error_data?: { estimated_time_to_regain_access?: number };
   };
 }
 

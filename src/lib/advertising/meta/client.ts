@@ -2,6 +2,7 @@ import "server-only";
 
 import { AdvertisingApiError } from "@/lib/advertising/types";
 import type { MetaConfig } from "@/lib/advertising/meta/config";
+import { extractEstimatedWaitMinutes } from "@/lib/advertising/meta/rate-limit";
 import type { MetaErrorBody, MetaListResponse } from "@/lib/advertising/meta/types";
 
 const GRAPH_BASE_URL = "https://graph.facebook.com";
@@ -9,21 +10,30 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** Defensive cap so a very large ad account (or an API bug) can't loop forever following `paging.next`. */
 const MAX_PAGES = 50;
 
-/** Meta's own numeric error codes for expired/invalid auth and rate limiting. */
+/** Meta's own numeric error codes for expired/invalid auth and rate limiting. 80004 is the ad-account-level throttle code (as opposed to 4/17/32/613, which are app/user/page-level). */
 const INVALID_TOKEN_CODES = new Set([190]);
-const RATE_LIMIT_CODES = new Set([4, 17, 32, 613]);
+const RATE_LIMIT_CODES = new Set([4, 17, 32, 613, 80004]);
 const PERMISSION_CODES = new Set([10, 200, 299]);
 
-function mapMetaError(httpStatus: number, body: MetaErrorBody | null): AdvertisingApiError {
+function rateLimitedError(detail: string, waitMinutes: number | null): AdvertisingApiError {
+  const message =
+    waitMinutes !== null
+      ? `חריגה ממכסת הבקשות ל-Meta API. Meta מעריכה שניתן יהיה לנסות שוב בעוד כ-${waitMinutes} דקות.`
+      : "חריגה ממכסת הבקשות ל-Meta API. נסו שוב בעוד מספר דקות.";
+  return new AdvertisingApiError("rate_limited", message, detail, waitMinutes);
+}
+
+function mapMetaError(httpStatus: number, body: MetaErrorBody | null, headers: Headers): AdvertisingApiError {
   const error = body?.error;
   const detail = error ? `${error.type ?? "Error"} (code ${error.code ?? "?"}): ${error.message}` : `HTTP ${httpStatus}`;
+  const waitMinutes = extractEstimatedWaitMinutes(body, headers);
 
   if (error?.code !== undefined) {
     if (INVALID_TOKEN_CODES.has(error.code)) {
       return new AdvertisingApiError("invalid_token", "טוקן הגישה ל-Meta אינו תקין או שפג תוקפו. יש להנפיק טוקן חדש.", detail);
     }
     if (RATE_LIMIT_CODES.has(error.code)) {
-      return new AdvertisingApiError("rate_limited", "חריגה ממכסת הבקשות ל-Meta API. נסו שוב בעוד מספר דקות.", detail);
+      return rateLimitedError(detail, waitMinutes);
     }
     if (PERMISSION_CODES.has(error.code)) {
       return new AdvertisingApiError(
@@ -41,7 +51,7 @@ function mapMetaError(httpStatus: number, body: MetaErrorBody | null): Advertisi
     return new AdvertisingApiError("permission_error", "אין הרשאה לגשת לחשבון הפרסום ב-Meta.", detail);
   }
   if (httpStatus === 429) {
-    return new AdvertisingApiError("rate_limited", "חריגה ממכסת הבקשות ל-Meta API. נסו שוב בעוד מספר דקות.", detail);
+    return rateLimitedError(detail, waitMinutes);
   }
   if (httpStatus === 404) {
     return new AdvertisingApiError("missing_account_id", "חשבון הפרסום לא נמצא. בדקו את META_AD_ACCOUNT_ID.", detail);
@@ -75,7 +85,7 @@ async function metaFetch(url: string): Promise<unknown> {
 
   const body = json as Partial<MetaErrorBody>;
   if (!response.ok || body?.error) {
-    throw mapMetaError(response.status, body?.error ? (body as MetaErrorBody) : null);
+    throw mapMetaError(response.status, body?.error ? (body as MetaErrorBody) : null, response.headers);
   }
 
   return json;

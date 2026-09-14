@@ -32,7 +32,7 @@ export async function getLeadsData(range: DateRange): Promise<LeadsResult> {
     );
   }
 
-  const provider = new MetaLeadsProvider(check.config);
+  const provider = new MetaLeadsProvider();
   const leads = await provider.getLeads(range);
   return { source: "meta", leads };
 }
