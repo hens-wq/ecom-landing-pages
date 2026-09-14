@@ -1,4 +1,4 @@
-import { logRawActionsForDebugging, parseLeadsFromActions } from "@/lib/advertising/meta/actions";
+import { logLeadParsingForDebugging, parseLeadsFromActions } from "@/lib/advertising/meta/actions";
 import type {
   MetaAdInsightsRow,
   MetaAdNode,
@@ -38,13 +38,14 @@ function parseNumber(value: string | undefined): number {
 }
 
 function insightsRowToRawMetrics(row: MetaAdInsightsRow): RawMetrics {
-  logRawActionsForDebugging(row.ad_id, row.actions);
+  const leadResult = parseLeadsFromActions(row.actions);
+  logLeadParsingForDebugging(row.ad_id, leadResult);
   return {
     spend: parseNumber(row.spend),
     impressions: parseNumber(row.impressions),
     reach: parseNumber(row.reach),
     linkClicks: parseNumber(row.inline_link_clicks),
-    leads: parseLeadsFromActions(row.actions),
+    leads: leadResult.leads,
     // Sales-side numbers never come from Meta (see lib/advertising/internal-sales.ts) -
     // real ads always report 0 here until real sales attribution exists.
     sales: 0,

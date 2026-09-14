@@ -3,17 +3,11 @@ import "server-only";
 import { buildGraphUrl, fetchAllPages, fetchNode } from "@/lib/advertising/meta/client";
 import type { MetaConfig } from "@/lib/advertising/meta/config";
 import { mapMetaHierarchyToCampaigns } from "@/lib/advertising/meta/mapper";
-import type {
-  MetaAdAccountNode,
-  MetaAdInsightsRow,
-  MetaAdNode,
-  MetaAdSetNode,
-  MetaCampaignNode,
-} from "@/lib/advertising/meta/types";
+import { fetchAdNodes, fetchAdSetNodes, fetchCampaignNodes } from "@/lib/advertising/meta/nodes";
+import type { MetaAdAccountNode, MetaAdInsightsRow } from "@/lib/advertising/meta/types";
 import type { AdvertisingAccountInfo, AdvertisingDataProvider, DateRange } from "@/lib/advertising/types";
 import type { Campaign } from "@/lib/types";
 
-const LIST_PAGE_LIMIT = "200";
 const INSIGHTS_PAGE_LIMIT = "500";
 
 export class MetaAdvertisingProvider implements AdvertisingDataProvider {
@@ -29,37 +23,13 @@ export class MetaAdvertisingProvider implements AdvertisingDataProvider {
 
   async getCampaigns(range: DateRange): Promise<Campaign[]> {
     const [campaignNodes, adSetNodes, adNodes, insightsRows] = await Promise.all([
-      this.fetchCampaignNodes(),
-      this.fetchAdSetNodes(),
-      this.fetchAdNodes(),
+      fetchCampaignNodes(this.config),
+      fetchAdSetNodes(this.config),
+      fetchAdNodes(this.config),
       this.fetchAdInsights(range),
     ]);
 
     return mapMetaHierarchyToCampaigns(campaignNodes, adSetNodes, adNodes, insightsRows);
-  }
-
-  private fetchCampaignNodes(): Promise<MetaCampaignNode[]> {
-    const url = buildGraphUrl(this.config, `${this.config.adAccountId}/campaigns`, {
-      fields: "id,name,status,effective_status",
-      limit: LIST_PAGE_LIMIT,
-    });
-    return fetchAllPages<MetaCampaignNode>(url);
-  }
-
-  private fetchAdSetNodes(): Promise<MetaAdSetNode[]> {
-    const url = buildGraphUrl(this.config, `${this.config.adAccountId}/adsets`, {
-      fields: "id,name,campaign_id,status,effective_status",
-      limit: LIST_PAGE_LIMIT,
-    });
-    return fetchAllPages<MetaAdSetNode>(url);
-  }
-
-  private fetchAdNodes(): Promise<MetaAdNode[]> {
-    const url = buildGraphUrl(this.config, `${this.config.adAccountId}/ads`, {
-      fields: "id,name,adset_id,campaign_id,status,effective_status",
-      limit: LIST_PAGE_LIMIT,
-    });
-    return fetchAllPages<MetaAdNode>(url);
   }
 
   /**
