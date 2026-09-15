@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { validateStatusUpdate } from "@/lib/lead-status/validation";
 
@@ -9,15 +10,9 @@ import { validateStatusUpdate } from "@/lib/lead-status/validation";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
-  const repository = getLeadStatusRepository();
-  const records = await repository.getAll();
-  return NextResponse.json({ records: Array.from(records.values()) });
-}
-
 interface UpsertBody {
   leadId?: unknown;
-  phone?: unknown;
+  normalizedPhone?: unknown;
   mainStatus?: unknown;
   secondaryStatus?: unknown;
   fullPaymentAmount?: unknown;
@@ -41,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "גוף הבקשה אינו JSON תקין." } }, { status: 400 });
   }
 
-  const { leadId, mainStatus, secondaryStatus, phone } = body;
+  const { leadId, mainStatus, secondaryStatus, normalizedPhone } = body;
   if (typeof leadId !== "string" || !leadId) {
     return NextResponse.json({ error: { message: "leadId חסר." } }, { status: 400 });
   }
@@ -58,7 +53,14 @@ export async function POST(request: NextRequest) {
   const partialPaymentAmount = partialPaymentParsed.value;
 
   const repository = getLeadStatusRepository();
-  const existing = await repository.get(leadId);
+
+  let existing;
+  try {
+    existing = await repository.get(leadId);
+  } catch (error) {
+    const message = error instanceof LeadStatusDatabaseError ? error.message : "שגיאה לא צפויה בגישה למסד הנתונים.";
+    return NextResponse.json({ error: { message } }, { status: 503 });
+  }
 
   const validation = validateStatusUpdate({ mainStatus, secondaryStatus, fullPaymentAmount, partialPaymentAmount }, existing);
   if (!validation.ok) {
@@ -69,14 +71,17 @@ export async function POST(request: NextRequest) {
     const updated = await repository.upsert(leadId, {
       mainStatus,
       secondaryStatus,
-      phone: typeof phone === "string" ? phone : undefined,
+      normalizedPhone: typeof normalizedPhone === "string" ? normalizedPhone : undefined,
       fullPaymentAmount,
       partialPaymentAmount,
     });
     return NextResponse.json({ record: updated });
-  } catch {
+  } catch (error) {
     // Never log the request body here - it carries phone numbers and payment
-    // amounts. A generic message is enough for the client.
-    return NextResponse.json({ error: { message: "שגיאה לא צפויה בשמירת הסטטוס." } }, { status: 500 });
+    // amounts. LeadStatusDatabaseError's own message is always a safe,
+    // hand-written Hebrew string (see db.ts) - never the raw driver error,
+    // which could in rare cases echo connection details.
+    const message = error instanceof LeadStatusDatabaseError ? error.message : "שגיאה לא צפויה בשמירת הסטטוס.";
+    return NextResponse.json({ error: { message } }, { status: 503 });
   }
 }

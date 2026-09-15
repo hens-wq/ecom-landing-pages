@@ -9,7 +9,7 @@ export interface LeadStatusPatch {
   secondaryStatus: string;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
-  phone?: string | null;
+  normalizedPhone?: string | null;
 }
 
 function isPositiveAmount(value: number | null | undefined): value is number {

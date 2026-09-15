@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Info, RefreshCw, Search } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
+import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
 import { FilterDropdown, type FilterOption } from "@/components/leads/filter-dropdown";
 import { LeadsTable } from "@/components/leads/leads-table";
-import { PersistenceWarning } from "@/components/leads/persistence-warning";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { DateRangeSelect } from "@/components/shared/date-range-select";
@@ -20,7 +20,7 @@ import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { calculateIrrelevantRate, calculateSalesSummary } from "@/lib/lead-status/calculations";
-import { defaultLeadStatusRecord, LEAD_STATUS_PERSISTENCE_IS_REAL, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -105,6 +105,8 @@ export default function LeadsPage() {
   const [refreshTick, setRefreshTick] = useState(0);
   const forceRefreshOnNextFetch = useRef(false);
 
+  const [dbHealth, setDbHealth] = useState<{ status: DatabaseStatus; message?: string }>({ status: "checking" });
+
   const [phoneSearch, setPhoneSearch] = useState("");
   const [campaignFilter, setCampaignFilter] = useState<string | null>(null);
   const [adSetFilter, setAdSetFilter] = useState<string | null>(null);
@@ -128,18 +130,16 @@ export default function LeadsPage() {
         forceRefreshOnNextFetch.current = false;
         const refreshParam = forceRefresh ? "&refresh=1" : "";
 
-        const [leadsRes, advertisingRes, statusRes, campaignStatusRes] = await Promise.all([
+        const [leadsRes, advertisingRes, campaignStatusRes] = await Promise.all([
           fetch(`/api/leads?since=${range.since}&until=${range.until}${refreshParam}`, { cache: "no-store" }),
           fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
-          fetch(`/api/lead-status`, { cache: "no-store" }),
           fetch(`/api/campaign-status`, { cache: "no-store" }),
         ]);
         if (cancelled) return;
 
-        const [leadsJson, advertisingJson, statusJson, campaignStatusJson] = await Promise.all([
+        const [leadsJson, advertisingJson, campaignStatusJson] = await Promise.all([
           leadsRes.json(),
           advertisingRes.json(),
-          statusRes.json(),
           campaignStatusRes.json(),
         ]);
         if (cancelled) return;
@@ -147,7 +147,6 @@ export default function LeadsPage() {
         const failed = [
           { res: leadsRes, json: leadsJson },
           { res: advertisingRes, json: advertisingJson },
-          { res: statusRes, json: statusJson },
           { res: campaignStatusRes, json: campaignStatusJson },
         ].find((entry) => !entry.res.ok || entry.json.error);
         if (failed) {
@@ -159,6 +158,28 @@ export default function LeadsPage() {
           return;
         }
 
+        const leadsResult = leadsJson as LeadsResult;
+
+        // Batch-load statuses only for the leads actually loaded for this
+        // date range (not the whole table's history) - one query instead of
+        // one per row. See api/lead-status/batch/route.ts.
+        const statusRes = await fetch("/api/lead-status/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadIds: leadsResult.leads.map((lead) => lead.id) }),
+        });
+        if (cancelled) return;
+        const statusJson = await statusRes.json();
+        if (cancelled) return;
+        if (!statusRes.ok || statusJson.error) {
+          setState({
+            phase: "error",
+            code: "unknown_error",
+            message: statusJson.error?.message ?? "שגיאה לא צפויה בטעינת סטטוסי הלידים ממסד הנתונים.",
+          });
+          return;
+        }
+
         const statusesByLeadId = new Map<string, LeadStatusRecord>(
           (statusJson.records as LeadStatusRecord[]).map((record) => [record.leadId, record])
         );
@@ -166,7 +187,7 @@ export default function LeadsPage() {
         setState({
           phase: "ready",
           data: {
-            leadsResult: leadsJson as LeadsResult,
+            leadsResult,
             campaignRows: buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns),
             statusesByLeadId,
             campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
@@ -191,6 +212,25 @@ export default function LeadsPage() {
     };
   }, [range.since, range.until, refreshTick]);
 
+  // Independent of the main data load - only drives the "מסד נתונים מחובר"
+  // indicator, never blocks viewing leads (a save attempt will surface its
+  // own clear error if the database turns out to be unavailable).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/lead-status/health", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: { connected: boolean; message?: string }) => {
+        if (cancelled) return;
+        setDbHealth({ status: data.connected ? "connected" : "error", message: data.message });
+      })
+      .catch(() => {
+        if (!cancelled) setDbHealth({ status: "error", message: "לא ניתן היה לבדוק את חיבור מסד הנתונים." });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTick]);
+
   const allLeads = useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
   const source = state.phase === "ready" ? state.data.leadsResult.source : undefined;
   const statusesByLeadId = useMemo(() => (state.phase === "ready" ? state.data.statusesByLeadId : new Map<string, LeadStatusRecord>()), [state]);
@@ -205,8 +245,8 @@ export default function LeadsPage() {
     return merged;
   }, [statusesByLeadId, statusOverrides]);
 
-  function getStatus(leadId: string, phone: string | null): LeadStatusRecord {
-    return effectiveStatusesByLeadId.get(leadId) ?? defaultLeadStatusRecord(leadId, phone);
+  function getStatus(leadId: string, normalizedPhone: string | null): LeadStatusRecord {
+    return effectiveStatusesByLeadId.get(leadId) ?? defaultLeadStatusRecord(leadId, normalizedPhone);
   }
 
   async function saveLeadStatus(leadId: string, patch: LeadStatusPatch): Promise<LeadStatusRecord> {
@@ -273,7 +313,7 @@ export default function LeadsPage() {
   const secondaryStatusOptions = useMemo<FilterOption[]>(() => {
     const present = new Set<string>();
     for (const lead of scopedLeads) {
-      const record = getStatus(lead.id, lead.phone);
+      const record = getStatus(lead.id, lead.normalizedPhone);
       if (!mainStatusFilter || record.mainStatus === mainStatusFilter) present.add(record.secondaryStatus);
     }
     return Array.from(present, (status) => ({ id: status, label: status }));
@@ -282,7 +322,7 @@ export default function LeadsPage() {
 
   const filteredLeads = useMemo(() => {
     return scopedLeads.filter((lead) => {
-      const record = getStatus(lead.id, lead.phone);
+      const record = getStatus(lead.id, lead.normalizedPhone);
       if (mainStatusFilter && record.mainStatus !== mainStatusFilter) return false;
       if (secondaryStatusFilter && record.secondaryStatus !== secondaryStatusFilter) return false;
       return leadMatchesPhoneQuery(lead, phoneSearch);
@@ -316,7 +356,7 @@ export default function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {!LEAD_STATUS_PERSISTENCE_IS_REAL && <PersistenceWarning />}
+      {dbHealth.status === "error" && <DatabaseStatusBadge status={dbHealth.status} message={dbHealth.message} />}
 
       <Card className="border-primary/25 bg-primary/[0.035]">
         <CardContent className="flex gap-3 px-5 py-4 text-sm leading-relaxed">
@@ -347,7 +387,10 @@ export default function LeadsPage() {
             {isRefreshing ? "מרענן..." : "רענון נתונים"}
           </Button>
         </div>
-        <DataSourceBadge source={source} />
+        <div className="flex items-center gap-2">
+          {dbHealth.status === "connected" && <DatabaseStatusBadge status={dbHealth.status} />}
+          <DataSourceBadge source={source} />
+        </div>
       </div>
 
       {state.phase === "loading" && <LoadingPanel label="טוען לידים..." />}

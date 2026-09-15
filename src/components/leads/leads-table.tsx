@@ -36,7 +36,7 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
             <LeadRow
               key={lead.id}
               lead={lead}
-              statusRecord={statusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.phone)}
+              statusRecord={statusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone)}
               onSaveStatus={onSaveStatus}
               onStatusSaved={onStatusSaved}
             />

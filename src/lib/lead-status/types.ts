@@ -77,8 +77,10 @@ export const DEFAULT_SECONDARY_STATUS = "חדש";
 
 /**
  * Ecom-internal business data attached to one Meta lead, keyed by Meta Lead
- * ID (see repository.ts - phone is kept only as a secondary matching aid,
- * never the primary key, since the same phone can have multiple leads).
+ * ID (see repository.ts - normalizedPhone is kept only as a secondary
+ * matching aid, never the primary key, since the same phone can have
+ * multiple leads). Only the normalized form is stored - the raw phone
+ * string already lives in Meta and doesn't need duplicating here.
  *
  * fullPaymentAmount and partialPaymentAmount are BOTH kept on the record even
  * though only one of them is ever "active" (counted) at a time, based on the
@@ -88,7 +90,7 @@ export const DEFAULT_SECONDARY_STATUS = "חדש";
  */
 export interface LeadStatusRecord {
   leadId: string;
-  phone: string | null;
+  normalizedPhone: string | null;
   mainStatus: MainStatus;
   secondaryStatus: string;
   fullPaymentAmount: number | null;
@@ -96,20 +98,10 @@ export interface LeadStatusRecord {
   updatedAt: string; // ISO datetime
 }
 
-/**
- * Whether the repository currently backing getLeadStatusRepository()
- * (lib/lead-status/repository.ts) is real, durable persistence - drives the
- * warning banner on the Leads page (components/leads/persistence-warning.tsx).
- * Lives here (not in repository.ts, which is server-only) so client
- * components can read it directly. Flip manually the day a real
- * implementation is wired in.
- */
-export const LEAD_STATUS_PERSISTENCE_IS_REAL = false;
-
-export function defaultLeadStatusRecord(leadId: string, phone: string | null): LeadStatusRecord {
+export function defaultLeadStatusRecord(leadId: string, normalizedPhone: string | null): LeadStatusRecord {
   return {
     leadId,
-    phone,
+    normalizedPhone,
     mainStatus: DEFAULT_MAIN_STATUS,
     secondaryStatus: DEFAULT_SECONDARY_STATUS,
     fullPaymentAmount: null,

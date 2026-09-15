@@ -1,98 +1,154 @@
 import "server-only";
 
-import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
+import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
+import type { LeadStatusRecord, MainStatus } from "@/lib/lead-status/types";
 
 /**
- * ============================================================================
- * PERSISTENCE STATUS: NOT YET CONFIGURED - READ THIS BEFORE RELYING ON IT
- * ============================================================================
- *
- * This file defines the repository INTERFACE the rest of the app is meant to
- * talk to (getLeadStatusRepository()), and ONE implementation of it -
- * InMemoryLeadStatusRepository - which exists ONLY so this feature is
- * demoable end-to-end on a Preview deploy. It is NOT real persistence:
- *
- *  - It lives in a plain in-process Map. On Vercel, serverless functions are
- *    ephemeral and often cold-start on a fresh instance per request/burst -
- *    there is no guarantee two requests even hit the same process, so edits
- *    can appear to vanish unpredictably, not just "on the next deploy".
- *  - It is wiped on every deploy, and can be wiped at any time in between
- *    (an idle instance recycling, a scale-to-zero event, etc.).
- *  - It is per-process, never shared across multiple warm instances serving
- *    the same deployment concurrently - two people editing at the same time
- *    can each see a different, incomplete picture.
- *
- * This is exactly what the spec explicitly said not to fake as real
- * persistence - it deliberately is NOT presented as one. See the banner this
- * powers on the Leads page (components/leads/persistence-warning.tsx) and
- * the session's final report for what a real backing store requires.
- *
- * ---- Intended schema for a real backing store (not yet applied anywhere) ----
+ * Backed by Neon Postgres (see db.ts) - a `lead_status` table, one row per
+ * Meta Lead ID:
  *
  *   CREATE TABLE lead_status (
- *     lead_id                text PRIMARY KEY,          -- Meta Lead ID - the only real key
- *     phone                  text,                       -- secondary matching aid only, never a key
+ *     meta_lead_id           text PRIMARY KEY,   -- Meta Lead ID - the only real key
+ *     normalized_phone       text,               -- secondary matching aid only, never a key
  *     main_status            text NOT NULL,
  *     secondary_status       text NOT NULL,
  *     full_payment_amount    numeric,
  *     partial_payment_amount numeric,
+ *     created_at             timestamptz NOT NULL DEFAULT now(),
  *     updated_at             timestamptz NOT NULL DEFAULT now()
  *   );
- *   CREATE INDEX lead_status_phone_idx ON lead_status (phone);
  *
- * Swapping in a real implementation later is meant to be a single new class
- * in this file (e.g. PostgresLeadStatusRepository) plus a one-line change to
- * getLeadStatusRepository() below - nothing outside this file (the API
- * route, the calculations, the UI) needs to know or care which one is live.
+ * Created idempotently by ensureSchema() (db.ts) - IF NOT EXISTS only, never
+ * dropped/recreated, existing rows are never touched by migration.
  */
 
 export interface LeadStatusUpsertPatch {
   mainStatus: string;
   secondaryStatus: string;
-  phone?: string | null;
+  /** Undefined = "not being changed by this update" (falls back to the existing stored value); null = "explicitly cleared". */
+  normalizedPhone?: string | null;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
 }
 
 export interface LeadStatusRepository {
-  getAll(): Promise<Map<string, LeadStatusRecord>>;
   get(leadId: string): Promise<LeadStatusRecord | undefined>;
-  /** Trusts its caller - validate against validation.ts's validateStatusUpdate() BEFORE calling this, not after. */
+  /** Batch read for however many lead IDs are currently loaded on the Leads page - avoids one query per row. */
+  getMany(leadIds: string[]): Promise<Map<string, LeadStatusRecord>>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
 }
 
-/** TEMPORARY / NON-PERSISTENT - see the file-level banner above. */
-class InMemoryLeadStatusRepository implements LeadStatusRepository {
-  private readonly store = new Map<string, LeadStatusRecord>();
+interface LeadStatusRow {
+  meta_lead_id: string;
+  normalized_phone: string | null;
+  main_status: string;
+  secondary_status: string;
+  full_payment_amount: string | number | null;
+  partial_payment_amount: string | number | null;
+  updated_at: string;
+}
 
-  async getAll(): Promise<Map<string, LeadStatusRecord>> {
-    return new Map(this.store);
-  }
+/** Postgres NUMERIC columns come back as strings (to avoid float precision loss on the wire) - this is the one place that converts back to a JS number. */
+function parseAmount(value: string | number | null): number | null {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
+function mapRow(row: LeadStatusRow): LeadStatusRecord {
+  return {
+    leadId: row.meta_lead_id,
+    normalizedPhone: row.normalized_phone,
+    mainStatus: row.main_status as MainStatus,
+    secondaryStatus: row.secondary_status,
+    fullPaymentAmount: parseAmount(row.full_payment_amount),
+    partialPaymentAmount: parseAmount(row.partial_payment_amount),
+    updatedAt: row.updated_at,
+  };
+}
+
+const UPSERT_SQL = `
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, created_at, updated_at)
+  VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+  ON CONFLICT (meta_lead_id) DO UPDATE SET
+    normalized_phone = EXCLUDED.normalized_phone,
+    main_status = EXCLUDED.main_status,
+    secondary_status = EXCLUDED.secondary_status,
+    full_payment_amount = EXCLUDED.full_payment_amount,
+    partial_payment_amount = EXCLUDED.partial_payment_amount,
+    updated_at = now()
+  RETURNING *
+`;
+
+class PostgresLeadStatusRepository implements LeadStatusRepository {
   async get(leadId: string): Promise<LeadStatusRecord | undefined> {
-    return this.store.get(leadId);
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT * FROM lead_status WHERE meta_lead_id = ${leadId}`) as LeadStatusRow[];
+      return rows[0] ? mapRow(rows[0]) : undefined;
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת סטטוס הליד ממסד הנתונים.");
+    }
   }
 
+  async getMany(leadIds: string[]): Promise<Map<string, LeadStatusRecord>> {
+    const result = new Map<string, LeadStatusRecord>();
+    if (leadIds.length === 0) return result;
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT * FROM lead_status WHERE meta_lead_id = ANY(${leadIds})`) as LeadStatusRow[];
+      for (const row of rows) {
+        const record = mapRow(row);
+        result.set(record.leadId, record);
+      }
+      return result;
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת סטטוסי הלידים ממסד הנתונים.");
+    }
+  }
+
+  /**
+   * Reads the existing row first so undefined patch fields keep their
+   * stored value (see LeadStatusUpsertPatch), then writes the fully
+   * resolved record. Not atomic against a concurrent edit of the SAME lead
+   * by two people at the exact same instant - an accepted tradeoff for a
+   * small internal tool where that's extremely unlikely, not engineered
+   * around with optimistic locking here.
+   */
   async upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord> {
-    const existing = this.store.get(leadId) ?? defaultLeadStatusRecord(leadId, patch.phone ?? null);
-    const next: LeadStatusRecord = {
-      leadId,
-      phone: patch.phone !== undefined ? patch.phone : existing.phone,
-      mainStatus: patch.mainStatus as LeadStatusRecord["mainStatus"],
-      secondaryStatus: patch.secondaryStatus,
-      fullPaymentAmount: patch.fullPaymentAmount !== undefined ? patch.fullPaymentAmount : existing.fullPaymentAmount,
-      partialPaymentAmount:
-        patch.partialPaymentAmount !== undefined ? patch.partialPaymentAmount : existing.partialPaymentAmount,
-      updatedAt: new Date().toISOString(),
-    };
-    this.store.set(leadId, next);
-    return next;
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+
+      const existing = await this.get(leadId);
+
+      const normalizedPhone = patch.normalizedPhone !== undefined ? patch.normalizedPhone : (existing?.normalizedPhone ?? null);
+      const fullPaymentAmount =
+        patch.fullPaymentAmount !== undefined ? patch.fullPaymentAmount : (existing?.fullPaymentAmount ?? null);
+      const partialPaymentAmount =
+        patch.partialPaymentAmount !== undefined ? patch.partialPaymentAmount : (existing?.partialPaymentAmount ?? null);
+
+      const rows = (await sql.query(UPSERT_SQL, [
+        leadId,
+        normalizedPhone,
+        patch.mainStatus,
+        patch.secondaryStatus,
+        fullPaymentAmount,
+        partialPaymentAmount,
+      ])) as LeadStatusRow[];
+
+      return mapRow(rows[0]);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בשמירת הסטטוס במסד הנתונים. הנתונים לא נשמרו.");
+    }
   }
 }
 
-const sharedInMemoryRepository = new InMemoryLeadStatusRepository();
+const sharedRepository = new PostgresLeadStatusRepository();
 
-/** Single point every caller goes through - see the swap-in note above for how this changes once a real database is configured. */
+/** Single point every caller goes through. */
 export function getLeadStatusRepository(): LeadStatusRepository {
-  return sharedInMemoryRepository;
+  return sharedRepository;
 }

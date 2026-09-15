@@ -19,7 +19,7 @@ interface LeadRowProps {
 
 export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: LeadRowProps) {
   const editor = useLeadStatusEditor(statusRecord, async (patch) => {
-    const saved = await onSaveStatus(lead.id, { ...patch, phone: lead.phone });
+    const saved = await onSaveStatus(lead.id, { ...patch, normalizedPhone: lead.normalizedPhone });
     onStatusSaved(saved);
     return saved;
   });
