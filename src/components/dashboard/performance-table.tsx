@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChevronDown, Image as ImageIcon, Layers3, Megaphone } from "lucide-react";
 
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -45,6 +46,7 @@ export function PerformanceTable({ campaignRows, salesDataConnected = true }: Pe
   const [visibleKeys, setVisibleKeys] = useState<Set<keyof PerformanceMetrics>>(
     () => new Set(DEFAULT_VISIBLE_COLUMN_KEYS)
   );
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const flatRows = useMemo(() => flattenRows(campaignRows, expanded), [campaignRows, expanded]);
   const visibleColumns = useMemo(
@@ -82,7 +84,8 @@ export function PerformanceTable({ campaignRows, salesDataConnected = true }: Pe
         <ColumnVisibilityMenu visibleKeys={visibleKeys} onToggle={toggleColumn} />
       </div>
 
-      <Table>
+      <TableTopScrollbar targetRef={tableContainerRef} />
+      <Table ref={tableContainerRef}>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="sticky right-0 z-10 min-w-64 border-l border-border bg-card">שם (Name)</TableHead>

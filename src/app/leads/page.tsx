@@ -5,7 +5,7 @@ import { Info, RefreshCw, Search } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
-import { FilterDropdown, type FilterOption } from "@/components/leads/filter-dropdown";
+import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";

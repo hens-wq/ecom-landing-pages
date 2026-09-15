@@ -3,16 +3,17 @@
 import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import type { MainStatus } from "@/lib/lead-status/types";
+import { cn } from "@/lib/utils";
 
 interface AmountFieldProps {
   value: number | null;
+  /** Whether this is the field matching the current secondary status - counted (see lib/lead-status/calculations.ts activePaymentAmount), editable, and visually emphasized. When false the field may still show a stale leftover value (never silently erased, per spec) but is disabled and un-emphasized. */
   active: boolean;
   disabled?: boolean;
   onCommit: (amount: number | null) => void;
 }
 
-/** One amount field, committed on blur (not per keystroke) - `active` controls whether it's currently the counted field (see lib/lead-status/calculations.ts activePaymentAmount) vs a stale leftover value from a previous status that must stay visible but never editable. */
+/** Committed on blur (not per keystroke). */
 function AmountField({ value, active, disabled, onCommit }: AmountFieldProps) {
   const [draft, setDraft] = useState(value === null ? "" : String(value));
   const [trackedValue, setTrackedValue] = useState(value);
@@ -41,67 +42,40 @@ function AmountField({ value, active, disabled, onCommit }: AmountFieldProps) {
   }
 
   return (
-    <Input
-      type="number"
-      min="0"
-      step="1"
-      dir="ltr"
-      value={draft}
-      disabled={disabled || !active}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-      }}
-      placeholder={active ? "סכום" : "-"}
-      className="h-8 w-24 text-xs tabular-nums-he"
-    />
-  );
-}
-
-interface PaymentInputsProps {
-  mainStatus: MainStatus;
-  secondaryStatus: string;
-  fullPaymentAmount: number | null;
-  partialPaymentAmount: number | null;
-  disabled?: boolean;
-  onFullPaymentChange: (amount: number | null) => void;
-  onPartialPaymentChange: (amount: number | null) => void;
-}
-
-/**
- * Only the amount field matching the CURRENT secondary status is editable
- * and counted (see calculations.ts) - the other stays visible if it already
- * has a value (never silently erased, per spec) but greyed out with a note
- * that it isn't being counted right now.
- */
-export function PaymentInputs({
-  mainStatus,
-  secondaryStatus,
-  fullPaymentAmount,
-  partialPaymentAmount,
-  disabled,
-  onFullPaymentChange,
-  onPartialPaymentChange,
-}: PaymentInputsProps) {
-  const isRegistered = mainStatus === "נרשם";
-  const fullActive = isRegistered && secondaryStatus === "תשלום מלא";
-  const partialActive = isRegistered && secondaryStatus === "תשלום חלקי";
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <AmountField value={fullPaymentAmount} active={fullActive} disabled={disabled} onCommit={onFullPaymentChange} />
-        {!fullActive && fullPaymentAmount !== null && (
-          <span className="text-[10px] text-muted-foreground/70">לא נספר</span>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5">
-        <AmountField value={partialPaymentAmount} active={partialActive} disabled={disabled} onCommit={onPartialPaymentChange} />
-        {!partialActive && partialPaymentAmount !== null && (
-          <span className="text-[10px] text-muted-foreground/70">לא נספר</span>
-        )}
-      </div>
+    <div className="flex flex-col gap-0.5">
+      <Input
+        type="number"
+        min="0"
+        step="1"
+        dir="ltr"
+        value={draft}
+        disabled={disabled || !active}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        placeholder={active ? "סכום" : "-"}
+        className={cn("h-8 w-28 text-xs tabular-nums-he", active && "border-primary/50 ring-1 ring-primary/20")}
+      />
+      {!active && value !== null && <span className="text-[10px] text-muted-foreground/70">לא נספר</span>}
     </div>
   );
+}
+
+interface PaymentFieldProps {
+  isActive: boolean;
+  value: number | null;
+  disabled?: boolean;
+  onChange: (amount: number | null) => void;
+}
+
+/** Full Payment column cell - active (emphasized + editable) only when Main Status = נרשם and Secondary Status = תשלום מלא. */
+export function FullPaymentField({ isActive, value, disabled, onChange }: PaymentFieldProps) {
+  return <AmountField value={value} active={isActive} disabled={disabled} onCommit={onChange} />;
+}
+
+/** Partial Payment column cell - active (emphasized + editable) only when Main Status = נרשם and Secondary Status = תשלום חלקי. */
+export function PartialPaymentField({ isActive, value, disabled, onChange }: PaymentFieldProps) {
+  return <AmountField value={value} active={isActive} disabled={disabled} onCommit={onChange} />;
 }

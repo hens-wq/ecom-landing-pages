@@ -2,13 +2,22 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * `ref` forwards to the scrollable container div (not the <table> itself) -
+ * lets a caller sync a TableTopScrollbar (components/shared) to this
+ * table's real horizontal scroll position. Optional: callers that don't
+ * pass a ref get the exact same element as before.
+ */
+const Table = React.forwardRef<HTMLDivElement, React.ComponentProps<"table">>(function Table(
+  { className, ...props },
+  ref
+) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div ref={ref} data-slot="table-container" className="relative w-full overflow-x-auto">
       <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );
-}
+});
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return <thead data-slot="table-header" className={cn("[&_tr]:border-b [&_tr]:border-border", className)} {...props} />;
