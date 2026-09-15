@@ -1,10 +1,17 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format";
-import { formatPhoneDisplay } from "@/lib/phone";
+import { LeadRow } from "@/components/leads/lead-row";
+import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { MetaFormLead } from "@/lib/leads";
+import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
 
-export function LeadsTable({ leads }: { leads: MetaFormLead[] }) {
+interface LeadsTableProps {
+  leads: MetaFormLead[];
+  statusesByLeadId: Map<string, LeadStatusRecord>;
+  onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
+  onStatusSaved: (record: LeadStatusRecord) => void;
+}
+
+export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved }: LeadsTableProps) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <Table>
@@ -19,27 +26,20 @@ export function LeadsTable({ leads }: { leads: MetaFormLead[] }) {
             <TableHead className="min-w-44">קמפיין (Campaign)</TableHead>
             <TableHead className="min-w-44">סדרת מודעות (Ad Set)</TableHead>
             <TableHead className="min-w-44">מודעה (Ad)</TableHead>
+            <TableHead className="min-w-40">סטטוס (Status)</TableHead>
+            <TableHead className="min-w-32">תשלום (Payment)</TableHead>
             <TableHead className="min-w-40 text-left font-mono text-[11px]">מזהה ליד (Lead ID)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {leads.map((lead) => (
-            <TableRow key={lead.id}>
-              <TableCell className="sticky right-0 z-10 border-l border-border bg-card tabular-nums-he">
-                {formatDateTime(lead.createdTime)}
-              </TableCell>
-              <TableCell className="font-medium">{lead.name ?? "-"}</TableCell>
-              <TableCell className="tabular-nums-he text-muted-foreground" dir="ltr">
-                {lead.phone ? formatPhoneDisplay(lead.phone) : "-"}
-              </TableCell>
-              <TableCell className="text-muted-foreground">{LEAD_SOURCE_LABELS[lead.sourceType].short}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.campaignName || "-"}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.adSetName || "-"}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.adName || "-"}</TableCell>
-              <TableCell className="text-left font-mono text-[11px] text-muted-foreground/70" dir="ltr">
-                {lead.id}
-              </TableCell>
-            </TableRow>
+            <LeadRow
+              key={lead.id}
+              lead={lead}
+              statusRecord={statusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.phone)}
+              onSaveStatus={onSaveStatus}
+              onStatusSaved={onStatusSaved}
+            />
           ))}
         </TableBody>
       </Table>

@@ -24,7 +24,7 @@ const ZERO_METRICS: RawMetrics = { spend: 0, impressions: 0, reach: 0, linkClick
  * folds into "paused"; anything not "ACTIVE" or paused-like folds into "ended"
  * (closest existing bucket - Phase 1 error/review states aren't modeled yet).
  */
-function mapStatus(node: { status?: string; effective_status?: string }): EntityStatus {
+export function mapStatus(node: { status?: string; effective_status?: string }): EntityStatus {
   const raw = (node.effective_status ?? node.status ?? "").toUpperCase();
   if (raw === "ACTIVE") return "active";
   if (raw.includes("PAUSED")) return "paused";
