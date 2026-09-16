@@ -1,7 +1,7 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
 
+import { columnStyle, type LeadColumnKey } from "@/components/leads/lead-columns";
 import { FullPaymentField, PartialPaymentField } from "@/components/leads/payment-inputs";
-import { stickyColumnStyle } from "@/components/leads/sticky-columns";
 import { MainStatusSelect, SecondaryStatusSelect } from "@/components/leads/status-select";
 import { useLeadStatusEditor, type LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -17,11 +17,14 @@ interface LeadRowProps {
   statusRecord: LeadStatusRecord;
   onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
   onStatusSaved: (record: LeadStatusRecord) => void;
+  /** Same live widths map the header's resize handles write to (see leads-table.tsx) - never a separate snapshot, so a resized column can never drift out of sync between header and body cells. */
+  widths: Record<LeadColumnKey, number>;
+  rightOffsets: Partial<Record<LeadColumnKey, number>>;
 }
 
 const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card group-hover:lg:bg-muted/40";
 
-export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: LeadRowProps) {
+export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, widths, rightOffsets }: LeadRowProps) {
   const editor = useLeadStatusEditor(statusRecord, async (patch) => {
     const saved = await onSaveStatus(lead.id, { ...patch, normalizedPhone: lead.normalizedPhone });
     onStatusSaved(saved);
@@ -36,22 +39,26 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: Lea
     <TableRow className="group">
       <TableCell
         className={cn(STICKY_CELL_CLASS, "border-l border-transparent lg:border-border tabular-nums-he")}
-        style={stickyColumnStyle("leadDate")}
+        style={columnStyle(widths.leadDate, rightOffsets.leadDate)}
       >
         {formatDateTime(lead.createdTime)}
       </TableCell>
       <TableCell
         className={cn(STICKY_CELL_CLASS, "overflow-hidden font-medium text-ellipsis")}
-        style={stickyColumnStyle("name")}
+        style={columnStyle(widths.name, rightOffsets.name)}
         title={lead.name ?? undefined}
       >
         {lead.name ?? "-"}
       </TableCell>
-      <TableCell className={cn(STICKY_CELL_CLASS, "tabular-nums-he text-muted-foreground")} style={stickyColumnStyle("phone")} dir="ltr">
+      <TableCell
+        className={cn(STICKY_CELL_CLASS, "tabular-nums-he text-muted-foreground")}
+        style={columnStyle(widths.phone, rightOffsets.phone)}
+        dir="ltr"
+      >
         {lead.phone ? formatPhoneDisplay(lead.phone) : "-"}
       </TableCell>
 
-      <TableCell className={cn(STICKY_CELL_CLASS, "align-top")} style={stickyColumnStyle("mainStatus")}>
+      <TableCell className={cn(STICKY_CELL_CLASS, "align-top")} style={columnStyle(widths.mainStatus, rightOffsets.mainStatus)}>
         <MainStatusSelect mainStatus={editor.mainStatus} disabled={editor.pending} onChange={editor.changeMainStatus} />
         {editor.pending && (
           <span className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -62,7 +69,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: Lea
       </TableCell>
       <TableCell
         className={cn(STICKY_CELL_CLASS, "border-l border-border align-top")}
-        style={stickyColumnStyle("secondaryStatus")}
+        style={columnStyle(widths.secondaryStatus, rightOffsets.secondaryStatus)}
       >
         <SecondaryStatusSelect
           mainStatus={editor.mainStatus}
@@ -77,7 +84,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: Lea
         )}
       </TableCell>
 
-      <TableCell className="align-top">
+      <TableCell className="align-top" style={columnStyle(widths.fullPayment)}>
         <FullPaymentField
           isActive={fullActive}
           value={editor.fullPaymentAmount}
@@ -85,7 +92,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: Lea
           onChange={editor.changeFullPayment}
         />
       </TableCell>
-      <TableCell className="align-top">
+      <TableCell className="align-top" style={columnStyle(widths.partialPayment)}>
         <PartialPaymentField
           isActive={partialActive}
           value={editor.partialPaymentAmount}
@@ -94,20 +101,33 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved }: Lea
         />
       </TableCell>
 
-      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground">
+      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground" style={columnStyle(widths.leadSource)}>
         {LEAD_SOURCE_LABELS[lead.sourceType].short}
       </TableCell>
-      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground" title={lead.campaignName || undefined}>
+      <TableCell
+        className="overflow-hidden text-ellipsis text-muted-foreground"
+        style={columnStyle(widths.campaign)}
+        title={lead.campaignName || undefined}
+      >
         {lead.campaignName || "-"}
       </TableCell>
-      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground" title={lead.adSetName || undefined}>
+      <TableCell
+        className="overflow-hidden text-ellipsis text-muted-foreground"
+        style={columnStyle(widths.adSet)}
+        title={lead.adSetName || undefined}
+      >
         {lead.adSetName || "-"}
       </TableCell>
-      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground" title={lead.adName || undefined}>
+      <TableCell
+        className="overflow-hidden text-ellipsis text-muted-foreground"
+        style={columnStyle(widths.ad)}
+        title={lead.adName || undefined}
+      >
         {lead.adName || "-"}
       </TableCell>
       <TableCell
         className="overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70"
+        style={columnStyle(widths.leadId)}
         dir="ltr"
         title={lead.id}
       >

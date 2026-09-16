@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Info, RefreshCw, Search } from "lucide-react";
+import { Info, RefreshCw, Search, Undo2 } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
+import { useLeadColumnWidths } from "@/components/leads/use-lead-column-widths";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { DateRangeSelect } from "@/components/shared/date-range-select";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
@@ -15,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
-import { presetDaysToDateRange } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
@@ -95,8 +95,8 @@ const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [
 
 export default function LeadsPage() {
   const [presetId, setPresetId] = useState(DEFAULT_DATE_RANGE_PRESET_ID);
-  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[2];
-  const range = useMemo(() => presetDaysToDateRange(preset.days), [preset.days]);
+  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[0];
+  const range = useMemo(() => preset.resolve(), [preset]);
   const rangeKey = `${range.since}_${range.until}`;
 
   const [state, setState] = useState<LoadState>({ phase: "loading" });
@@ -354,6 +354,8 @@ export default function LeadsPage() {
     campaignFilter || adSetFilter || adFilter || sourceFilter || campaignStatusFilter || mainStatusFilter || secondaryStatusFilter || phoneSearch.trim()
   );
 
+  const columnWidths = useLeadColumnWidths(filteredLeads);
+
   return (
     <div className="flex flex-col gap-5">
       {dbHealth.status === "error" && <DatabaseStatusBadge status={dbHealth.status} message={dbHealth.message} />}
@@ -386,6 +388,12 @@ export default function LeadsPage() {
             <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
             {isRefreshing ? "מרענן..." : "רענון נתונים"}
           </Button>
+          {columnWidths.hasCustomWidths && (
+            <Button variant="ghost" size="sm" onClick={columnWidths.resetWidths} className="gap-2">
+              <Undo2 className="size-4" />
+              איפוס תצוגת עמודות
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {dbHealth.status === "connected" && <DatabaseStatusBadge status={dbHealth.status} />}
@@ -497,6 +505,7 @@ export default function LeadsPage() {
               statusesByLeadId={effectiveStatusesByLeadId}
               onSaveStatus={saveLeadStatus}
               onStatusSaved={handleStatusSaved}
+              columnWidths={columnWidths}
             />
           )}
         </>

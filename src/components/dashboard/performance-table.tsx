@@ -4,14 +4,14 @@ import { useMemo, useRef, useState } from "react";
 import { ChevronDown, Image as ImageIcon, Layers3, Megaphone } from "lucide-react";
 
 import { ColumnVisibilityMenu } from "@/components/dashboard/column-visibility-menu";
+import { useDashboardColumns } from "@/components/dashboard/use-dashboard-columns";
 import { TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AdRow, AdSetRow, CampaignRow } from "@/lib/aggregate";
-import { DEFAULT_VISIBLE_COLUMN_KEYS, PERFORMANCE_COLUMNS, SALES_METRIC_KEYS } from "@/lib/columns";
+import { SALES_METRIC_KEYS } from "@/lib/columns";
 import { LEAD_SOURCE_LABELS } from "@/lib/constants";
-import type { PerformanceMetrics } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type FlatRow =
@@ -43,31 +43,17 @@ interface PerformanceTableProps {
 
 export function PerformanceTable({ campaignRows, salesDataConnected = true }: PerformanceTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(campaignRows.map((c) => c.id)));
-  const [visibleKeys, setVisibleKeys] = useState<Set<keyof PerformanceMetrics>>(
-    () => new Set(DEFAULT_VISIBLE_COLUMN_KEYS)
-  );
+  const columns = useDashboardColumns();
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const flatRows = useMemo(() => flattenRows(campaignRows, expanded), [campaignRows, expanded]);
-  const visibleColumns = useMemo(
-    () => PERFORMANCE_COLUMNS.filter((column) => visibleKeys.has(column.key)),
-    [visibleKeys]
-  );
+  const visibleColumns = columns.visibleColumns;
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleColumn(key: keyof PerformanceMetrics) {
-    setVisibleKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
       return next;
     });
   }
@@ -81,7 +67,14 @@ export function PerformanceTable({ campaignRows, salesDataConnected = true }: Pe
           </h2>
           <p className="text-xs text-muted-foreground">לחצו על שורה כדי להרחיב ולראות את הרמה הבאה</p>
         </div>
-        <ColumnVisibilityMenu visibleKeys={visibleKeys} onToggle={toggleColumn} />
+        <ColumnVisibilityMenu
+          orderedColumns={columns.orderedColumns}
+          visibleKeys={columns.visibleKeys}
+          toggleColumn={columns.toggleColumn}
+          moveColumn={columns.moveColumn}
+          reset={columns.reset}
+          hasCustomLayout={columns.hasCustomLayout}
+        />
       </div>
 
       <TableTopScrollbar targetRef={tableContainerRef} />

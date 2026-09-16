@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, type CSSProperties } from "react";
+import { useRef } from "react";
 
 import { LeadRow } from "@/components/leads/lead-row";
-import { stickyColumnStyle } from "@/components/leads/sticky-columns";
+import { columnStyle, type LeadColumnKey, stickyRightOffsets } from "@/components/leads/lead-columns";
+import type { LeadColumnWidthsState } from "@/components/leads/use-lead-column-widths";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
+import { ColumnResizeHandle } from "@/components/shared/column-resize-handle";
 import { TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { MetaFormLead } from "@/lib/leads";
@@ -16,17 +18,46 @@ interface LeadsTableProps {
   statusesByLeadId: Map<string, LeadStatusRecord>;
   onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
   onStatusSaved: (record: LeadStatusRecord) => void;
+  columnWidths: LeadColumnWidthsState;
 }
 
-/** Shared sticky classes (lg+ only - see sticky-columns.ts) so header and body cells line up exactly. */
+/** Shared sticky classes (lg+ only - see lead-columns.ts) so header and body cells line up exactly. */
 const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card";
-/** Headers wrap to 2 lines instead of forcing the column wider than its data needs (see sticky-columns.ts doc comment on why column width must stay authoritative under table-fixed). */
-const HEADER_TEXT_CLASS = "whitespace-normal leading-tight py-2";
-/** Fits the w-28 (112px) amount input from payment-inputs.tsx plus the cell's px-3 padding. */
-const PAYMENT_COLUMN_WIDTH: CSSProperties = { width: 140, minWidth: 140 };
+/** Headers wrap to 2 lines instead of forcing the column wider than its data needs (see lead-columns.ts doc comment on why column width must stay authoritative under table-fixed). */
+const HEADER_TEXT_CLASS = "relative whitespace-normal py-2 leading-tight";
 
-export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved }: LeadsTableProps) {
+const HEADER_LABELS: Record<LeadColumnKey, string> = {
+  leadDate: "תאריך כניסת ליד (Lead Date)",
+  name: "שם (Name)",
+  phone: "טלפון (Phone)",
+  mainStatus: "סטטוס ראשי (Main Status)",
+  secondaryStatus: "סטטוס משני (Secondary Status)",
+  fullPayment: "תשלום מלא (Full Payment)",
+  partialPayment: "תשלום חלקי (Partial Payment)",
+  leadSource: "מקור ליד (Lead Source)",
+  campaign: "קמפיין (Campaign)",
+  adSet: "סדרת מודעות (Ad Set)",
+  ad: "מודעה (Ad)",
+  leadId: "מזהה ליד (Lead ID)",
+};
+
+export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnWidths }: LeadsTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const { widths, resizeColumn } = columnWidths;
+  const rightOffsets = stickyRightOffsets(widths);
+
+  function head(key: LeadColumnKey, extraClassName?: string) {
+    const isSticky = rightOffsets[key] !== undefined;
+    return (
+      <TableHead
+        className={cn(HEADER_TEXT_CLASS, isSticky && STICKY_CELL_CLASS, extraClassName)}
+        style={columnStyle(widths[key], rightOffsets[key])}
+      >
+        {HEADER_LABELS[key]}
+        <ColumnResizeHandle label={HEADER_LABELS[key]} onResize={(delta) => resizeColumn(key, delta)} />
+      </TableHead>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -34,51 +65,18 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
       <Table ref={tableContainerRef} className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead
-              className={cn(STICKY_CELL_CLASS, HEADER_TEXT_CLASS, "border-l border-transparent lg:border-border")}
-              style={stickyColumnStyle("leadDate")}
-            >
-              תאריך כניסת ליד (Lead Date)
-            </TableHead>
-            <TableHead className={cn(STICKY_CELL_CLASS, HEADER_TEXT_CLASS)} style={stickyColumnStyle("name")}>
-              שם (Name)
-            </TableHead>
-            <TableHead className={cn(STICKY_CELL_CLASS, HEADER_TEXT_CLASS)} style={stickyColumnStyle("phone")}>
-              טלפון (Phone)
-            </TableHead>
-            <TableHead className={cn(STICKY_CELL_CLASS, HEADER_TEXT_CLASS)} style={stickyColumnStyle("mainStatus")}>
-              סטטוס ראשי (Main Status)
-            </TableHead>
-            <TableHead
-              className={cn(STICKY_CELL_CLASS, HEADER_TEXT_CLASS, "border-l border-border")}
-              style={stickyColumnStyle("secondaryStatus")}
-            >
-              סטטוס משני (Secondary Status)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={PAYMENT_COLUMN_WIDTH}>
-              תשלום מלא (Full Payment)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={PAYMENT_COLUMN_WIDTH}>
-              תשלום חלקי (Partial Payment)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={{ width: 110, minWidth: 110 }}>
-              מקור ליד (Lead Source)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={{ width: 160, minWidth: 160 }}>
-              קמפיין (Campaign)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={{ width: 160, minWidth: 160 }}>
-              סדרת מודעות (Ad Set)
-            </TableHead>
-            <TableHead className={HEADER_TEXT_CLASS} style={{ width: 160, minWidth: 160 }}>
-              מודעה (Ad)
-            </TableHead>
-            <TableHead
-              className={cn(HEADER_TEXT_CLASS, "text-left font-mono text-[11px]")}
-              style={{ width: 150, minWidth: 150 }}
-            >
-              מזהה ליד (Lead ID)
-            </TableHead>
+            {head("leadDate", "border-l border-transparent lg:border-border")}
+            {head("name")}
+            {head("phone")}
+            {head("mainStatus")}
+            {head("secondaryStatus", "border-l border-border")}
+            {head("fullPayment")}
+            {head("partialPayment")}
+            {head("leadSource")}
+            {head("campaign")}
+            {head("adSet")}
+            {head("ad")}
+            {head("leadId", "text-left font-mono text-[11px]")}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -89,6 +87,8 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
               statusRecord={statusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone)}
               onSaveStatus={onSaveStatus}
               onStatusSaved={onStatusSaved}
+              widths={widths}
+              rightOffsets={rightOffsets}
             />
           ))}
         </TableBody>
@@ -96,3 +96,4 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
     </div>
   );
 }
+

@@ -12,7 +12,7 @@ import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dr
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { type CampaignRow, aggregateTotals, buildPerformanceTree } from "@/lib/aggregate";
-import { presetDaysToDateRange } from "@/lib/advertising/date-range";
+import { dateRangeDayCount } from "@/lib/advertising/date-range";
 import { getInternalSalesTotals, INTERNAL_SALES_BASELINE_DAYS } from "@/lib/advertising/internal-sales";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
@@ -35,8 +35,8 @@ const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [{ id: "active", label: "פעי�
 
 export default function DashboardPage() {
   const [presetId, setPresetId] = useState(DEFAULT_DATE_RANGE_PRESET_ID);
-  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[2];
-  const range = useMemo(() => presetDaysToDateRange(preset.days), [preset.days]);
+  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[0];
+  const range = useMemo(() => preset.resolve(), [preset]);
   const rangeKey = `${range.since}_${range.until}`;
 
   const [state, setState] = useState<LoadState>({ phase: "loading" });
@@ -147,7 +147,7 @@ export default function DashboardPage() {
     // Sales stays proportional to whatever period is selected (a 1-day view
     // shouldn't carry a full 30-day sales total, which would blow up Close
     // Rate / ROAS into nonsensical values) - see lib/advertising/internal-sales.ts.
-    const internalSales = getInternalSalesTotals(preset.days / INTERNAL_SALES_BASELINE_DAYS);
+    const internalSales = getInternalSalesTotals(dateRangeDayCount(range) / INTERNAL_SALES_BASELINE_DAYS);
     return {
       ...advTotals,
       // Sales-side KPIs are always sourced from the internal/mock sales layer,
@@ -159,7 +159,7 @@ export default function DashboardPage() {
       costPerSale: calcCostPerSale(advTotals.spend, internalSales.sales),
       roas: calcROAS(internalSales.revenue, advTotals.spend),
     };
-  }, [campaignRows, preset.days, salesDataConnected]);
+  }, [campaignRows, range, salesDataConnected]);
 
   return (
     <div className="flex flex-col gap-5">
