@@ -21,6 +21,8 @@ import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { calculateIrrelevantRate, calculateSalesSummary } from "@/lib/lead-status/calculations";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
+import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -130,17 +132,19 @@ export default function LeadsPage() {
         forceRefreshOnNextFetch.current = false;
         const refreshParam = forceRefresh ? "&refresh=1" : "";
 
-        const [leadsRes, advertisingRes, campaignStatusRes] = await Promise.all([
+        const [leadsRes, advertisingRes, campaignStatusRes, landingLeadsRes] = await Promise.all([
           fetch(`/api/leads?since=${range.since}&until=${range.until}${refreshParam}`, { cache: "no-store" }),
           fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
           fetch(`/api/campaign-status`, { cache: "no-store" }),
+          fetch(`/api/landing-leads?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
         ]);
         if (cancelled) return;
 
-        const [leadsJson, advertisingJson, campaignStatusJson] = await Promise.all([
+        const [leadsJson, advertisingJson, campaignStatusJson, landingLeadsJson] = await Promise.all([
           leadsRes.json(),
           advertisingRes.json(),
           campaignStatusRes.json(),
+          landingLeadsRes.json(),
         ]);
         if (cancelled) return;
 
@@ -148,6 +152,7 @@ export default function LeadsPage() {
           { res: leadsRes, json: leadsJson },
           { res: advertisingRes, json: advertisingJson },
           { res: campaignStatusRes, json: campaignStatusJson },
+          { res: landingLeadsRes, json: landingLeadsJson },
         ].find((entry) => !entry.res.ok || entry.json.error);
         if (failed) {
           setState({
@@ -158,11 +163,30 @@ export default function LeadsPage() {
           return;
         }
 
-        const leadsResult = leadsJson as LeadsResult;
+        // Meta Instant Form leads keep being fetched live, exactly as
+        // before; landing-page leads are the only ones persisted in Neon
+        // (see lib/landing-leads) - combined here into one list so the rest
+        // of this page (filters, KPI math, the table) never needs to know
+        // leads came from two different places.
+        const campaignRows = buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns);
+        const nameLookup = buildNameLookup(campaignRows);
+        const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) =>
+          landingLeadToMetaFormLead(record, nameLookup)
+        );
+        const leadsResult: LeadsResult = {
+          ...(leadsJson as LeadsResult),
+          leads: [...(leadsJson as LeadsResult).leads, ...landingLeads].sort(
+            (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
+          ),
+        };
 
         // Batch-load statuses only for the leads actually loaded for this
         // date range (not the whole table's history) - one query instead of
-        // one per row. See api/lead-status/batch/route.ts.
+        // one per row. See api/lead-status/batch/route.ts. Landing-page
+        // leads use their internalLeadId here exactly like a Meta lead uses
+        // its meta_lead_id - lead_status's own schema/API never changed to
+        // support this, since it was always a generic "whatever lead ID the
+        // UI is showing" key, not a Meta-specific one.
         const statusRes = await fetch("/api/lead-status/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -188,7 +212,7 @@ export default function LeadsPage() {
           phase: "ready",
           data: {
             leadsResult,
-            campaignRows: buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns),
+            campaignRows,
             statusesByLeadId,
             campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
           },
@@ -364,9 +388,9 @@ export default function LeadsPage() {
         <CardContent className="flex gap-3 px-5 py-4 text-sm leading-relaxed">
           <Info className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-muted-foreground">
-            עמוד זה מציג לידים שהתקבלו דרך <span className="font-medium text-foreground">טפסי Meta (Instant Forms)</span> בלבד,
-            עם שיוך מלא לקמפיין ← סדרת מודעות ← מודעה לפי מזהים, וניהול סטטוס מכירה פנימי של Ecom. לידים מדפי נחיתה
-            עדיין אינם כלולים כאן - שיוך שלהם ייבנה בנפרד בשלב הבא.
+            עמוד זה מציג לידים מ<span className="font-medium text-foreground">טפסי Meta (Instant Forms)</span> ומ
+            <span className="font-medium text-foreground">דפי נחיתה</span> יחד, עם שיוך מלא לקמפיין ← סדרת מודעות ← מודעה
+            לפי מזהים, וניהול סטטוס מכירה פנימי של Ecom.
           </p>
         </CardContent>
       </Card>
