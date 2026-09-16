@@ -1,3 +1,4 @@
+import { currentMonthDateRange, presetDaysToDateRange, singleDayDateRange } from "@/lib/advertising/date-range";
 import type { DateRangePreset, LeadSourceType } from "@/lib/types";
 
 export const NAV_ITEMS = [
@@ -8,13 +9,15 @@ export const NAV_ITEMS = [
 ] as const;
 
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
-  { id: "today", label: "היום", days: 1 },
-  { id: "last_7", label: "7 הימים האחרונים", days: 7 },
-  { id: "last_30", label: "30 הימים האחרונים", days: 30 },
-  { id: "last_90", label: "הרבעון האחרון", days: 90 },
+  { id: "today", label: "היום", resolve: (today) => singleDayDateRange(0, today) },
+  { id: "yesterday", label: "אתמול", resolve: (today) => singleDayDateRange(1, today) },
+  { id: "last_7", label: "7 הימים האחרונים", resolve: (today) => presetDaysToDateRange(7, today) },
+  { id: "last_30", label: "30 הימים האחרונים", resolve: (today) => presetDaysToDateRange(30, today) },
+  { id: "current_month", label: "חודש נוכחי", resolve: (today) => currentMonthDateRange(today) },
 ];
 
-export const DEFAULT_DATE_RANGE_PRESET_ID = "last_30";
+/** First preset in the list above ("today") - both Dashboard and Leads open on Today by default, per spec. */
+export const DEFAULT_DATE_RANGE_PRESET_ID = DATE_RANGE_PRESETS[0].id;
 
 /** Placeholder only - real values come from Meta once META_ACCESS_TOKEN / META_AD_ACCOUNT_ID are configured. */
 export const AD_ACCOUNTS = [{ id: "act_ecom_main", name: "Ecom - חשבון פרסום ראשי" }];

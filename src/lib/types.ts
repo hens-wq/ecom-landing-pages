@@ -196,11 +196,16 @@ export interface DateRangePreset {
   id: string;
   label: string;
   /**
-   * How many trailing days (including today) this preset covers. Turned into
-   * concrete since/until dates at request time (lib/advertising/date-range.ts)
-   * anchored to the real current date - this is what actually gets sent to
-   * Meta Insights, and what the mock provider uses to scale its 30-day
-   * baseline (Phase 1 behavior, unchanged).
+   * Resolves this preset to concrete since/until calendar dates ("YYYY-MM-DD"),
+   * anchored to `today` (defaults to the real current instant) - see
+   * lib/advertising/date-range.ts for the actual per-preset math (all of it
+   * timezone-aware, never the server's raw UTC clock). This is what gets sent
+   * to Meta Insights, and what dateRangeDayCount() turns into the mock
+   * provider's / internal sales layer's day-count scaling factor.
+   *
+   * Not every preset covers a fixed number of trailing days (e.g. "Current
+   * Month" varies with today's day-of-month), so this is a resolver function
+   * rather than a static day count.
    */
-  days: number;
+  resolve: (today?: Date) => { since: string; until: string };
 }

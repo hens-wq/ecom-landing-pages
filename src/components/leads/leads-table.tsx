@@ -1,48 +1,99 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format";
-import { formatPhoneDisplay } from "@/lib/phone";
-import type { MetaFormLead } from "@/lib/leads";
+"use client";
 
-export function LeadsTable({ leads }: { leads: MetaFormLead[] }) {
+import { useRef } from "react";
+
+import { LeadRow } from "@/components/leads/lead-row";
+import { columnStyle, type LeadColumnKey, stickyRightOffsets } from "@/components/leads/lead-columns";
+import type { LeadColumnWidthsState } from "@/components/leads/use-lead-column-widths";
+import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
+import { ColumnResizeHandle } from "@/components/shared/column-resize-handle";
+import { TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { MetaFormLead } from "@/lib/leads";
+import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
+import { cn } from "@/lib/utils";
+
+interface LeadsTableProps {
+  leads: MetaFormLead[];
+  statusesByLeadId: Map<string, LeadStatusRecord>;
+  onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
+  onStatusSaved: (record: LeadStatusRecord) => void;
+  columnWidths: LeadColumnWidthsState;
+}
+
+/** Shared sticky classes (lg+ only - see lead-columns.ts) so header and body cells line up exactly. */
+const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card";
+/** Headers wrap to 2 lines instead of forcing the column wider than its data needs (see lead-columns.ts doc comment on why column width must stay authoritative under table-fixed). */
+const HEADER_TEXT_CLASS = "relative whitespace-normal py-2 leading-tight";
+
+const HEADER_LABELS: Record<LeadColumnKey, string> = {
+  leadDate: "תאריך כניסת ליד (Lead Date)",
+  name: "שם (Name)",
+  phone: "טלפון (Phone)",
+  mainStatus: "סטטוס ראשי (Main Status)",
+  secondaryStatus: "סטטוס משני (Secondary Status)",
+  fullPayment: "תשלום מלא (Full Payment)",
+  partialPayment: "תשלום חלקי (Partial Payment)",
+  leadSource: "מקור ליד (Lead Source)",
+  campaign: "קמפיין (Campaign)",
+  adSet: "סדרת מודעות (Ad Set)",
+  ad: "מודעה (Ad)",
+  leadId: "מזהה ליד (Lead ID)",
+};
+
+export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnWidths }: LeadsTableProps) {
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const { widths, resizeColumn } = columnWidths;
+  const rightOffsets = stickyRightOffsets(widths);
+
+  function head(key: LeadColumnKey, extraClassName?: string) {
+    const isSticky = rightOffsets[key] !== undefined;
+    return (
+      <TableHead
+        className={cn(HEADER_TEXT_CLASS, isSticky && STICKY_CELL_CLASS, extraClassName)}
+        style={columnStyle(widths[key], rightOffsets[key])}
+      >
+        {HEADER_LABELS[key]}
+        <ColumnResizeHandle label={HEADER_LABELS[key]} onResize={(delta) => resizeColumn(key, delta)} />
+      </TableHead>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-border bg-card">
-      <Table>
+      <TableTopScrollbar targetRef={tableContainerRef} />
+      <Table ref={tableContainerRef} className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="sticky right-0 z-10 min-w-36 border-l border-border bg-card">
-              תאריך כניסת ליד (Lead Date)
-            </TableHead>
-            <TableHead className="min-w-36">שם (Name)</TableHead>
-            <TableHead className="min-w-32">טלפון (Phone)</TableHead>
-            <TableHead className="min-w-32">מקור ליד (Lead Source)</TableHead>
-            <TableHead className="min-w-44">קמפיין (Campaign)</TableHead>
-            <TableHead className="min-w-44">סדרת מודעות (Ad Set)</TableHead>
-            <TableHead className="min-w-44">מודעה (Ad)</TableHead>
-            <TableHead className="min-w-40 text-left font-mono text-[11px]">מזהה ליד (Lead ID)</TableHead>
+            {head("leadDate", "border-l border-transparent lg:border-border")}
+            {head("name")}
+            {head("phone")}
+            {head("mainStatus")}
+            {head("secondaryStatus", "border-l border-border")}
+            {head("fullPayment")}
+            {head("partialPayment")}
+            {head("leadSource")}
+            {head("campaign")}
+            {head("adSet")}
+            {head("ad")}
+            {head("leadId", "text-left font-mono text-[11px]")}
           </TableRow>
         </TableHeader>
         <TableBody>
           {leads.map((lead) => (
-            <TableRow key={lead.id}>
-              <TableCell className="sticky right-0 z-10 border-l border-border bg-card tabular-nums-he">
-                {formatDateTime(lead.createdTime)}
-              </TableCell>
-              <TableCell className="font-medium">{lead.name ?? "-"}</TableCell>
-              <TableCell className="tabular-nums-he text-muted-foreground" dir="ltr">
-                {lead.phone ? formatPhoneDisplay(lead.phone) : "-"}
-              </TableCell>
-              <TableCell className="text-muted-foreground">{LEAD_SOURCE_LABELS[lead.sourceType].short}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.campaignName || "-"}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.adSetName || "-"}</TableCell>
-              <TableCell className="text-muted-foreground">{lead.adName || "-"}</TableCell>
-              <TableCell className="text-left font-mono text-[11px] text-muted-foreground/70" dir="ltr">
-                {lead.id}
-              </TableCell>
-            </TableRow>
+            <LeadRow
+              key={lead.id}
+              lead={lead}
+              statusRecord={statusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone)}
+              onSaveStatus={onSaveStatus}
+              onStatusSaved={onStatusSaved}
+              widths={widths}
+              rightOffsets={rightOffsets}
+            />
           ))}
         </TableBody>
       </Table>
     </div>
   );
 }
+

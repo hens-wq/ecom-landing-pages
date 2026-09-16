@@ -8,32 +8,45 @@ import { InsightsCallout } from "@/components/dashboard/insights-callout";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { MetaSalesNote } from "@/components/dashboard/meta-sales-note";
 import { PerformanceTable } from "@/components/dashboard/performance-table";
+import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { TrendChart } from "@/components/dashboard/trend-chart";
-import { aggregateTotals, buildPerformanceTree } from "@/lib/aggregate";
-import { presetDaysToDateRange } from "@/lib/advertising/date-range";
+import { type CampaignRow, aggregateTotals, buildPerformanceTree } from "@/lib/aggregate";
+import { dateRangeDayCount } from "@/lib/advertising/date-range";
 import { getInternalSalesTotals, INTERNAL_SALES_BASELINE_DAYS } from "@/lib/advertising/internal-sales";
 import type { AdvertisingResult } from "@/lib/advertising";
+import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { calcCloseRate, calcCostPerSale, calcROAS } from "@/lib/calculations";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID } from "@/lib/constants";
 import { dailyTrend } from "@/lib/mock-data";
 import type { PerformanceMetrics } from "@/lib/types";
 
+interface PageData {
+  advertising: AdvertisingResult;
+  campaignStatuses: CampaignStatusMap;
+}
+
 type LoadState =
   | { phase: "loading" }
   | { phase: "error"; code: string; message: string }
-  | { phase: "ready"; data: AdvertisingResult };
+  | { phase: "ready"; data: PageData };
+
+const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [{ id: "active", label: "פעילים בלבד" }];
 
 export default function DashboardPage() {
   const [presetId, setPresetId] = useState(DEFAULT_DATE_RANGE_PRESET_ID);
-  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[2];
-  const range = useMemo(() => presetDaysToDateRange(preset.days), [preset.days]);
+  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[0];
+  const range = useMemo(() => preset.resolve(), [preset]);
   const rangeKey = `${range.since}_${range.until}`;
 
   const [state, setState] = useState<LoadState>({ phase: "loading" });
   const [trackedRangeKey, setTrackedRangeKey] = useState(rangeKey);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  // Defaults to "active" (not null/"הכל") per spec - a fresh page load should
+  // already be scoped to currently-active campaigns, not the account's
+  // entire history.
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | null>("active");
 
   // Reset to the loading state when the selected date range changes - done
   // during render (React's documented "adjust state when a prop changes"
@@ -49,19 +62,35 @@ export default function DashboardPage() {
 
     async function run() {
       try {
-        const response = await fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" });
-        const json = await response.json();
+        const [advertisingRes, campaignStatusRes] = await Promise.all([
+          fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
+          fetch(`/api/campaign-status`, { cache: "no-store" }),
+        ]);
         if (cancelled) return;
 
-        if (!response.ok || json.error) {
+        const [advertisingJson, campaignStatusJson] = await Promise.all([advertisingRes.json(), campaignStatusRes.json()]);
+        if (cancelled) return;
+
+        const failed = [
+          { res: advertisingRes, json: advertisingJson },
+          { res: campaignStatusRes, json: campaignStatusJson },
+        ].find((entry) => !entry.res.ok || entry.json.error);
+        if (failed) {
           setState({
             phase: "error",
-            code: json.error?.code ?? "unknown_error",
-            message: json.error?.message ?? "שגיאה לא צפויה בטעינת נתוני הפרסום.",
+            code: failed.json.error?.code ?? "unknown_error",
+            message: failed.json.error?.message ?? "שגיאה לא צפויה בטעינת נתוני הפרסום.",
           });
           return;
         }
-        setState({ phase: "ready", data: json as AdvertisingResult });
+
+        setState({
+          phase: "ready",
+          data: {
+            advertising: advertisingJson as AdvertisingResult,
+            campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
+          },
+        });
       } catch {
         if (!cancelled) {
           setState({
@@ -81,12 +110,26 @@ export default function DashboardPage() {
     };
   }, [range.since, range.until, refreshTick]);
 
-  const campaignRows = useMemo(
-    () => (state.phase === "ready" ? buildPerformanceTree(state.data.campaigns) : []),
+  const allCampaignRows = useMemo(
+    () => (state.phase === "ready" ? buildPerformanceTree(state.data.advertising.campaigns) : []),
+    [state]
+  );
+  const campaignStatuses = useMemo<CampaignStatusMap>(
+    () => (state.phase === "ready" ? state.data.campaignStatuses : {}),
     [state]
   );
 
-  const source = state.phase === "ready" ? state.data.source : undefined;
+  // "Active Only" (the default) drops entire campaign subtrees (their Ad
+  // Sets and Ads along with them) rather than deleting anything - a fresh
+  // fetch with "הכל" selected shows the exact same historical data again.
+  // Status comes from Meta's real effective_status by campaign ID (see
+  // lib/campaign-status), never from campaign names.
+  const campaignRows: CampaignRow[] = useMemo(() => {
+    if (campaignStatusFilter !== "active") return allCampaignRows;
+    return allCampaignRows.filter((campaign) => (campaignStatuses[campaign.id] ?? "ended") === "active");
+  }, [allCampaignRows, campaignStatuses, campaignStatusFilter]);
+
+  const source = state.phase === "ready" ? state.data.advertising.source : undefined;
   // Sales/Revenue/Close Rate/Cost per Sale/ROAS only ever come from the
   // internal/mock sales layer, which has no real attribution to live Meta
   // campaigns. In mock mode that cross-join is the whole point of the demo;
@@ -104,7 +147,7 @@ export default function DashboardPage() {
     // Sales stays proportional to whatever period is selected (a 1-day view
     // shouldn't carry a full 30-day sales total, which would blow up Close
     // Rate / ROAS into nonsensical values) - see lib/advertising/internal-sales.ts.
-    const internalSales = getInternalSalesTotals(preset.days / INTERNAL_SALES_BASELINE_DAYS);
+    const internalSales = getInternalSalesTotals(dateRangeDayCount(range) / INTERNAL_SALES_BASELINE_DAYS);
     return {
       ...advTotals,
       // Sales-side KPIs are always sourced from the internal/mock sales layer,
@@ -116,21 +159,29 @@ export default function DashboardPage() {
       costPerSale: calcCostPerSale(advTotals.spend, internalSales.sales),
       roas: calcROAS(internalSales.revenue, advTotals.spend),
     };
-  }, [campaignRows, preset.days, salesDataConnected]);
+  }, [campaignRows, range, salesDataConnected]);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <DashboardControls
-          presetId={presetId}
-          onPresetChange={setPresetId}
-          onRefresh={() => {
-            setIsRefreshing(true);
-            setRefreshTick((tick) => tick + 1);
-          }}
-          isRefreshing={isRefreshing}
-          accountLabel={state.phase === "ready" ? (state.data.account?.name ?? undefined) : undefined}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <DashboardControls
+            presetId={presetId}
+            onPresetChange={setPresetId}
+            onRefresh={() => {
+              setIsRefreshing(true);
+              setRefreshTick((tick) => tick + 1);
+            }}
+            isRefreshing={isRefreshing}
+            accountLabel={state.phase === "ready" ? (state.data.advertising.account?.name ?? undefined) : undefined}
+          />
+          <FilterDropdown
+            label="סטטוס קמפיין"
+            options={CAMPAIGN_STATUS_OPTIONS}
+            selectedId={campaignStatusFilter}
+            onChange={(id) => setCampaignStatusFilter(id as "active" | null)}
+          />
+        </div>
         <DataSourceBadge source={source} />
       </div>
 
@@ -150,11 +201,18 @@ export default function DashboardPage() {
       {state.phase === "ready" && (
         <>
           <KpiCards metrics={totals} salesDataConnected={salesDataConnected} />
-          {state.data.source === "mock" && <TrendChart data={dailyTrend} />}
-          {state.data.source === "meta" && <MetaSalesNote />}
+          {state.data.advertising.source === "mock" && <TrendChart data={dailyTrend} />}
+          {state.data.advertising.source === "meta" && <MetaSalesNote />}
 
-          {state.data.campaigns.length === 0 ? (
-            <EmptyStatePanel title="לא נמצאו קמפיינים" description="לא נמצאו קמפיינים פעילים בטווח התאריכים שנבחר." />
+          {campaignRows.length === 0 ? (
+            <EmptyStatePanel
+              title="לא נמצאו קמפיינים"
+              description={
+                campaignStatusFilter === "active"
+                  ? "אין קמפיינים פעילים בטווח התאריכים שנבחר - נסו לעבור לסינון 'הכל'."
+                  : "לא נמצאו קמפיינים בטווח התאריכים שנבחר."
+              }
+            />
           ) : (
             <>
               <InsightsCallout campaignRows={campaignRows} />

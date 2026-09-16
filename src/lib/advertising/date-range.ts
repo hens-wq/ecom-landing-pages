@@ -24,6 +24,26 @@ export function presetDaysToDateRange(days: number, today: Date = new Date()): D
   return { since: toIsoDate(since), until: untilIso };
 }
 
+/** A single calendar day, `daysAgo` days back from "today" in REPORTING_TIMEZONE (0 = today, 1 = yesterday). since === until. */
+export function singleDayDateRange(daysAgo: number, today: Date = new Date()): DateRange {
+  const untilIso = isoDateInTimezone(today);
+  if (daysAgo === 0) return { since: untilIso, until: untilIso };
+  const day = new Date(`${untilIso}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - daysAgo);
+  const iso = toIsoDate(day);
+  return { since: iso, until: iso };
+}
+
+/**
+ * First day of the current calendar month (in REPORTING_TIMEZONE) through
+ * today - deliberately NOT through the end of the month, since the days
+ * after today haven't happened yet and would just show up as zeros.
+ */
+export function currentMonthDateRange(today: Date = new Date()): DateRange {
+  const untilIso = isoDateInTimezone(today);
+  return { since: `${untilIso.slice(0, 7)}-01`, until: untilIso };
+}
+
 /** Inclusive day count spanned by a date range, e.g. since=until -> 1 day. */
 export function dateRangeDayCount(range: DateRange): number {
   const since = new Date(`${range.since}T00:00:00Z`).getTime();
