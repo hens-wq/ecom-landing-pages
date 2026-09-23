@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { LeadRow } from "@/components/leads/lead-row";
 import { columnStyle, type LeadColumnKey, stickyRightOffsets } from "@/components/leads/lead-columns";
@@ -19,6 +20,9 @@ interface LeadsTableProps {
   onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
   onStatusSaved: (record: LeadStatusRecord) => void;
   columnWidths: LeadColumnWidthsState;
+  /** "desc" = newest first (the default - see app/leads/page.tsx), "asc" = oldest first. Sorts whatever's already loaded/filtered - never triggers a new fetch. */
+  sortOrder: "asc" | "desc";
+  onToggleSort: () => void;
 }
 
 /** Shared sticky classes (lg+ only - see lead-columns.ts) so header and body cells line up exactly. */
@@ -41,7 +45,7 @@ const HEADER_LABELS: Record<LeadColumnKey, string> = {
   leadId: "מזהה ליד (Lead ID)",
 };
 
-export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnWidths }: LeadsTableProps) {
+export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnWidths, sortOrder, onToggleSort }: LeadsTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const { widths, resizeColumn } = columnWidths;
   const rightOffsets = stickyRightOffsets(widths);
@@ -59,13 +63,31 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
     );
   }
 
+  const isLeadDateSticky = rightOffsets.leadDate !== undefined;
+  const SortIcon = sortOrder === "desc" ? ArrowDown : ArrowUp;
+
   return (
     <div className="rounded-xl border border-border bg-card">
       <TableTopScrollbar targetRef={tableContainerRef} />
       <Table ref={tableContainerRef} className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {head("leadDate", "border-l border-transparent lg:border-border")}
+            <TableHead
+              className={cn(HEADER_TEXT_CLASS, isLeadDateSticky && STICKY_CELL_CLASS, "border-l border-transparent lg:border-border")}
+              style={columnStyle(widths.leadDate, rightOffsets.leadDate)}
+              aria-sort={sortOrder === "desc" ? "descending" : "ascending"}
+            >
+              <button
+                type="button"
+                onClick={onToggleSort}
+                className="flex items-center gap-1 text-right hover:text-foreground"
+                title={sortOrder === "desc" ? "מיון: החדש ביותר קודם - לחצו למיון הפוך" : "מיון: הישן ביותר קודם - לחצו למיון הפוך"}
+              >
+                <span>{HEADER_LABELS.leadDate}</span>
+                <SortIcon className="size-3.5 shrink-0" />
+              </button>
+              <ColumnResizeHandle label={HEADER_LABELS.leadDate} onResize={(delta) => resizeColumn("leadDate", delta)} />
+            </TableHead>
             {head("name")}
             {head("phone")}
             {head("mainStatus")}

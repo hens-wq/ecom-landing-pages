@@ -1,5 +1,6 @@
 import { isoDateInTimezone } from "@/lib/advertising/timezone";
 import type { DateRange } from "@/lib/advertising/types";
+import type { DateRangePreset } from "@/lib/types";
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -58,4 +59,26 @@ export function isValidDateRange(range: Partial<DateRange>): range is DateRange 
   const until = new Date(range.until);
   if (Number.isNaN(since.getTime()) || Number.isNaN(until.getTime())) return false;
   return since.getTime() <= until.getTime();
+}
+
+/** A date-range choice that's either one of the named presets or an explicit custom since/until - see components/shared/custom-date-range-select.tsx. */
+export interface DateRangeSelection {
+  presetId: string;
+  customSince: string | null;
+  customUntil: string | null;
+}
+
+export const CUSTOM_DATE_RANGE_PRESET_ID = "custom";
+
+/**
+ * Takes `presets` as a parameter (instead of importing DATE_RANGE_PRESETS
+ * from lib/constants.ts directly) to avoid a circular import - constants.ts
+ * already imports from this file for the presets' own resolve() functions.
+ */
+export function resolveDateRangeSelection(selection: DateRangeSelection, presets: DateRangePreset[]): DateRange {
+  if (selection.presetId === CUSTOM_DATE_RANGE_PRESET_ID && selection.customSince && selection.customUntil) {
+    return { since: selection.customSince, until: selection.customUntil };
+  }
+  const preset = presets.find((p) => p.id === selection.presetId) ?? presets[0];
+  return preset.resolve();
 }

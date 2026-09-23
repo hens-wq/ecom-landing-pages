@@ -5,17 +5,18 @@ import { Info, RefreshCw, Search, Undo2 } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
+import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
 import { useLeadColumnWidths } from "@/components/leads/use-lead-column-widths";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
-import { DateRangeSelect } from "@/components/shared/date-range-select";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
+import { resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
@@ -96,9 +97,16 @@ const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [
 ];
 
 export default function LeadsPage() {
-  const [presetId, setPresetId] = useState(DEFAULT_DATE_RANGE_PRESET_ID);
-  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[0];
-  const range = useMemo(() => preset.resolve(), [preset]);
+  // Single shared date-range state - the top control and the filter-row
+  // control (both <CustomDateRangeSelect> below) are bound to this SAME
+  // state, never two independent ones, so picking a range in either place
+  // is reflected immediately in the other.
+  const [dateSelection, setDateSelection] = useState<DateRangeSelection>({
+    presetId: DEFAULT_DATE_RANGE_PRESET_ID,
+    customSince: null,
+    customUntil: null,
+  });
+  const range = useMemo(() => resolveDateRangeSelection(dateSelection, DATE_RANGE_PRESETS), [dateSelection]);
   const rangeKey = `${range.since}_${range.until}`;
 
   const [state, setState] = useState<LoadState>({ phase: "loading" });
@@ -354,6 +362,20 @@ export default function LeadsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, phoneSearch, effectiveStatusesByLeadId]);
 
+  // Independent of every filter above (never reset by a filter change, and
+  // never resets a filter itself) - sorts whatever's already been fetched
+  // and filtered by the real createdTime timestamp, never the formatted
+  // display string, so this is pure client-side reordering with no new
+  // Meta/Neon request. Defaults to newest-first: this is a sales-ops table,
+  // and the newest leads are what you almost always want to act on first.
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const sortedLeads = useMemo(() => {
+    const direction = sortOrder === "desc" ? -1 : 1;
+    return [...filteredLeads].sort(
+      (a, b) => direction * (new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime())
+    );
+  }, [filteredLeads, sortOrder]);
+
   const scopedSpend = useMemo(
     () =>
       sumScopedSpend(campaignRows, campaignStatuses, {
@@ -397,7 +419,7 @@ export default function LeadsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <DateRangeSelect presetId={presetId} onPresetChange={setPresetId} />
+          <CustomDateRangeSelect selection={dateSelection} onChange={setDateSelection} />
           <Button
             variant="outline"
             size="sm"
@@ -454,6 +476,7 @@ export default function LeadsPage() {
                 dir="ltr"
               />
             </div>
+            <CustomDateRangeSelect selection={dateSelection} onChange={setDateSelection} />
             <FilterDropdown
               label="קמפיין"
               options={campaignOptions}
@@ -525,11 +548,13 @@ export default function LeadsPage() {
             <EmptyStatePanel title="לא נמצאו לידים התואמים לסינון" description="נסו לשנות את החיפוש, המסננים או טווח התאריכים." />
           ) : (
             <LeadsTable
-              leads={filteredLeads}
+              leads={sortedLeads}
               statusesByLeadId={effectiveStatusesByLeadId}
               onSaveStatus={saveLeadStatus}
               onStatusSaved={handleStatusSaved}
               columnWidths={columnWidths}
+              sortOrder={sortOrder}
+              onToggleSort={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
             />
           )}
         </>
