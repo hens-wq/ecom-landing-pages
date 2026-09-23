@@ -229,6 +229,8 @@ export default function LeadsPage() {
   const forceRefreshOnNextFetch = useRef(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isExportingRange, setIsExportingRange] = useState(false);
+  const [exportRangeError, setExportRangeError] = useState<string | null>(null);
 
   const [dbHealth, setDbHealth] = useState<{ status: DatabaseStatus; message?: string }>({ status: "checking" });
 
@@ -384,6 +386,43 @@ export default function LeadsPage() {
     }
   }
 
+  /**
+   * Exports exactly the currently-selected date range (`range`, the SAME
+   * shared state the two <CustomDateRangeSelect> controls above are bound to
+   * - no separate/hidden date state) as a real .xlsx file. Deliberately
+   * independent of the table's current sort order, visible column order or
+   * manually resized widths, and does NOT apply the other UI filters
+   * (campaign/status/search) - date range is the only export scope, matching
+   * the existing 7-day export's own behavior. The merge + serialization both
+   * happen server-side (see api/leads/export-xlsx), so this only needs to
+   * trigger the download.
+   */
+  async function handleExportSelectedRange() {
+    setIsExportingRange(true);
+    setExportRangeError(null);
+    try {
+      const response = await fetch(`/api/leads/export-xlsx?since=${range.since}&until=${range.until}`, { cache: "no-store" });
+      if (!response.ok) {
+        const json = await response.json().catch(() => null);
+        setExportRangeError(json?.error?.message ?? "שגיאה לא צפויה בהפקת קובץ הייצוא.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = range.since === range.until ? `ecom-leads-${range.since}.xlsx` : `ecom-leads-${range.since}-to-${range.until}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportRangeError("לא ניתן היה להתחבר לשרת. בדקו את החיבור לאינטרנט ונסו שוב.");
+    } finally {
+      setIsExportingRange(false);
+    }
+  }
+
   const campaignOptions = useMemo(() => uniqueOptions(allLeads, "campaignId", "campaignName"), [allLeads]);
   const adSetOptions = useMemo(
     () => uniqueOptions(allLeads.filter((l) => !campaignFilter || l.campaignId === campaignFilter), "adSetId", "adSetName"),
@@ -529,6 +568,11 @@ export default function LeadsPage() {
             {isExporting ? "מייצא..." : "ייצוא לסוכן - 7 ימים"}
           </Button>
           {exportError && <span className="text-xs text-destructive">{exportError}</span>}
+          <Button variant="outline" size="sm" onClick={handleExportSelectedRange} disabled={isExportingRange} className="gap-2">
+            <Download className={cn("size-4", isExportingRange && "animate-pulse")} />
+            {isExportingRange ? "מייצא..." : "ייצוא לפי טווח נבחר"}
+          </Button>
+          {exportRangeError && <span className="text-xs text-destructive">{exportRangeError}</span>}
         </div>
         <div className="flex items-center gap-2">
           {dbHealth.status === "connected" && <DatabaseStatusBadge status={dbHealth.status} />}
