@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Info, RefreshCw, Search, Undo2 } from "lucide-react";
+import { Download, Info, RefreshCw, Search } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
 import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
+import { LeadColumnVisibilityMenu } from "@/components/leads/lead-column-visibility-menu";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
-import { useLeadColumnWidths } from "@/components/leads/use-lead-column-widths";
+import { useLeadColumnLayout } from "@/components/leads/use-lead-column-layout";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
-import { resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
+import { presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
@@ -24,6 +25,7 @@ import { calculateIrrelevantRate, calculateSalesSummary } from "@/lib/lead-statu
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
+import { buildLeadExportCsv, toLeadExportRow } from "@/lib/leads/export";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +98,117 @@ const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [
   { id: "inactive", label: "מושהים / לא פעילים" },
 ];
 
+interface CombinedLeadsFetchOk {
+  ok: true;
+  leadsResult: LeadsResult;
+  campaignRows: CampaignRow[];
+  campaignStatuses: CampaignStatusMap;
+  statusesByLeadId: Map<string, LeadStatusRecord>;
+}
+interface CombinedLeadsFetchError {
+  ok: false;
+  code: string;
+  message: string;
+}
+
+/**
+ * Meta Instant Form leads (still fetched live, exactly as before) + landing-
+ * page leads (from Neon, see lib/landing-leads) + their lead_status rows,
+ * combined into one ready-to-render dataset. Shared between the page's own
+ * data-loading effect and the "Export for Agent" button below, so the two
+ * can never drift apart in what counts as "a lead" or how names get
+ * resolved. `isCancelled` mirrors the effect's own cancellation flag at each
+ * checkpoint (same behavior as before this was extracted) - the export
+ * button has nothing to cancel, so it just never passes one.
+ */
+async function fetchCombinedLeads(
+  range: { since: string; until: string },
+  options: { forceRefresh?: boolean; isCancelled?: () => boolean } = {}
+): Promise<CombinedLeadsFetchOk | CombinedLeadsFetchError | null> {
+  const isCancelled = options.isCancelled ?? (() => false);
+  const refreshParam = options.forceRefresh ? "&refresh=1" : "";
+
+  const [leadsRes, advertisingRes, campaignStatusRes, landingLeadsRes] = await Promise.all([
+    fetch(`/api/leads?since=${range.since}&until=${range.until}${refreshParam}`, { cache: "no-store" }),
+    fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
+    fetch(`/api/campaign-status`, { cache: "no-store" }),
+    fetch(`/api/landing-leads?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
+  ]);
+  if (isCancelled()) return null;
+
+  const [leadsJson, advertisingJson, campaignStatusJson, landingLeadsJson] = await Promise.all([
+    leadsRes.json(),
+    advertisingRes.json(),
+    campaignStatusRes.json(),
+    landingLeadsRes.json(),
+  ]);
+  if (isCancelled()) return null;
+
+  const failed = [
+    { res: leadsRes, json: leadsJson },
+    { res: advertisingRes, json: advertisingJson },
+    { res: campaignStatusRes, json: campaignStatusJson },
+    { res: landingLeadsRes, json: landingLeadsJson },
+  ].find((entry) => !entry.res.ok || entry.json.error);
+  if (failed) {
+    return {
+      ok: false,
+      code: failed.json.error?.code ?? "unknown_error",
+      message: failed.json.error?.message ?? "שגיאה לא צפויה בטעינת נתוני הלידים.",
+    };
+  }
+
+  // Meta Instant Form leads keep being fetched live, exactly as before;
+  // landing-page leads are the only ones persisted in Neon (see
+  // lib/landing-leads) - combined here into one list so the rest of this
+  // page (filters, KPI math, the table, the export) never needs to know
+  // leads came from two different places.
+  const campaignRows = buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns);
+  const nameLookup = buildNameLookup(campaignRows);
+  const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) => landingLeadToMetaFormLead(record, nameLookup));
+  const leadsResult: LeadsResult = {
+    ...(leadsJson as LeadsResult),
+    leads: [...(leadsJson as LeadsResult).leads, ...landingLeads].sort(
+      (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
+    ),
+  };
+
+  // Batch-load statuses only for the leads actually loaded for this date
+  // range (not the whole table's history) - one query instead of one per
+  // row. See api/lead-status/batch/route.ts. Landing-page leads use their
+  // internalLeadId here exactly like a Meta lead uses its meta_lead_id -
+  // lead_status's own schema/API never changed to support this, since it
+  // was always a generic "whatever lead ID the UI is showing" key, not a
+  // Meta-specific one.
+  const statusRes = await fetch("/api/lead-status/batch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ leadIds: leadsResult.leads.map((lead) => lead.id) }),
+  });
+  if (isCancelled()) return null;
+  const statusJson = await statusRes.json();
+  if (isCancelled()) return null;
+  if (!statusRes.ok || statusJson.error) {
+    return {
+      ok: false,
+      code: "unknown_error",
+      message: statusJson.error?.message ?? "שגיאה לא צפויה בטעינת סטטוסי הלידים ממסד הנתונים.",
+    };
+  }
+
+  const statusesByLeadId = new Map<string, LeadStatusRecord>(
+    (statusJson.records as LeadStatusRecord[]).map((record) => [record.leadId, record])
+  );
+
+  return {
+    ok: true,
+    leadsResult,
+    campaignRows,
+    campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
+    statusesByLeadId,
+  };
+}
+
 export default function LeadsPage() {
   // Single shared date-range state - the top control and the filter-row
   // control (both <CustomDateRangeSelect> below) are bound to this SAME
@@ -114,6 +227,8 @@ export default function LeadsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const forceRefreshOnNextFetch = useRef(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [dbHealth, setDbHealth] = useState<{ status: DatabaseStatus; message?: string }>({ status: "checking" });
 
@@ -138,91 +253,21 @@ export default function LeadsPage() {
       try {
         const forceRefresh = forceRefreshOnNextFetch.current;
         forceRefreshOnNextFetch.current = false;
-        const refreshParam = forceRefresh ? "&refresh=1" : "";
+        const result = await fetchCombinedLeads(range, { forceRefresh, isCancelled: () => cancelled });
+        if (cancelled || result === null) return;
 
-        const [leadsRes, advertisingRes, campaignStatusRes, landingLeadsRes] = await Promise.all([
-          fetch(`/api/leads?since=${range.since}&until=${range.until}${refreshParam}`, { cache: "no-store" }),
-          fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
-          fetch(`/api/campaign-status`, { cache: "no-store" }),
-          fetch(`/api/landing-leads?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
-        ]);
-        if (cancelled) return;
-
-        const [leadsJson, advertisingJson, campaignStatusJson, landingLeadsJson] = await Promise.all([
-          leadsRes.json(),
-          advertisingRes.json(),
-          campaignStatusRes.json(),
-          landingLeadsRes.json(),
-        ]);
-        if (cancelled) return;
-
-        const failed = [
-          { res: leadsRes, json: leadsJson },
-          { res: advertisingRes, json: advertisingJson },
-          { res: campaignStatusRes, json: campaignStatusJson },
-          { res: landingLeadsRes, json: landingLeadsJson },
-        ].find((entry) => !entry.res.ok || entry.json.error);
-        if (failed) {
-          setState({
-            phase: "error",
-            code: failed.json.error?.code ?? "unknown_error",
-            message: failed.json.error?.message ?? "שגיאה לא צפויה בטעינת נתוני הלידים.",
-          });
+        if (!result.ok) {
+          setState({ phase: "error", code: result.code, message: result.message });
           return;
         }
-
-        // Meta Instant Form leads keep being fetched live, exactly as
-        // before; landing-page leads are the only ones persisted in Neon
-        // (see lib/landing-leads) - combined here into one list so the rest
-        // of this page (filters, KPI math, the table) never needs to know
-        // leads came from two different places.
-        const campaignRows = buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns);
-        const nameLookup = buildNameLookup(campaignRows);
-        const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) =>
-          landingLeadToMetaFormLead(record, nameLookup)
-        );
-        const leadsResult: LeadsResult = {
-          ...(leadsJson as LeadsResult),
-          leads: [...(leadsJson as LeadsResult).leads, ...landingLeads].sort(
-            (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
-          ),
-        };
-
-        // Batch-load statuses only for the leads actually loaded for this
-        // date range (not the whole table's history) - one query instead of
-        // one per row. See api/lead-status/batch/route.ts. Landing-page
-        // leads use their internalLeadId here exactly like a Meta lead uses
-        // its meta_lead_id - lead_status's own schema/API never changed to
-        // support this, since it was always a generic "whatever lead ID the
-        // UI is showing" key, not a Meta-specific one.
-        const statusRes = await fetch("/api/lead-status/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ leadIds: leadsResult.leads.map((lead) => lead.id) }),
-        });
-        if (cancelled) return;
-        const statusJson = await statusRes.json();
-        if (cancelled) return;
-        if (!statusRes.ok || statusJson.error) {
-          setState({
-            phase: "error",
-            code: "unknown_error",
-            message: statusJson.error?.message ?? "שגיאה לא צפויה בטעינת סטטוסי הלידים ממסד הנתונים.",
-          });
-          return;
-        }
-
-        const statusesByLeadId = new Map<string, LeadStatusRecord>(
-          (statusJson.records as LeadStatusRecord[]).map((record) => [record.leadId, record])
-        );
 
         setState({
           phase: "ready",
           data: {
-            leadsResult,
-            campaignRows,
-            statusesByLeadId,
-            campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
+            leadsResult: result.leadsResult,
+            campaignRows: result.campaignRows,
+            statusesByLeadId: result.statusesByLeadId,
+            campaignStatuses: result.campaignStatuses,
           },
         });
       } catch {
@@ -242,7 +287,8 @@ export default function LeadsPage() {
     return () => {
       cancelled = true;
     };
-  }, [range.since, range.until, refreshTick]);
+    // range is a new object only when dateSelection changes (see its useMemo above), so this is equivalent to the previous [range.since, range.until] dependency - not a behavior change.
+  }, [range, refreshTick]);
 
   // Independent of the main data load - only drives the "מסד נתונים מחובר"
   // indicator, never blocks viewing leads (a save attempt will surface its
@@ -300,6 +346,42 @@ export default function LeadsPage() {
       next.set(record.leadId, record);
       return next;
     });
+  }
+
+  /**
+   * Always the latest 7 calendar days (Asia/Jerusalem), regardless of
+   * whatever range/filters/sort the table is currently showing - a fresh,
+   * independent fetch (never a slice of state.data), per spec. The exact 10
+   * columns and their order are owned entirely by lib/leads/export.ts.
+   */
+  async function handleExportForAgent() {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const exportRange = presetDaysToDateRange(7);
+      const result = await fetchCombinedLeads(exportRange);
+      if (result === null) return;
+      if (!result.ok) {
+        setExportError(result.message);
+        return;
+      }
+
+      const rows = result.leadsResult.leads.map((lead) => toLeadExportRow(lead, result.statusesByLeadId.get(lead.id)));
+      const csv = buildLeadExportCsv(rows);
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `leads-export-7-days_${exportRange.since}_${exportRange.until}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("לא ניתן היה להתחבר לשרת. בדקו את החיבור לאינטרנט ונסו שוב.");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   const campaignOptions = useMemo(() => uniqueOptions(allLeads, "campaignId", "campaignName"), [allLeads]);
@@ -400,7 +482,7 @@ export default function LeadsPage() {
     campaignFilter || adSetFilter || adFilter || sourceFilter || campaignStatusFilter || mainStatusFilter || secondaryStatusFilter || phoneSearch.trim()
   );
 
-  const columnWidths = useLeadColumnWidths(filteredLeads);
+  const columnLayout = useLeadColumnLayout(filteredLeads);
 
   return (
     <div className="flex flex-col gap-5">
@@ -434,12 +516,19 @@ export default function LeadsPage() {
             <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
             {isRefreshing ? "מרענן..." : "רענון נתונים"}
           </Button>
-          {columnWidths.hasCustomWidths && (
-            <Button variant="ghost" size="sm" onClick={columnWidths.resetWidths} className="gap-2">
-              <Undo2 className="size-4" />
-              איפוס תצוגת עמודות
-            </Button>
-          )}
+          <LeadColumnVisibilityMenu
+            orderedConfigurableKeys={columnLayout.orderedConfigurableKeys}
+            visibleConfigurableKeys={columnLayout.visibleConfigurableKeys}
+            toggleColumnVisibility={columnLayout.toggleColumnVisibility}
+            moveConfigurableColumn={columnLayout.moveConfigurableColumn}
+            resetLayout={columnLayout.resetLayout}
+            hasCustomLayout={columnLayout.hasCustomLayout}
+          />
+          <Button variant="outline" size="sm" onClick={handleExportForAgent} disabled={isExporting} className="gap-2">
+            <Download className={cn("size-4", isExporting && "animate-pulse")} />
+            {isExporting ? "מייצא..." : "ייצוא לסוכן - 7 ימים"}
+          </Button>
+          {exportError && <span className="text-xs text-destructive">{exportError}</span>}
         </div>
         <div className="flex items-center gap-2">
           {dbHealth.status === "connected" && <DatabaseStatusBadge status={dbHealth.status} />}
@@ -552,7 +641,7 @@ export default function LeadsPage() {
               statusesByLeadId={effectiveStatusesByLeadId}
               onSaveStatus={saveLeadStatus}
               onStatusSaved={handleStatusSaved}
-              columnWidths={columnWidths}
+              columnLayout={columnLayout}
               sortOrder={sortOrder}
               onToggleSort={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
             />
