@@ -20,11 +20,25 @@ interface LeadRowProps {
   /** Same live widths map the header's resize handles write to (see leads-table.tsx) - never a separate snapshot, so a resized column can never drift out of sync between header and body cells. */
   widths: Record<LeadColumnKey, number>;
   rightOffsets: Partial<Record<LeadColumnKey, number>>;
+  /** The configurable columns currently visible, in their current order - the anchored cluster (Lead Date..Payments) is always rendered first regardless, see below. */
+  visibleColumnOrder: LeadColumnKey[];
 }
 
 const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card group-hover:lg:bg-muted/40";
+const TECH_ID_CLASS = "overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70";
+const CONFIGURABLE_KEYS_SET = new Set<LeadColumnKey>([
+  "leadSource",
+  "campaign",
+  "adSet",
+  "ad",
+  "leadId",
+  "campaignId",
+  "adSetId",
+  "adId",
+  "outcome",
+]);
 
-export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, widths, rightOffsets }: LeadRowProps) {
+export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, widths, rightOffsets, visibleColumnOrder }: LeadRowProps) {
   const editor = useLeadStatusEditor(statusRecord, async (patch) => {
     const saved = await onSaveStatus(lead.id, { ...patch, normalizedPhone: lead.normalizedPhone });
     onStatusSaved(saved);
@@ -34,6 +48,96 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
   const isRegistered = editor.mainStatus === "נרשם";
   const fullActive = isRegistered && editor.secondaryStatus === "תשלום מלא";
   const partialActive = isRegistered && editor.secondaryStatus === "תשלום חלקי";
+
+  /**
+   * Meta Lead ID is only meaningful for leads that actually came through a
+   * Meta Instant Form - a landing-page lead's `id` is this app's own
+   * internal_lead_id (a UUID used to key its lead_status row, same as any
+   * other lead), never a real Meta Lead ID, so it must never be displayed
+   * as one here (see lib/landing-leads/types.ts: meta_lead_id is null for
+   * these rows in Neon too).
+   */
+  const metaLeadId = lead.sourceType === "landing_page" ? null : lead.id;
+
+  function renderConfigurableCell(key: LeadColumnKey) {
+    switch (key) {
+      case "leadSource":
+        return (
+          <TableCell key={key} className="overflow-hidden text-ellipsis text-muted-foreground" style={columnStyle(widths.leadSource)}>
+            {LEAD_SOURCE_LABELS[lead.sourceType].short}
+          </TableCell>
+        );
+      case "campaign":
+        return (
+          <TableCell
+            key={key}
+            className="overflow-hidden text-ellipsis text-muted-foreground"
+            style={columnStyle(widths.campaign)}
+            title={lead.campaignName || undefined}
+          >
+            {lead.campaignName || "-"}
+          </TableCell>
+        );
+      case "adSet":
+        return (
+          <TableCell
+            key={key}
+            className="overflow-hidden text-ellipsis text-muted-foreground"
+            style={columnStyle(widths.adSet)}
+            title={lead.adSetName || undefined}
+          >
+            {lead.adSetName || "-"}
+          </TableCell>
+        );
+      case "ad":
+        return (
+          <TableCell
+            key={key}
+            className="overflow-hidden text-ellipsis text-muted-foreground"
+            style={columnStyle(widths.ad)}
+            title={lead.adName || undefined}
+          >
+            {lead.adName || "-"}
+          </TableCell>
+        );
+      case "leadId":
+        return (
+          <TableCell key={key} className={TECH_ID_CLASS} style={columnStyle(widths.leadId)} dir="ltr" title={metaLeadId ?? undefined}>
+            {metaLeadId ?? "-"}
+          </TableCell>
+        );
+      case "campaignId":
+        return (
+          <TableCell key={key} className={TECH_ID_CLASS} style={columnStyle(widths.campaignId)} dir="ltr" title={lead.campaignId || undefined}>
+            {lead.campaignId || "-"}
+          </TableCell>
+        );
+      case "adSetId":
+        return (
+          <TableCell key={key} className={TECH_ID_CLASS} style={columnStyle(widths.adSetId)} dir="ltr" title={lead.adSetId || undefined}>
+            {lead.adSetId || "-"}
+          </TableCell>
+        );
+      case "adId":
+        return (
+          <TableCell key={key} className={TECH_ID_CLASS} style={columnStyle(widths.adId)} dir="ltr" title={lead.adId || undefined}>
+            {lead.adId || "-"}
+          </TableCell>
+        );
+      case "outcome":
+        // Read-only, deliberately never its own editable control - always
+        // mirrors the SAME live secondaryStatus value the dropdown above
+        // shows (including a staged, not-yet-saved selection), so it can
+        // never disagree with Secondary Status even for a moment.
+        return (
+          <TableCell key={key} className="overflow-hidden text-ellipsis text-muted-foreground" style={columnStyle(widths.outcome)} title={editor.secondaryStatus || undefined}>
+            {editor.secondaryStatus || ""}
+          </TableCell>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <TableRow className="group">
@@ -101,38 +205,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
         />
       </TableCell>
 
-      <TableCell className="overflow-hidden text-ellipsis text-muted-foreground" style={columnStyle(widths.leadSource)}>
-        {LEAD_SOURCE_LABELS[lead.sourceType].short}
-      </TableCell>
-      <TableCell
-        className="overflow-hidden text-ellipsis text-muted-foreground"
-        style={columnStyle(widths.campaign)}
-        title={lead.campaignName || undefined}
-      >
-        {lead.campaignName || "-"}
-      </TableCell>
-      <TableCell
-        className="overflow-hidden text-ellipsis text-muted-foreground"
-        style={columnStyle(widths.adSet)}
-        title={lead.adSetName || undefined}
-      >
-        {lead.adSetName || "-"}
-      </TableCell>
-      <TableCell
-        className="overflow-hidden text-ellipsis text-muted-foreground"
-        style={columnStyle(widths.ad)}
-        title={lead.adName || undefined}
-      >
-        {lead.adName || "-"}
-      </TableCell>
-      <TableCell
-        className="overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70"
-        style={columnStyle(widths.leadId)}
-        dir="ltr"
-        title={lead.id}
-      >
-        {lead.id}
-      </TableCell>
+      {visibleColumnOrder.filter((key) => CONFIGURABLE_KEYS_SET.has(key)).map(renderConfigurableCell)}
     </TableRow>
   );
 }

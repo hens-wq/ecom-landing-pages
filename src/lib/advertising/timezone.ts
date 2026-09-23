@@ -54,3 +54,28 @@ export function startOfDayUnixMs(isoDate: string, timeZone: string = REPORTING_T
   const offsetMinutes = timezoneOffsetMinutes(new Date(naiveUtcMidnight), timeZone);
   return naiveUtcMidnight - offsetMinutes * 60_000;
 }
+
+/**
+ * "YYYY-MM-DD HH:mm:ss" for `date` as it reads on a wall clock in `timeZone`
+ * (defaults to REPORTING_TIMEZONE) - unambiguous and unaffected by whatever
+ * timezone the server or the consuming tool happens to be in. Built via
+ * formatToParts (not a locale's own .format() string) so the exact
+ * separators are guaranteed regardless of locale, and %24 guards against
+ * the same midnight-as-"24" quirk timezoneOffsetMinutes above already
+ * works around.
+ */
+export function formatDateTimeInTimezone(date: Date, timeZone: string = REPORTING_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
+  const hour = String(Number(get("hour")) % 24).padStart(2, "0");
+  return `${get("year")}-${get("month")}-${get("day")} ${hour}:${get("minute")}:${get("second")}`;
+}
