@@ -1,3 +1,4 @@
+import { formatDateTimeInTimezone } from "@/lib/advertising/timezone";
 import { LEAD_SOURCE_LABELS } from "@/lib/constants";
 import type { MetaFormLead } from "@/lib/leads/types";
 import type { LeadStatusRecord } from "@/lib/lead-status/types";
@@ -33,12 +34,14 @@ export const LEAD_EXPORT_COLUMNS: { key: keyof LeadExportRow; header: string }[]
   { key: "outcome", header: "Outcome" },
 ];
 
-/** These columns hold Meta's own IDs (or this app's Meta Lead ID) - long digit strings that Excel/Sheets would otherwise silently round or convert to scientific notation if written as plain numeric-looking CSV text. */
-const ID_COLUMNS = new Set<keyof LeadExportRow>(["leadIdentifier", "campaignId", "adSetId", "adId"]);
-
 /**
  * Lead Identifier = Meta Lead ID (Sunil's confirmed mapping) - blank for a
  * Landing Page lead, which has no Meta Lead ID at all. Never invent one.
+ *
+ * Lead Date is formatted in Asia/Jerusalem ("YYYY-MM-DD HH:mm:ss"), matching
+ * the timezone the 7-day export window itself is already computed in - a
+ * raw UTC ISO timestamp here would silently disagree with that window by a
+ * couple of hours right around midnight.
  *
  * Outcome = Secondary Status, but ONLY once a status has actually been
  * saved for this lead - a lead nobody has touched yet has no row in
@@ -50,7 +53,7 @@ const ID_COLUMNS = new Set<keyof LeadExportRow>(["leadIdentifier", "campaignId",
  */
 export function toLeadExportRow(lead: MetaFormLead, status: LeadStatusRecord | undefined): LeadExportRow {
   return {
-    leadDate: lead.createdTime,
+    leadDate: formatDateTimeInTimezone(new Date(lead.createdTime)),
     leadIdentifier: lead.sourceType === "landing_page" ? "" : lead.id,
     campaignId: lead.campaignId || "",
     campaignName: lead.campaignName || "",
@@ -63,26 +66,22 @@ export function toLeadExportRow(lead: MetaFormLead, status: LeadStatusRecord | u
   };
 }
 
+/**
+ * Standard CSV quoting only (RFC 4126: quote when the value contains a
+ * comma/quote/newline, doubling any internal quotes) - no Excel formula
+ * escape, no leading apostrophe, no other transformation. This export is
+ * for Sunil's Optimization Agent, a machine parser, not for opening in
+ * Excel by hand - a parsed field must equal the original value exactly,
+ * Meta IDs included.
+ */
 function csvField(value: string): string {
   if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
   return value;
 }
 
-/** Excel/Sheets' own documented escape for "keep this exactly as typed text, never a number": a formula that evaluates to the literal string. Left blank for an empty value rather than wrapping "" needlessly. */
-function excelTextValue(value: string): string {
-  if (!value) return "";
-  return `="${value.replace(/"/g, '""')}"`;
-}
-
-/** CRLF line endings, standard for a CSV meant to be opened in Excel. The caller (app/leads/page.tsx) prepends a UTF-8 BOM when turning this into a downloadable file, so Excel detects the encoding correctly instead of mangling the Hebrew Lead Source values - not done here so this stays a plain, environment-agnostic string builder. */
+/** CRLF line endings, standard for a CSV. The caller (app/leads/page.tsx) prepends a UTF-8 BOM when turning this into a downloadable file, so a viewer that does open it detects the encoding correctly instead of mangling the Hebrew Lead Source values - not done here so this stays a plain, environment-agnostic string builder. */
 export function buildLeadExportCsv(rows: LeadExportRow[]): string {
   const header = LEAD_EXPORT_COLUMNS.map((c) => csvField(c.header)).join(",");
-  const lines = rows.map((row) =>
-    LEAD_EXPORT_COLUMNS.map((c) => {
-      const raw = row[c.key];
-      const value = ID_COLUMNS.has(c.key) ? excelTextValue(raw) : raw;
-      return csvField(value);
-    }).join(",")
-  );
+  const lines = rows.map((row) => LEAD_EXPORT_COLUMNS.map((c) => csvField(row[c.key])).join(","));
   return [header, ...lines].join("\r\n");
 }
