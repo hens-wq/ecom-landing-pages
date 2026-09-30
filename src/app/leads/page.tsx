@@ -8,6 +8,8 @@ import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/dat
 import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadColumnVisibilityMenu } from "@/components/leads/lead-column-visibility-menu";
+import type { LeadColumnKey } from "@/components/leads/lead-columns";
+import { compareLeadSortValues, getLeadSortValue } from "@/components/leads/lead-sort";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
 import { useLeadColumnLayout } from "@/components/leads/use-lead-column-layout";
@@ -21,7 +23,7 @@ import { presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelecti
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { calculateIrrelevantRate, calculateSalesSummary } from "@/lib/lead-status/calculations";
+import { calculateIrrelevantRate, calculateSalesSummary, isSaleRecord } from "@/lib/lead-status/calculations";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
@@ -242,6 +244,9 @@ export default function LeadsPage() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | "inactive" | null>(null);
   const [mainStatusFilter, setMainStatusFilter] = useState<MainStatus | null>(null);
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState<string | null>(null);
+  /** Toggled only via the "סה"כ מכירות" KPI card - the existing sale rule (isSaleRecord), never a new definition. A separate flag (not reusing mainStatusFilter/secondaryStatusFilter) since a sale is "נרשם" AND EITHER secondary status, which those single-value dropdowns can't express together. */
+  const [salesOnlyFilter, setSalesOnlyFilter] = useState(false);
+  const tableSectionRef = useRef<HTMLDivElement>(null);
 
   if (rangeKey !== trackedRangeKey) {
     setTrackedRangeKey(rangeKey);
@@ -478,24 +483,42 @@ export default function LeadsPage() {
       const record = getStatus(lead.id, lead.normalizedPhone);
       if (mainStatusFilter && record.mainStatus !== mainStatusFilter) return false;
       if (secondaryStatusFilter && record.secondaryStatus !== secondaryStatusFilter) return false;
+      if (salesOnlyFilter && !isSaleRecord(record)) return false;
       return leadMatchesPhoneQuery(lead, phoneSearch);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, phoneSearch, effectiveStatusesByLeadId]);
+  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, salesOnlyFilter, phoneSearch, effectiveStatusesByLeadId]);
 
   // Independent of every filter above (never reset by a filter change, and
   // never resets a filter itself) - sorts whatever's already been fetched
-  // and filtered by the real createdTime timestamp, never the formatted
-  // display string, so this is pure client-side reordering with no new
-  // Meta/Neon request. Defaults to newest-first: this is a sales-ops table,
-  // and the newest leads are what you almost always want to act on first.
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // and filtered, using each column's RAW underlying value (see
+  // lead-sort.ts), never a formatted display string, so this is pure
+  // client-side reordering with no new Meta/Neon request. Defaults to Lead
+  // Date newest-first: this is a sales-ops table, and the newest leads are
+  // what you almost always want to act on first. Clicking a DIFFERENT
+  // column's header always starts it at ascending; clicking the ALREADY-
+  // active column's header toggles direction - so the very first click on
+  // Lead Date (already the active/default column) still just flips the
+  // existing desc default to asc, exactly as before this phase.
+  const [sortKey, setSortKey] = useState<LeadColumnKey>("leadDate");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  function handleSort(key: LeadColumnKey) {
+    if (key === sortKey) {
+      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  }
   const sortedLeads = useMemo(() => {
-    const direction = sortOrder === "desc" ? -1 : 1;
-    return [...filteredLeads].sort(
-      (a, b) => direction * (new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime())
-    );
-  }, [filteredLeads, sortOrder]);
+    const direction = sortDirection === "desc" ? -1 : 1;
+    return [...filteredLeads].sort((a, b) => {
+      const valueA = getLeadSortValue(sortKey, a, getStatus(a.id, a.normalizedPhone));
+      const valueB = getLeadSortValue(sortKey, b, getStatus(b.id, b.normalizedPhone));
+      return direction * compareLeadSortValues(valueA, valueB);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getStatus closes over effectiveStatusesByLeadId, already a dependency below
+  }, [filteredLeads, sortKey, sortDirection, effectiveStatusesByLeadId]);
 
   const scopedSpend = useMemo(
     () =>
@@ -518,8 +541,48 @@ export default function LeadsPage() {
   );
 
   const hasActiveFilters = Boolean(
-    campaignFilter || adSetFilter || adFilter || sourceFilter || campaignStatusFilter || mainStatusFilter || secondaryStatusFilter || phoneSearch.trim()
+    campaignFilter ||
+      adSetFilter ||
+      adFilter ||
+      sourceFilter ||
+      campaignStatusFilter ||
+      mainStatusFilter ||
+      secondaryStatusFilter ||
+      salesOnlyFilter ||
+      phoneSearch.trim()
   );
+
+  function resetAllFilters() {
+    setPhoneSearch("");
+    setCampaignFilter(null);
+    setAdSetFilter(null);
+    setAdFilter(null);
+    setSourceFilter(null);
+    setCampaignStatusFilter(null);
+    setMainStatusFilter(null);
+    setSecondaryStatusFilter(null);
+    setSalesOnlyFilter(false);
+  }
+
+  /**
+   * Shows exactly the leads that make up "סה"כ מכירות" for the currently
+   * selected date range - the existing isSaleRecord() rule (Main Status
+   * "נרשם" AND Secondary Status "תשלום מלא" or "תשלום חלקי"), never a new
+   * definition of a sale. Clicking again while already active clears just
+   * this filter (a plain toggle); turning it ON clears every OTHER filter
+   * first, so what's shown is unambiguously "all the sales in this date
+   * range" and not a further-narrowed subset of whatever else happened to be
+   * selected - the date range itself is the one thing left untouched.
+   */
+  function handleTotalSalesClick() {
+    if (salesOnlyFilter) {
+      setSalesOnlyFilter(false);
+      return;
+    }
+    resetAllFilters();
+    setSalesOnlyFilter(true);
+    tableSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const columnLayout = useLeadColumnLayout(filteredLeads);
 
@@ -596,7 +659,12 @@ export default function LeadsPage() {
 
       {state.phase === "ready" && (
         <>
-          <SalesKpiCards sales={salesSummary} irrelevant={irrelevantRate} />
+          <SalesKpiCards
+            sales={salesSummary}
+            irrelevant={irrelevantRate}
+            onTotalSalesClick={handleTotalSalesClick}
+            isSalesFilterActive={salesOnlyFilter}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -653,43 +721,41 @@ export default function LeadsPage() {
               onChange={setSecondaryStatusFilter}
             />
             {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setPhoneSearch("");
-                  setCampaignFilter(null);
-                  setAdSetFilter(null);
-                  setAdFilter(null);
-                  setSourceFilter(null);
-                  setCampaignStatusFilter(null);
-                  setMainStatusFilter(null);
-                  setSecondaryStatusFilter(null);
-                }}
-              >
+              <Button variant="ghost" size="sm" onClick={resetAllFilters}>
                 איפוס סינון
               </Button>
             )}
             <span className="text-xs text-muted-foreground">
               מציג {filteredLeads.length.toLocaleString("he-IL")} מתוך {allLeads.length.toLocaleString("he-IL")} לידים
+              {salesOnlyFilter && " (מכירות בלבד)"}
             </span>
           </div>
 
-          {allLeads.length === 0 ? (
-            <EmptyStatePanel title="לא נמצאו לידים" description="לא נמצאו לידים בטווח התאריכים שנבחר." />
-          ) : filteredLeads.length === 0 ? (
-            <EmptyStatePanel title="לא נמצאו לידים התואמים לסינון" description="נסו לשנות את החיפוש, המסננים או טווח התאריכים." />
-          ) : (
-            <LeadsTable
-              leads={sortedLeads}
-              statusesByLeadId={effectiveStatusesByLeadId}
-              onSaveStatus={saveLeadStatus}
-              onStatusSaved={handleStatusSaved}
-              columnLayout={columnLayout}
-              sortOrder={sortOrder}
-              onToggleSort={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-            />
-          )}
+          <div ref={tableSectionRef}>
+            {allLeads.length === 0 ? (
+              <EmptyStatePanel title="לא נמצאו לידים" description="לא נמצאו לידים בטווח התאריכים שנבחר." />
+            ) : filteredLeads.length === 0 ? (
+              <EmptyStatePanel
+                title={salesOnlyFilter ? "לא נמצאו מכירות" : "לא נמצאו לידים התואמים לסינון"}
+                description={
+                  salesOnlyFilter
+                    ? "אין לידים עם תשלום מלא או חלקי בטווח התאריכים שנבחר."
+                    : "נסו לשנות את החיפוש, המסננים או טווח התאריכים."
+                }
+              />
+            ) : (
+              <LeadsTable
+                leads={sortedLeads}
+                statusesByLeadId={effectiveStatusesByLeadId}
+                onSaveStatus={saveLeadStatus}
+                onStatusSaved={handleStatusSaved}
+                columnLayout={columnLayout}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
+            )}
+          </div>
         </>
       )}
     </div>

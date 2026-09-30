@@ -5,7 +5,6 @@ import { FullPaymentField, PartialPaymentField } from "@/components/leads/paymen
 import { MainStatusSelect, SecondaryStatusSelect } from "@/components/leads/status-select";
 import { useLeadStatusEditor, type LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 import type { MetaFormLead } from "@/lib/leads";
 import type { LeadStatusRecord } from "@/lib/lead-status/types";
@@ -27,7 +26,6 @@ interface LeadRowProps {
 const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card group-hover:lg:bg-muted/40";
 const TECH_ID_CLASS = "overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70";
 const CONFIGURABLE_KEYS_SET = new Set<LeadColumnKey>([
-  "leadSource",
   "campaign",
   "adSet",
   "ad",
@@ -61,12 +59,6 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
 
   function renderConfigurableCell(key: LeadColumnKey) {
     switch (key) {
-      case "leadSource":
-        return (
-          <TableCell key={key} className="overflow-hidden text-ellipsis text-muted-foreground" style={columnStyle(widths.leadSource)}>
-            {LEAD_SOURCE_LABELS[lead.sourceType].short}
-          </TableCell>
-        );
       case "campaign":
         return (
           <TableCell
