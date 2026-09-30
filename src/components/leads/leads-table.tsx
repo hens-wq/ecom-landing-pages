@@ -8,7 +8,7 @@ import { columnStyle, LEAD_COLUMN_LABELS, type LeadColumnKey, stickyRightOffsets
 import type { LeadColumnLayoutState } from "@/components/leads/use-lead-column-layout";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { ColumnResizeHandle } from "@/components/shared/column-resize-handle";
-import { TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
+import { TableBottomScrollbar, TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { MetaFormLead } from "@/lib/leads";
 import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
@@ -20,9 +20,10 @@ interface LeadsTableProps {
   onSaveStatus: (leadId: string, patch: LeadStatusPatch) => Promise<LeadStatusRecord>;
   onStatusSaved: (record: LeadStatusRecord) => void;
   columnLayout: LeadColumnLayoutState;
-  /** "desc" = newest first (the default - see app/leads/page.tsx), "asc" = oldest first. Sorts whatever's already loaded/filtered - never triggers a new fetch. */
-  sortOrder: "asc" | "desc";
-  onToggleSort: () => void;
+  /** The single currently-active sort column, and its direction - "desc" for leadDate means newest first (the page's default). Sorts whatever's already loaded/filtered - never triggers a new fetch. */
+  sortKey: LeadColumnKey;
+  sortDirection: "asc" | "desc";
+  onSort: (key: LeadColumnKey) => void;
 }
 
 /** Shared sticky classes (lg+ only - see lead-columns.ts) so header and body cells line up exactly. */
@@ -30,27 +31,43 @@ const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card";
 /** Headers wrap to 2 lines instead of forcing the column wider than its data needs (see lead-columns.ts doc comment on why column width must stay authoritative under table-fixed). */
 const HEADER_TEXT_CLASS = "relative whitespace-normal py-2 leading-tight";
 
-export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnLayout, sortOrder, onToggleSort }: LeadsTableProps) {
+export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSaved, columnLayout, sortKey, sortDirection, onSort }: LeadsTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const { widths, resizeColumn, visibleColumnOrder } = columnLayout;
   const rightOffsets = stickyRightOffsets(widths);
+  const SortIcon = sortDirection === "desc" ? ArrowDown : ArrowUp;
 
+  /** Every column header is clickable and sortable (see lead-sort.ts) - only the currently-active column shows the ↑/↓ indicator. */
   function head(key: LeadColumnKey, extraClassName?: string) {
     const isSticky = rightOffsets[key] !== undefined;
+    const isActive = sortKey === key;
     return (
       <TableHead
         key={key}
         className={cn(HEADER_TEXT_CLASS, isSticky && STICKY_CELL_CLASS, extraClassName)}
         style={columnStyle(widths[key], rightOffsets[key])}
+        aria-sort={isActive ? (sortDirection === "desc" ? "descending" : "ascending") : undefined}
       >
-        {LEAD_COLUMN_LABELS[key]}
+        <button
+          type="button"
+          onClick={() => onSort(key)}
+          className="flex items-center gap-1 text-right hover:text-foreground"
+          title={
+            isActive
+              ? sortDirection === "desc"
+                ? "מיון: מהגבוה/חדש לנמוך/ישן - לחצו למיון הפוך"
+                : "מיון: מהנמוך/ישן לגבוה/חדש - לחצו למיון הפוך"
+              : `מיון לפי ${LEAD_COLUMN_LABELS[key]}`
+          }
+        >
+          <span>{LEAD_COLUMN_LABELS[key]}</span>
+          {isActive && <SortIcon className="size-3.5 shrink-0" />}
+        </button>
         <ColumnResizeHandle label={LEAD_COLUMN_LABELS[key]} onResize={(delta) => resizeColumn(key, delta)} />
       </TableHead>
     );
   }
 
-  const isLeadDateSticky = rightOffsets.leadDate !== undefined;
-  const SortIcon = sortOrder === "desc" ? ArrowDown : ArrowUp;
   const isTechnicalIdColumn = (key: LeadColumnKey) => key === "campaignId" || key === "adSetId" || key === "adId";
 
   return (
@@ -59,22 +76,7 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
       <Table ref={tableContainerRef} className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead
-              className={cn(HEADER_TEXT_CLASS, isLeadDateSticky && STICKY_CELL_CLASS, "border-l border-transparent lg:border-border")}
-              style={columnStyle(widths.leadDate, rightOffsets.leadDate)}
-              aria-sort={sortOrder === "desc" ? "descending" : "ascending"}
-            >
-              <button
-                type="button"
-                onClick={onToggleSort}
-                className="flex items-center gap-1 text-right hover:text-foreground"
-                title={sortOrder === "desc" ? "מיון: החדש ביותר קודם - לחצו למיון הפוך" : "מיון: הישן ביותר קודם - לחצו למיון הפוך"}
-              >
-                <span>{LEAD_COLUMN_LABELS.leadDate}</span>
-                <SortIcon className="size-3.5 shrink-0" />
-              </button>
-              <ColumnResizeHandle label={LEAD_COLUMN_LABELS.leadDate} onResize={(delta) => resizeColumn("leadDate", delta)} />
-            </TableHead>
+            {head("leadDate", "border-l border-transparent lg:border-border")}
             {head("name")}
             {head("phone")}
             {head("mainStatus")}
@@ -101,6 +103,7 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
           ))}
         </TableBody>
       </Table>
+      <TableBottomScrollbar targetRef={tableContainerRef} />
     </div>
   );
 }
