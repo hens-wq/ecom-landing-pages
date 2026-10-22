@@ -7,14 +7,16 @@ import { cn } from "@/lib/utils";
 
 interface AmountFieldProps {
   value: number | null;
-  /** Whether this is the field matching the current secondary status - counted (see lib/lead-status/calculations.ts activePaymentAmount), editable, and visually emphasized. When false the field may still show a stale leftover value (never silently erased, per spec) but is disabled and un-emphasized. */
-  active: boolean;
+  /** Whether an amount can be typed here - true for every enrolled lead, since entering an amount is what sets its payment status. */
+  editable: boolean;
+  /** Whether this is the payment the lead currently counts (see calculations.ts activePaymentAmount) - emphasized. A value in a non-emphasized field is a leftover and shows "לא נספר". */
+  emphasized: boolean;
   disabled?: boolean;
   onCommit: (amount: number | null) => void;
 }
 
 /** Committed on blur (not per keystroke). */
-function AmountField({ value, active, disabled, onCommit }: AmountFieldProps) {
+function AmountField({ value, editable, emphasized, disabled, onCommit }: AmountFieldProps) {
   const [draft, setDraft] = useState(value === null ? "" : String(value));
   const [trackedValue, setTrackedValue] = useState(value);
 
@@ -30,15 +32,15 @@ function AmountField({ value, active, disabled, onCommit }: AmountFieldProps) {
   function commit() {
     const trimmed = draft.trim();
     if (trimmed === "") {
-      onCommit(null);
+      if (value !== null) onCommit(null);
       return;
     }
     const parsed = Number(trimmed);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onCommit(parsed);
-    } else {
+    if (!Number.isFinite(parsed) || parsed <= 0) {
       setDraft(value === null ? "" : String(value)); // invalid input - revert to last confirmed value
+      return;
     }
+    if (parsed !== value) onCommit(parsed);
   }
 
   return (
@@ -49,33 +51,34 @@ function AmountField({ value, active, disabled, onCommit }: AmountFieldProps) {
         step="1"
         dir="ltr"
         value={draft}
-        disabled={disabled || !active}
+        disabled={disabled || !editable}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
-        placeholder={active ? "סכום" : "-"}
-        className={cn("h-8 w-28 text-xs tabular-nums-he", active && "border-primary/50 ring-1 ring-primary/20")}
+        placeholder={editable ? "סכום" : "-"}
+        className={cn("h-8 w-28 text-xs tabular-nums-he", emphasized && "border-primary/50 ring-1 ring-primary/20")}
       />
-      {!active && value !== null && <span className="text-[10px] text-muted-foreground/70">לא נספר</span>}
+      {!emphasized && value !== null && <span className="text-[10px] text-muted-foreground/70">לא נספר</span>}
     </div>
   );
 }
 
 interface PaymentFieldProps {
+  isEditable: boolean;
   isActive: boolean;
   value: number | null;
   disabled?: boolean;
   onChange: (amount: number | null) => void;
 }
 
-/** Full Payment column cell - active (emphasized + editable) only when Main Status = נרשם and Secondary Status = תשלום מלא. */
-export function FullPaymentField({ isActive, value, disabled, onChange }: PaymentFieldProps) {
-  return <AmountField value={value} active={isActive} disabled={disabled} onCommit={onChange} />;
+/** Full Payment column cell - editable for every enrolled lead; emphasized when the lead's Secondary Status is תשלום מלא. */
+export function FullPaymentField({ isEditable, isActive, value, disabled, onChange }: PaymentFieldProps) {
+  return <AmountField value={value} editable={isEditable} emphasized={isActive} disabled={disabled} onCommit={onChange} />;
 }
 
-/** Partial Payment column cell - active (emphasized + editable) only when Main Status = נרשם and Secondary Status = תשלום חלקי. */
-export function PartialPaymentField({ isActive, value, disabled, onChange }: PaymentFieldProps) {
-  return <AmountField value={value} active={isActive} disabled={disabled} onCommit={onChange} />;
+/** Partial Payment column cell - editable for every enrolled lead; emphasized when the lead's Secondary Status is תשלום חלקי. */
+export function PartialPaymentField({ isEditable, isActive, value, disabled, onChange }: PaymentFieldProps) {
+  return <AmountField value={value} editable={isEditable} emphasized={isActive} disabled={disabled} onCommit={onChange} />;
 }

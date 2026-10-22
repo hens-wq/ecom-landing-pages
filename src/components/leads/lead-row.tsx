@@ -2,6 +2,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { columnStyle, type LeadColumnKey } from "@/components/leads/lead-columns";
 import { FullPaymentField, PartialPaymentField } from "@/components/leads/payment-inputs";
+import { StudentRatingFlames } from "@/components/leads/student-rating";
 import { MainStatusSelect, SecondaryStatusSelect } from "@/components/leads/status-select";
 import { useLeadStatusEditor, type LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -26,6 +27,7 @@ interface LeadRowProps {
 const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card group-hover:lg:bg-muted/40";
 const TECH_ID_CLASS = "overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70";
 const CONFIGURABLE_KEYS_SET = new Set<LeadColumnKey>([
+  "studentRating",
   "campaign",
   "adSet",
   "ad",
@@ -59,6 +61,12 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
 
   function renderConfigurableCell(key: LeadColumnKey) {
     switch (key) {
+      case "studentRating":
+        return (
+          <TableCell key={key} className="whitespace-nowrap" style={columnStyle(widths.studentRating)}>
+            <StudentRatingFlames rating={statusRecord.studentRating} />
+          </TableCell>
+        );
       case "campaign":
         return (
           <TableCell
@@ -182,6 +190,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
 
       <TableCell className="align-top" style={columnStyle(widths.fullPayment)}>
         <FullPaymentField
+          isEditable={isRegistered}
           isActive={fullActive}
           value={editor.fullPaymentAmount}
           disabled={editor.pending}
@@ -190,6 +199,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
       </TableCell>
       <TableCell className="align-top" style={columnStyle(widths.partialPayment)}>
         <PartialPaymentField
+          isEditable={isRegistered}
           isActive={partialActive}
           value={editor.partialPaymentAmount}
           disabled={editor.pending}

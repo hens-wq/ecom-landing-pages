@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
-import { validateStatusUpdate } from "@/lib/lead-status/validation";
+import { checkStatusRequest, resolveStatusUpdate } from "@/lib/lead-status/validation";
 
 // Never statically cached (this is live, frequently-changing business data),
 // Node runtime only - consistent with every other route in this app that
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
   if (typeof leadId !== "string" || !leadId) {
     return NextResponse.json({ error: { message: "leadId חסר." } }, { status: 400 });
   }
-  if (typeof mainStatus !== "string" || typeof secondaryStatus !== "string") {
-    return NextResponse.json({ error: { message: "mainStatus / secondaryStatus חסרים." } }, { status: 400 });
+  if (typeof mainStatus !== "string") {
+    return NextResponse.json({ error: { message: "mainStatus חסר." } }, { status: 400 });
   }
 
   const fullPaymentParsed = parseOptionalAmount(body.fullPaymentAmount);
@@ -49,8 +49,18 @@ export async function POST(request: NextRequest) {
   if (!fullPaymentParsed.ok || !partialPaymentParsed.ok) {
     return NextResponse.json({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, { status: 400 });
   }
-  const fullPaymentAmount = fullPaymentParsed.value;
-  const partialPaymentAmount = partialPaymentParsed.value;
+
+  const updateRequest = {
+    mainStatus,
+    secondaryStatus: typeof secondaryStatus === "string" ? secondaryStatus : "",
+    fullPaymentAmount: fullPaymentParsed.value,
+    partialPaymentAmount: partialPaymentParsed.value,
+  };
+
+  const requestCheck = checkStatusRequest(updateRequest);
+  if (!requestCheck.ok) {
+    return NextResponse.json({ error: { message: requestCheck.error } }, { status: 400 });
+  }
 
   const repository = getLeadStatusRepository();
 
@@ -62,18 +72,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message } }, { status: 503 });
   }
 
-  const validation = validateStatusUpdate({ mainStatus, secondaryStatus, fullPaymentAmount, partialPaymentAmount }, existing);
-  if (!validation.ok) {
-    return NextResponse.json({ error: { message: validation.error } }, { status: 400 });
+  const resolved = resolveStatusUpdate(updateRequest, existing);
+  if (!resolved.ok) {
+    return NextResponse.json({ error: { message: resolved.error } }, { status: 400 });
   }
 
   try {
     const updated = await repository.upsert(leadId, {
-      mainStatus,
-      secondaryStatus,
+      mainStatus: resolved.value.mainStatus,
+      secondaryStatus: resolved.value.secondaryStatus,
       normalizedPhone: typeof normalizedPhone === "string" ? normalizedPhone : undefined,
-      fullPaymentAmount,
-      partialPaymentAmount,
+      fullPaymentAmount: resolved.value.fullPaymentAmount,
+      partialPaymentAmount: resolved.value.partialPaymentAmount,
     });
     return NextResponse.json({ record: updated });
   } catch (error) {

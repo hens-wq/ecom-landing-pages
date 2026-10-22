@@ -43,6 +43,37 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
   return { source: "meta", campaigns, account };
 }
 
+/**
+ * Total ad spend for `range` across every campaign that spent in it - paused,
+ * archived and switched-off campaigns included. Mock mode sums the mock
+ * campaigns; Meta mode asks the account-level Insights edge directly.
+ */
+export async function getAccountSpendForRange(range: DateRange): Promise<{ source: "mock" | "meta"; spend: number }> {
+  const check = checkMetaConfig();
+
+  if (check.status === "unconfigured") {
+    const campaigns = await new MockAdvertisingProvider().getCampaigns(range);
+    const spend = campaigns.reduce(
+      (total, campaign) =>
+        total + campaign.adSets.reduce((adSetTotal, adSet) => adSetTotal + adSet.ads.reduce((adTotal, ad) => adTotal + ad.metrics.spend, 0), 0),
+      0
+    );
+    return { source: "mock", spend };
+  }
+
+  if (check.status === "incomplete") {
+    const missingLabel = check.missing.join(", ");
+    throw new AdvertisingApiError(
+      check.missing.includes("META_ACCESS_TOKEN") ? "missing_token" : "missing_account_id",
+      `הגדרת Meta Ads חסרה: ${missingLabel}.`,
+      `Missing env vars: ${missingLabel}`
+    );
+  }
+
+  const provider = new MetaAdvertisingProvider(check.config);
+  return { source: "meta", spend: await provider.getAccountSpend(range) };
+}
+
 export type MetaConnectionStatus =
   | { status: "not_configured" }
   | { status: "connected"; account: AdvertisingAccountInfo }

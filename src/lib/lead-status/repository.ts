@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
-import type { LeadStatusRecord, MainStatus } from "@/lib/lead-status/types";
+import { ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 
 /**
  * Backed by Neon Postgres (see db.ts) - a `lead_status` table, one row per
@@ -35,6 +35,8 @@ export interface LeadStatusRepository {
   get(leadId: string): Promise<LeadStatusRecord | undefined>;
   /** Batch read for however many lead IDs are currently loaded on the Leads page - avoids one query per row. */
   getMany(leadIds: string[]): Promise<Map<string, LeadStatusRecord>>;
+  /** Every enrolled lead with no payment amount entered - across ALL dates, so the Leads page's warning never depends on the range it's showing. */
+  listEnrolledMissingPayment(): Promise<LeadStatusRecord[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
 }
 
@@ -63,6 +65,7 @@ function mapRow(row: LeadStatusRow): LeadStatusRecord {
     secondaryStatus: row.secondary_status,
     fullPaymentAmount: parseAmount(row.full_payment_amount),
     partialPaymentAmount: parseAmount(row.partial_payment_amount),
+    studentRating: null,
     updatedAt: row.updated_at,
   };
 }
@@ -106,6 +109,23 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       return result;
     } catch (error) {
       throw wrapDatabaseError(error, "שגיאה בטעינת סטטוסי הלידים ממסד הנתונים.");
+    }
+  }
+
+  async listEnrolledMissingPayment(): Promise<LeadStatusRecord[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`
+        SELECT * FROM lead_status
+        WHERE main_status = ${ENROLLED_MAIN_STATUS}
+          AND COALESCE(full_payment_amount, 0) <= 0
+          AND COALESCE(partial_payment_amount, 0) <= 0
+        ORDER BY updated_at DESC
+      `) as LeadStatusRow[];
+      return rows.map(mapRow);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת לידים שנרשמו ללא תשלום ממסד הנתונים.");
     }
   }
 

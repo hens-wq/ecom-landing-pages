@@ -31,6 +31,8 @@ export function getLeadSortValue(key: LeadColumnKey, lead: MetaFormLead, status:
       return status.fullPaymentAmount ?? -Infinity;
     case "partialPayment":
       return status.partialPaymentAmount ?? -Infinity;
+    case "studentRating":
+      return status.studentRating ?? -Infinity;
     case "campaign":
       return lead.campaignName || lead.campaignId || "";
     case "adSet":

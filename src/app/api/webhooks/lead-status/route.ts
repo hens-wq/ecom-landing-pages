@@ -4,8 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
-import { isMainStatus, SECONDARY_STATUSES_BY_MAIN } from "@/lib/lead-status/types";
-import { validateStatusUpdate } from "@/lib/lead-status/validation";
+import { checkStatusRequest, resolveStatusUpdate } from "@/lib/lead-status/validation";
 
 // Never statically cached, Node runtime only - consistent with every other
 // data route in this app.
@@ -17,13 +16,12 @@ export const runtime = "nodejs";
  * Lead Status Webhook - integration reference
  * ============================================================================
  *
- * Call this from a Make.com "HTTP > Make a request" module, or directly from
- * any other system (CRM, landing page backend, etc.) that knows a lead's
- * Main/Secondary status. It upserts lib/lead-status's one record per lead -
- * the SAME table, and the SAME validateStatusUpdate() business rules, the
- * dashboard's own UI writes through - never a second definition of the
- * status hierarchy. upsert() means this also works the very first time a
- * lead's status is set ("update on creation"): no row has to exist yet.
+ * Called by Make.com (HTTP > Make a request) or any other system that knows a
+ * lead's CRM status. It upserts the one lead_status record per lead, through
+ * the SAME business rules the dashboard's own status editor uses
+ * (lib/lead-status/validation.ts) - never a second definition of the status
+ * hierarchy. The first call for a lead creates its record, so this works
+ * "on creation" too.
  *
  * Request
  * -------
@@ -32,28 +30,27 @@ export const runtime = "nodejs";
  *   Content-Type: application/json
  *
  *   {
- *     "leadId": "120210000000001111",   // required - see "leadId" below
- *     "mainStatus": "בתהליך",             // required - one of MAIN_STATUSES
- *     "secondaryStatus": "בתהליך",        // optional - see below
- *     "fullPaymentAmount": 1500,          // optional, only for "תשלום מלא"
- *     "partialPaymentAmount": 500         // optional, only for "תשלום חלקי"
+ *     "leadId": "120210000000001111",   // required - the Meta Lead ID
+ *     "mainStatus": "נרשם",               // required
+ *     "secondaryStatus": "",              // see below
+ *     "fullPaymentAmount": 1500,          // optional - a positive amount only
+ *     "partialPaymentAmount": 500         // optional - a positive amount only
  *   }
  *
- * - "leadId": the Meta Lead ID for a lead captured via a Meta Instant Form.
- *   (A landing-page lead that has no Meta Lead ID instead uses its internal
- *   lead UUID as this same key internally - irrelevant for a typical Meta
- *   Lead Ads flow, worth knowing only if this is ever called for a
- *   landing-page-sourced lead.)
- * - "secondaryStatus" is OPTIONAL: when omitted (or sent as an empty
- *   string), it defaults to the first secondary status under the given main
- *   status - the exact same default the dashboard's own Main Status dropdown
- *   applies. Pass it explicitly whenever the caller actually knows the
- *   specific reason/sub-stage; omit it when the caller only tracks a coarse
- *   main-status pipeline stage.
- * - Payment amounts are REQUIRED (must be a positive number) only when
- *   secondaryStatus is "תשלום מלא" or "תשלום חלקי" under mainStatus "נרשם" -
- *   the request is rejected with 400 otherwise. Omit both fields entirely
- *   for every other status.
+ * secondaryStatus
+ * ---------------
+ *   - Main Status "נרשם": may be empty or omitted. The dashboard stores
+ *     "נרשם" (enrolled, no payment entered yet) - or, if the lead already has
+ *     a Full or Partial payment entered in the dashboard, keeps that payment.
+ *   - Every other Main Status: required, and sent exactly as the CRM has it.
+ *     Nothing is invented - a missing value is rejected with 400.
+ *
+ * Payment amounts
+ * ---------------
+ *   Optional. Omit them and the stored amounts stay as they are - a CRM sync
+ *   never erases a payment entered in the dashboard. An entered amount sets
+ *   the payment status: a Full amount means "תשלום מלא", a Partial amount
+ *   means "תשלום חלקי". Enrollment itself never needs an amount.
  *
  * Valid mainStatus -> secondaryStatus values (must match exactly, including
  * punctuation - see lib/lead-status/types.ts, the single source of truth):
@@ -74,7 +71,7 @@ export const runtime = "nodejs";
  *                      ליד שגוי - ליד כפול
  *   רשימה שחורה     -> ר"ש - תביעה | ר"ש - מסרב פניות | ר"ש - לקוח בעייתי
  *   ביטול הרשמה     -> ביטל הרשמה - BDI שלילי | ביטל הרשמה - לקוח התחרט
- *   נרשם            -> תשלום מלא | תשלום חלקי
+ *   נרשם            -> נרשם | תשלום מלא | תשלום חלקי (see above)
  *   DATA            -> דאטה
  *
  * Responses
@@ -82,27 +79,19 @@ export const runtime = "nodejs";
  *   200 { "ok": true, "record": { leadId, normalizedPhone, mainStatus,
  *         secondaryStatus, fullPaymentAmount, partialPaymentAmount,
  *         updatedAt } }
- *   400 { "error": { "message": "..." } }  - bad/missing/invalid field
- *   401 { "error": { "message": "אימות נכשל." } }  - wrong/missing bearer token
+ *   400 { "error": { "message": "..." } }  - bad, missing or invalid field
+ *   401 { "error": { "message": "אימות נכשל." } }  - wrong or missing token
  *   503 { "error": { "message": "..." } }  - endpoint not configured, or a
  *         database error (never the raw driver error)
  *
- * Safe to call repeatedly with the same values (idempotent upsert) - a retry
- * from Make after a timeout never double-applies anything.
+ * Safe to retry: the same request twice leaves the same record.
  */
+
 function timingSafeStringEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;
   return timingSafeEqual(bufA, bufB);
-}
-
-interface WebhookBody {
-  leadId?: unknown;
-  mainStatus?: unknown;
-  secondaryStatus?: unknown;
-  fullPaymentAmount?: unknown;
-  partialPaymentAmount?: unknown;
 }
 
 type AmountParseResult = { ok: true; value: number | null | undefined } | { ok: false };
@@ -129,9 +118,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "אימות נכשל." } }, { status: 401 });
   }
 
-  let body: WebhookBody;
+  let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as WebhookBody;
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: { message: "גוף הבקשה אינו JSON תקין." } }, { status: 400 });
   }
@@ -141,28 +130,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "leadId (מזהה ליד פייסבוק) חסר." } }, { status: 400 });
   }
 
-  const mainStatus = typeof body.mainStatus === "string" ? body.mainStatus.trim() : "";
-  if (!mainStatus) {
-    return NextResponse.json({ error: { message: "mainStatus חסר." } }, { status: 400 });
-  }
-  if (!isMainStatus(mainStatus)) {
-    return NextResponse.json({ error: { message: `סטטוס ראשי לא תקין: "${mainStatus}".` } }, { status: 400 });
-  }
-
-  // secondaryStatus is optional - callers that only track a coarse main-
-  // status stage (no specific reason code) can omit it entirely; this then
-  // defaults to the same first option the dashboard's own Main Status
-  // dropdown applies for that main status.
-  const rawSecondary = typeof body.secondaryStatus === "string" ? body.secondaryStatus.trim() : "";
-  const secondaryStatus = rawSecondary || SECONDARY_STATUSES_BY_MAIN[mainStatus][0];
-
   const fullPaymentParsed = parseOptionalAmount(body.fullPaymentAmount);
   const partialPaymentParsed = parseOptionalAmount(body.partialPaymentAmount);
   if (!fullPaymentParsed.ok || !partialPaymentParsed.ok) {
     return NextResponse.json({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, { status: 400 });
   }
-  const fullPaymentAmount = fullPaymentParsed.value;
-  const partialPaymentAmount = partialPaymentParsed.value;
+
+  const updateRequest = {
+    mainStatus: typeof body.mainStatus === "string" ? body.mainStatus : "",
+    secondaryStatus: typeof body.secondaryStatus === "string" ? body.secondaryStatus : "",
+    fullPaymentAmount: fullPaymentParsed.value,
+    partialPaymentAmount: partialPaymentParsed.value,
+  };
+
+  const requestCheck = checkStatusRequest(updateRequest);
+  if (!requestCheck.ok) {
+    return NextResponse.json({ error: { message: requestCheck.error } }, { status: 400 });
+  }
 
   const repository = getLeadStatusRepository();
 
@@ -174,17 +158,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message } }, { status: 503 });
   }
 
-  const validation = validateStatusUpdate({ mainStatus, secondaryStatus, fullPaymentAmount, partialPaymentAmount }, existing);
-  if (!validation.ok) {
-    return NextResponse.json({ error: { message: validation.error } }, { status: 400 });
+  const resolved = resolveStatusUpdate(updateRequest, existing);
+  if (!resolved.ok) {
+    return NextResponse.json({ error: { message: resolved.error } }, { status: 400 });
   }
 
   try {
     const updated = await repository.upsert(leadId, {
-      mainStatus,
-      secondaryStatus,
-      fullPaymentAmount,
-      partialPaymentAmount,
+      mainStatus: resolved.value.mainStatus,
+      secondaryStatus: resolved.value.secondaryStatus,
+      fullPaymentAmount: resolved.value.fullPaymentAmount,
+      partialPaymentAmount: resolved.value.partialPaymentAmount,
     });
     return NextResponse.json({ ok: true, record: updated });
   } catch (error) {

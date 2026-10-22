@@ -33,6 +33,22 @@ export class MetaAdvertisingProvider implements AdvertisingDataProvider {
   }
 
   /**
+   * Total spend for the whole account in `range`, from the account-level
+   * Insights edge. Not a sum of getCampaigns(): that list comes from Meta's
+   * default campaign listing, which doesn't promise to include every paused or
+   * archived campaign that still spent in the range.
+   */
+  async getAccountSpend(range: DateRange): Promise<number> {
+    const url = buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, {
+      level: "account",
+      fields: "spend",
+      time_range: JSON.stringify({ since: range.since, until: range.until }),
+    });
+    const rows = await fetchAllPages<{ spend?: string }>(url);
+    return rows.reduce((total, row) => total + Number(row.spend ?? 0), 0);
+  }
+
+  /**
    * One row per ad for the ENTIRE requested range (no time_increment). This is
    * deliberate: Reach is a unique-user count, so summing per-day reach across a
    * time_increment=1 breakdown would double-count anyone reached on more than
