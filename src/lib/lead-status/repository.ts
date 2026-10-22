@@ -39,6 +39,10 @@ export interface LeadStatusRepository {
   listEnrolledMissingPayment(): Promise<LeadStatusRecord[]>;
   /** Lead IDs whose stored normalized phone is exactly this canonical value (see normalizeIsraeliPhone). */
   findLeadIdsByNormalizedPhone(normalizedPhone: string): Promise<string[]>;
+  /** Every status row - for housekeeping only (see the orphan cleanup route). */
+  listAllStatusRows(): Promise<LeadStatusRecord[]>;
+  /** Deletes the given rows, but only those with no payment amount. Returns the IDs actually deleted. */
+  deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
 }
 
@@ -128,6 +132,35 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       return rows.map(mapRow);
     } catch (error) {
       throw wrapDatabaseError(error, "שגיאה בטעינת לידים שנרשמו ללא תשלום ממסד הנתונים.");
+    }
+  }
+
+  async listAllStatusRows(): Promise<LeadStatusRecord[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT * FROM lead_status ORDER BY meta_lead_id`) as LeadStatusRow[];
+      return rows.map(mapRow);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת רשומות הסטטוס ממסד הנתונים.");
+    }
+  }
+
+  async deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]> {
+    if (leadIds.length === 0) return [];
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`
+        DELETE FROM lead_status
+        WHERE meta_lead_id = ANY(${leadIds})
+          AND COALESCE(full_payment_amount, 0) <= 0
+          AND COALESCE(partial_payment_amount, 0) <= 0
+        RETURNING meta_lead_id
+      `) as { meta_lead_id: string }[];
+      return rows.map((row) => row.meta_lead_id);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה במחיקת רשומות הסטטוס ממסד הנתונים.");
     }
   }
 
