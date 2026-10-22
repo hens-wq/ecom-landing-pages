@@ -37,6 +37,8 @@ export interface LeadStatusRepository {
   getMany(leadIds: string[]): Promise<Map<string, LeadStatusRecord>>;
   /** Every enrolled lead with no payment amount entered - across ALL dates, so the Leads page's warning never depends on the range it's showing. */
   listEnrolledMissingPayment(): Promise<LeadStatusRecord[]>;
+  /** Lead IDs whose stored normalized phone is exactly this canonical value (see normalizeIsraeliPhone). */
+  findLeadIdsByNormalizedPhone(normalizedPhone: string): Promise<string[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
 }
 
@@ -126,6 +128,17 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       return rows.map(mapRow);
     } catch (error) {
       throw wrapDatabaseError(error, "שגיאה בטעינת לידים שנרשמו ללא תשלום ממסד הנתונים.");
+    }
+  }
+
+  async findLeadIdsByNormalizedPhone(normalizedPhone: string): Promise<string[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT meta_lead_id FROM lead_status WHERE normalized_phone = ${normalizedPhone}`) as { meta_lead_id: string }[];
+      return rows.map((row) => row.meta_lead_id);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בחיפוש ליד לפי מספר טלפון במסד הנתונים.");
     }
   }
 

@@ -15,16 +15,19 @@
 export function normalizeIsraeliPhone(raw: string): string {
   if (!raw) return "";
 
-  const hasPlus = raw.trim().startsWith("+");
-  const digits = raw.replace(/\D/g, "");
+  const trimmed = raw.trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
   if (!digits) return "";
 
-  // Strip the country code (972) whether it arrived as "+972..." or "972...".
+  // Strip the country code whether it arrived as "+972...", "00972..." or "972...".
   // The length check on the bare "972..." form guards against misreading a local
   // number that happens to start with those digits (not a realistic case for
   // Israeli numbers, but cheap to guard against).
   let national = digits;
-  if (digits.startsWith("972") && (hasPlus || digits.length > 9)) {
+  if (digits.startsWith("00972")) {
+    national = digits.slice(5);
+  } else if (digits.startsWith("972") && (hasPlus || digits.length > 9)) {
     national = digits.slice(3);
   }
 
@@ -33,6 +36,11 @@ export function normalizeIsraeliPhone(raw: string): string {
   }
 
   return national;
+}
+
+/** True for a canonical Israeli number as returned by normalizeIsraeliPhone: a leading 0 and 9-10 digits in total. */
+export function isValidIsraeliPhone(normalized: string): boolean {
+  return /^0\d{8,9}$/.test(normalized);
 }
 
 export function phonesMatch(a: string, b: string): boolean {

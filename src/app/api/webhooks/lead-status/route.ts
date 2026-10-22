@@ -2,9 +2,12 @@ import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { LandingLeadsDatabaseError } from "@/lib/landing-leads/db";
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
+import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
+import { syncCrmStatus } from "@/lib/lead-status/crm-sync";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
-import { checkStatusRequest, resolveStatusUpdate } from "@/lib/lead-status/validation";
+import { checkStatusRequest } from "@/lib/lead-status/validation";
 
 // Never statically cached, Node runtime only - consistent with every other
 // data route in this app.
@@ -17,11 +20,7 @@ export const runtime = "nodejs";
  * ============================================================================
  *
  * Called by Make.com (HTTP > Make a request) or any other system that knows a
- * lead's CRM status. It upserts the one lead_status record per lead, through
- * the SAME business rules the dashboard's own status editor uses
- * (lib/lead-status/validation.ts) - never a second definition of the status
- * hierarchy. The first call for a lead creates its record, so this works
- * "on creation" too.
+ * lead's CRM status.
  *
  * Request
  * -------
@@ -30,18 +29,35 @@ export const runtime = "nodejs";
  *   Content-Type: application/json
  *
  *   {
- *     "leadId": "120210000000001111",   // required - the Meta Lead ID
- *     "mainStatus": "נרשם",               // required
+ *     "leadId": "120210000000001111",     // optional - the Meta Lead ID, as a STRING
+ *     "phone": "052-8678178",             // optional - any Israeli format
+ *     "mainStatus": "נרשם",
  *     "secondaryStatus": "",              // see below
  *     "fullPaymentAmount": 1500,          // optional - a positive amount only
  *     "partialPaymentAmount": 500         // optional - a positive amount only
  *   }
  *
+ * Send at least one of leadId or phone.
+ *
+ * How the lead is found
+ * ---------------------
+ *   1. leadId, when it is a lead the dashboard knows (Meta or landing page).
+ *   2. Otherwise phone, normalized to the Israeli national form
+ *      (052-867-8178, +972528678178 and 972528678178 all become 0528678178).
+ *      Names are never used.
+ *   If the phone matches more than one lead, nothing is updated and the reply
+ *   is 409. If nothing matches, nothing is updated and the reply is 404. A
+ *   lead is only ever updated under its own dashboard ID, so one person keeps
+ *   one status row.
+ *
+ *   leadId must be sent as a string. A number this large loses digits in JSON
+ *   and would not match the dashboard's lead.
+ *
  * secondaryStatus
  * ---------------
  *   - Main Status "נרשם": may be empty or omitted. The dashboard stores
- *     "נרשם" (enrolled, no payment entered yet) - or, if the lead already has
- *     a Full or Partial payment entered in the dashboard, keeps that payment.
+ *     "נרשם" (enrolled, no payment entered yet), or keeps an existing Full or
+ *     Partial payment.
  *   - Every other Main Status: required, and sent exactly as the CRM has it.
  *     Nothing is invented - a missing value is rejected with 400.
  *
@@ -76,11 +92,13 @@ export const runtime = "nodejs";
  *
  * Responses
  * ---------
- *   200 { "ok": true, "record": { leadId, normalizedPhone, mainStatus,
- *         secondaryStatus, fullPaymentAmount, partialPaymentAmount,
- *         updatedAt } }
+ *   200 { "ok": true, "matchedBy": "lead_id" | "phone", "leadId": "...",
+ *         "record": { leadId, normalizedPhone, mainStatus, secondaryStatus,
+ *         fullPaymentAmount, partialPaymentAmount, updatedAt } }
  *   400 { "error": { "message": "..." } }  - bad, missing or invalid field
  *   401 { "error": { "message": "אימות נכשל." } }  - wrong or missing token
+ *   404 { "error": { "message": "..." } }  - no lead matches; nothing updated
+ *   409 { "error": { "message": "..." } }  - phone matches several leads; nothing updated
  *   503 { "error": { "message": "..." } }  - endpoint not configured, or a
  *         database error (never the raw driver error)
  *
@@ -125,9 +143,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "גוף הבקשה אינו JSON תקין." } }, { status: 400 });
   }
 
-  const leadId = typeof body.leadId === "string" ? body.leadId.trim() : "";
-  if (!leadId) {
-    return NextResponse.json({ error: { message: "leadId (מזהה ליד פייסבוק) חסר." } }, { status: 400 });
+  // A numeric leadId has already lost digits in JSON; only a string is trusted.
+  const leadId = typeof body.leadId === "string" && body.leadId.trim() ? body.leadId.trim() : null;
+  const phone =
+    (typeof body.phone === "string" && body.phone.trim()) || (typeof body.phone === "number" && Number.isFinite(body.phone))
+      ? (body.phone as string | number)
+      : null;
+  if (!leadId && phone === null) {
+    return NextResponse.json({ error: { message: "נדרש leadId (כמחרוזת) או phone לזיהוי הליד." } }, { status: 400 });
   }
 
   const fullPaymentParsed = parseOptionalAmount(body.fullPaymentAmount);
@@ -136,46 +159,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, { status: 400 });
   }
 
-  const updateRequest = {
+  const syncInput = {
+    leadId,
+    phone,
     mainStatus: typeof body.mainStatus === "string" ? body.mainStatus : "",
     secondaryStatus: typeof body.secondaryStatus === "string" ? body.secondaryStatus : "",
     fullPaymentAmount: fullPaymentParsed.value,
     partialPaymentAmount: partialPaymentParsed.value,
   };
 
-  const requestCheck = checkStatusRequest(updateRequest);
+  const requestCheck = checkStatusRequest(syncInput);
   if (!requestCheck.ok) {
     return NextResponse.json({ error: { message: requestCheck.error } }, { status: 400 });
   }
 
-  const repository = getLeadStatusRepository();
-
-  let existing;
   try {
-    existing = await repository.get(leadId);
-  } catch (error) {
-    const message = error instanceof LeadStatusDatabaseError ? error.message : "שגיאה לא צפויה בגישה למסד הנתונים.";
-    return NextResponse.json({ error: { message } }, { status: 503 });
-  }
+    const index = await loadDashboardLeadIndex();
+    const result = await syncCrmStatus(syncInput, index, getLeadStatusRepository());
 
-  const resolved = resolveStatusUpdate(updateRequest, existing);
-  if (!resolved.ok) {
-    return NextResponse.json({ error: { message: resolved.error } }, { status: 400 });
-  }
-
-  try {
-    const updated = await repository.upsert(leadId, {
-      mainStatus: resolved.value.mainStatus,
-      secondaryStatus: resolved.value.secondaryStatus,
-      fullPaymentAmount: resolved.value.fullPaymentAmount,
-      partialPaymentAmount: resolved.value.partialPaymentAmount,
-    });
-    return NextResponse.json({ ok: true, record: updated });
+    if (!result.ok) {
+      return NextResponse.json({ error: { message: result.message } }, { status: result.status });
+    }
+    return NextResponse.json({ ok: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record });
   } catch (error) {
-    // Never log the request body - LeadStatusDatabaseError's message is
-    // always a safe, hand-written Hebrew string (see db.ts), never the raw
-    // driver error.
-    const message = error instanceof LeadStatusDatabaseError ? error.message : "שגיאה לא צפויה בשמירת הסטטוס.";
-    return NextResponse.json({ error: { message } }, { status: 503 });
+    // Never log the request body - it carries phone numbers and payment
+    // amounts. The database errors' own messages are always safe, hand-written
+    // Hebrew strings (see db.ts), never the raw driver error.
+    if (error instanceof LeadStatusDatabaseError || error instanceof LandingLeadsDatabaseError) {
+      return NextResponse.json({ error: { message: error.message } }, { status: 503 });
+    }
+    return NextResponse.json({ error: { message: "שגיאה לא צפויה בעדכון הסטטוס מה-CRM." } }, { status: 500 });
   }
 }

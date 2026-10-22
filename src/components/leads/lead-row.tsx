@@ -140,7 +140,7 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
   }
 
   return (
-    <TableRow className="group">
+    <TableRow className="group" data-lead-id={lead.id}>
       <TableCell
         className={cn(STICKY_CELL_CLASS, "border-l border-transparent lg:border-border tabular-nums-he")}
         style={columnStyle(widths.leadDate, rightOffsets.leadDate)}

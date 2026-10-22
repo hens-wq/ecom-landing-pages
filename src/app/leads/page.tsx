@@ -25,6 +25,7 @@ import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { calculateIrrelevantRate, calculateSalesSummary, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
@@ -237,11 +238,13 @@ export default function LeadsPage() {
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState<string | null>(null);
   /** Toggled only via the "סה"כ מכירות" KPI card - every enrolled lead ("נרשם"), paid or not. A separate flag since a sale isn't one single-value status the dropdowns can express. */
   const [salesOnlyFilter, setSalesOnlyFilter] = useState(false);
-  /** Toggled via the missing-payment banner - enrolled leads with no payment amount entered. */
+  /** Toggled via the missing-payment alert - enrolled leads with no payment amount entered. */
   const [missingPaymentOnly, setMissingPaymentOnly] = useState(false);
-  const [missingCount, setMissingCount] = useState(0);
-  const [missingBusy, setMissingBusy] = useState(false);
-  const [missingError, setMissingError] = useState<string | null>(null);
+  /** Every enrolled lead still missing a payment amount, across all dates - the alert is built from this. */
+  const [missingLeads, setMissingLeads] = useState<MissingPaymentLead[]>([]);
+  const [missingMetaAvailable, setMissingMetaAvailable] = useState(true);
+  /** A lead the alert asked us to bring into view. Consumed once that lead's row has rendered. */
+  const pendingFocusLeadIdRef = useRef<string | null>(null);
   const [statusSaveTick, setStatusSaveTick] = useState(0);
   /** Ad spend from the 1st of this month through today - undefined while loading, null if unavailable. Independent of the date range on screen. */
   const [monthToDateSpend, setMonthToDateSpend] = useState<number | null | undefined>(undefined);
@@ -315,21 +318,23 @@ export default function LeadsPage() {
     };
   }, [refreshTick]);
 
-  // Counted across ALL dates (see /api/lead-status/missing-payment), so an old
+  // Built across ALL dates (see /api/lead-status/missing-payment), so an old
   // unpaid enrollment never disappears from view just because the range on
-  // screen is Today. Re-read after every saved status, so the count follows
-  // payments as they're entered.
+  // screen is Today. Re-read after every saved status, so the alert follows
+  // payments as they're entered. On a failed read the last known list stays
+  // in place - a transient error must not hide an unpaid enrollment.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/lead-status/missing-payment", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data: { count?: unknown }) => {
-        if (cancelled || typeof data.count !== "number") return;
-        setMissingCount(data.count);
-        if (data.count === 0) setMissingPaymentOnly(false);
+      .then((data: Partial<MissingPaymentResponse>) => {
+        if (cancelled || !Array.isArray(data.leads)) return;
+        setMissingLeads(data.leads);
+        setMissingMetaAvailable(data.metaAvailable !== false);
+        if (data.leads.length === 0) setMissingPaymentOnly(false);
       })
       .catch(() => {
-        if (!cancelled) setMissingCount(0);
+        // Keep the last known list (see the comment above).
       });
     return () => {
       cancelled = true;
@@ -560,6 +565,19 @@ export default function LeadsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getStatus closes over effectiveStatusesByLeadId, already a dependency below
   }, [filteredLeads, sortKey, sortDirection, effectiveStatusesByLeadId]);
 
+  // Brings a lead that the alert asked for into view once its row has rendered.
+  // The table isn't mounted while the range is reloading, so the lead is kept
+  // pending until it appears.
+  useEffect(() => {
+    const leadId = pendingFocusLeadIdRef.current;
+    if (!leadId) return;
+    const row = tableSectionRef.current?.querySelector<HTMLElement>(`tr[data-lead-id="${CSS.escape(leadId)}"]`);
+    if (!row) return;
+    pendingFocusLeadIdRef.current = null;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.querySelector<HTMLElement>("select")?.focus({ preventScroll: true });
+  }, [sortedLeads, missingPaymentOnly]);
+
   const scopedSpend = useMemo(
     () =>
       sumScopedSpend(campaignRows, campaignStatuses, {
@@ -625,38 +643,32 @@ export default function LeadsPage() {
   }
 
   /**
-   * Shows the enrolled leads still missing a payment amount. If any of them
-   * fall outside the range on screen, the range widens just enough to include
-   * them all (the current range is kept whenever it already covers them).
+   * Shows every enrolled lead still missing a payment. The range widens just
+   * enough to include the oldest of them, and the current range is kept when
+   * it already covers them all. With one missing lead - or a specific lead
+   * from the list - that lead's row is brought into view.
    */
-  async function handleActivateMissingPayment() {
-    setMissingBusy(true);
-    setMissingError(null);
-    try {
-      const response = await fetch("/api/lead-status/missing-payment?details=1", { cache: "no-store" });
-      const json = await response.json();
-      if (!response.ok || typeof json.count !== "number") {
-        setMissingError(json.error?.message ?? "לא ניתן היה לטעון את הלידים שחסר להם תשלום.");
-        return;
-      }
-      setMissingCount(json.count);
-      if (json.count === 0) return;
+  function activateMissingPayment(focusLeadId?: string) {
+    const dates = missingLeads.flatMap((lead) => (lead.found && lead.leadDate ? [lead.leadDate] : []));
+    const since = [range.since, ...dates].reduce((earliest, date) => (date < earliest ? date : earliest));
+    const until = [range.until, ...dates].reduce((latest, date) => (date > latest ? date : latest));
+    if (since !== range.since || until !== range.until) {
+      setDateSelection({ presetId: CUSTOM_DATE_RANGE_PRESET_ID, customSince: since, customUntil: until });
+    }
 
-      if (typeof json.earliestDate === "string" && typeof json.latestDate === "string") {
-        const since = json.earliestDate < range.since ? json.earliestDate : range.since;
-        const until = json.latestDate > range.until ? json.latestDate : range.until;
-        if (since !== range.since || until !== range.until) {
-          setDateSelection({ presetId: CUSTOM_DATE_RANGE_PRESET_ID, customSince: since, customUntil: until });
-        }
-      }
+    const onlyLead = missingLeads.length === 1 ? missingLeads[0] : undefined;
+    const leadToFocus = focusLeadId ?? (onlyLead?.found ? onlyLead.leadId : undefined);
 
-      resetAllFilters();
-      setMissingPaymentOnly(true);
+    resetAllFilters();
+    setMissingPaymentOnly(true);
+
+    if (leadToFocus) {
+      pendingFocusLeadIdRef.current = leadToFocus;
+      window.setTimeout(() => {
+        pendingFocusLeadIdRef.current = null;
+      }, 15000);
+    } else {
       tableSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch {
-      setMissingError("לא ניתן היה להתחבר לשרת. בדקו את החיבור לאינטרנט ונסו שוב.");
-    } finally {
-      setMissingBusy(false);
     }
   }
 
@@ -667,11 +679,11 @@ export default function LeadsPage() {
       {dbHealth.status === "error" && <DatabaseStatusBadge status={dbHealth.status} message={dbHealth.message} />}
 
       <MissingPaymentBanner
-        count={missingCount}
+        leads={missingLeads}
+        metaAvailable={missingMetaAvailable}
         isFilterActive={missingPaymentOnly}
-        isBusy={missingBusy}
-        error={missingError}
-        onActivate={handleActivateMissingPayment}
+        onActivateAll={() => activateMissingPayment()}
+        onActivateLead={(leadId) => activateMissingPayment(leadId)}
         onClear={() => setMissingPaymentOnly(false)}
       />
 
@@ -842,7 +854,7 @@ export default function LeadsPage() {
                 }
                 description={
                   missingPaymentOnly
-                    ? "כל הלידים שנרשמו בטווח זה כבר עם סכום תשלום."
+                    ? "הלידים החסרי תשלום מופיעים בפירוט שמעל, וחלקם אינם מזוהים כליד בדשבורד."
                     : salesOnlyFilter
                       ? "אין לידים שנרשמו בטווח התאריכים שנבחר."
                       : "נסו לשנות את החיפוש, המסננים או טווח התאריכים."
