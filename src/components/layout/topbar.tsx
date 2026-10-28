@@ -13,12 +13,10 @@ const PAGE_TITLES: Record<string, { he: string; en: string }> = {
   "/sales-matching": { he: "מכירות והתאמות", en: "Sales & Matching" },
   "/integrations": { he: "חיבורים", en: "Integrations" },
 };
-/** Single-ad pages live under a dynamic path, so they are matched by prefix rather than in PAGE_TITLES. */
-const CREATIVE_PAGE_TITLE = { he: "קריאייטיב", en: "Creative" };
 
 export function Topbar() {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? (pathname.startsWith("/creative/") ? CREATIVE_PAGE_TITLE : PAGE_TITLES["/"]);
+  const title = PAGE_TITLES[pathname] ?? PAGE_TITLES["/"];
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">

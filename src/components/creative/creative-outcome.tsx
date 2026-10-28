@@ -6,14 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { AdCreativeView, AdMeta, CreativeLookup, CreativeType } from "@/lib/creative/creative-lookup";
 import { cn } from "@/lib/utils";
 
-const TYPE_LABELS: Record<CreativeType, string> = {
-  image: "תמונה",
-  video: "וידאו",
-  carousel: "קרוסלה",
-  dynamic: "דינמית (Dynamic)",
-  unknown: "לא זוהה",
-};
-
 interface NoticeCopy {
   title: string;
   description: string;
@@ -125,13 +117,6 @@ function CreativeDetail({ creative }: { creative: AdCreativeView }) {
       <CreativeVisual creative={creative} />
       <Card>
         <CardContent className="space-y-5">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">סוג קריאייטיב (Creative Type)</p>
-            <span className="inline-block rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-              {TYPE_LABELS[creative.creativeType]}
-              {creative.cardCount ? ` · ${creative.cardCount} כרטיסים` : ""}
-            </span>
-          </div>
           <dl className="space-y-4">
             <Field label="כותרת (Headline)" value={creative.headline} />
             <Field label="טקסט ראשי (Primary Text)" value={creative.primaryText} multiline />
