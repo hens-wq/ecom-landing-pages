@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { SECONDARY_STATUSES_BY_MAIN, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { ENROLLED_MAIN_STATUS, SECONDARY_STATUSES_BY_MAIN, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { enrolledSecondaryFromPayment, isPositiveAmount } from "@/lib/lead-status/validation";
 
 export interface LeadStatusPatch {
   mainStatus: string;
@@ -12,23 +13,18 @@ export interface LeadStatusPatch {
   normalizedPhone?: string | null;
 }
 
-function isPositiveAmount(value: number | null | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
 /**
- * Drives one lead's Main/Secondary status + payment amounts. Two states are
- * tracked deliberately separately:
- *  - `current`: the last server-CONFIRMED record - what calculations.ts and
- *    every other row/page would see if they read this lead's status right now.
- *  - the draft main/secondary selection: what the dropdowns show, which can
- *    run ahead of `current` while "נרשם" is selected but no payment amount
- *    has been entered yet (see awaitingAmount) - required so a "תשלום מלא"
- *    selection doesn't have to (impossibly) already carry an amount before
- *    the amount field itself is even enabled.
+ * Drives one lead's Main/Secondary status and payment amounts. Two states are
+ * tracked separately:
+ *  - `current`: the last server-confirmed record - what the calculations and
+ *    every other row would see right now.
+ *  - the draft selection: what the dropdowns show, which can run ahead of
+ *    `current` while a payment type is chosen but its amount isn't entered yet
+ *    (see awaitingAmount).
  *
- * Any OTHER status transition (i.e. not "נרשם") never needs an amount, so it
- * saves immediately, same as before.
+ * For an enrolled lead the amount drives the payment status: typing a Full or
+ * Partial amount sets "תשלום מלא" or "תשלום חלקי", and clearing both returns
+ * the lead to "נרשם". Enrolling itself never needs an amount.
  */
 export function useLeadStatusEditor(record: LeadStatusRecord, onSave: (patch: LeadStatusPatch) => Promise<LeadStatusRecord>) {
   const [current, setCurrent] = useState(record);
@@ -45,14 +41,15 @@ export function useLeadStatusEditor(record: LeadStatusRecord, onSave: (patch: Le
   }
 
   function requiredAmountFor(mainStatus: MainStatus, secondaryStatus: string): number | null {
-    if (mainStatus !== "נרשם") return null;
+    if (mainStatus !== ENROLLED_MAIN_STATUS) return null;
     if (secondaryStatus === "תשלום מלא") return current.fullPaymentAmount;
     if (secondaryStatus === "תשלום חלקי") return current.partialPaymentAmount;
     return null;
   }
 
+  const isPaymentDraft = draftMain === ENROLLED_MAIN_STATUS && draftSecondary !== ENROLLED_MAIN_STATUS;
   const awaitingAmount =
-    draftMain === "נרשם" &&
+    isPaymentDraft &&
     !isPositiveAmount(requiredAmountFor(draftMain, draftSecondary)) &&
     (draftMain !== current.mainStatus || draftSecondary !== current.secondaryStatus);
 
@@ -72,25 +69,48 @@ export function useLeadStatusEditor(record: LeadStatusRecord, onSave: (patch: Le
   }
 
   function changeMainStatus(newMain: MainStatus) {
-    const newSecondary = SECONDARY_STATUSES_BY_MAIN[newMain][0];
-    setDraftMain(newMain);
-    setDraftSecondary(newSecondary);
     setError(null);
-    if (newMain !== "נרשם" || isPositiveAmount(requiredAmountFor(newMain, newSecondary))) {
+    if (newMain === ENROLLED_MAIN_STATUS) {
+      const newSecondary = enrolledSecondaryFromPayment(current.fullPaymentAmount, current.partialPaymentAmount) ?? ENROLLED_MAIN_STATUS;
+      setDraftMain(newMain);
+      setDraftSecondary(newSecondary);
       void commit({
         mainStatus: newMain,
         secondaryStatus: newSecondary,
         fullPaymentAmount: current.fullPaymentAmount,
         partialPaymentAmount: current.partialPaymentAmount,
       });
+      return;
     }
-    // else: staged - waiting for an amount via changeFullPayment/changePartialPayment.
+
+    const newSecondary = SECONDARY_STATUSES_BY_MAIN[newMain][0];
+    setDraftMain(newMain);
+    setDraftSecondary(newSecondary);
+    void commit({
+      mainStatus: newMain,
+      secondaryStatus: newSecondary,
+      fullPaymentAmount: current.fullPaymentAmount,
+      partialPaymentAmount: current.partialPaymentAmount,
+    });
   }
 
   function changeSecondaryStatus(newSecondary: string) {
     setDraftSecondary(newSecondary);
     setError(null);
-    if (draftMain !== "נרשם" || isPositiveAmount(requiredAmountFor(draftMain, newSecondary))) {
+
+    if (draftMain === ENROLLED_MAIN_STATUS && newSecondary === ENROLLED_MAIN_STATUS) {
+      // Picking "נרשם" from the dropdown is the one deliberate way to say "no
+      // payment", so any amount entered so far is cleared with it.
+      void commit({
+        mainStatus: ENROLLED_MAIN_STATUS,
+        secondaryStatus: ENROLLED_MAIN_STATUS,
+        fullPaymentAmount: null,
+        partialPaymentAmount: null,
+      });
+      return;
+    }
+
+    if (draftMain !== ENROLLED_MAIN_STATUS || isPositiveAmount(requiredAmountFor(draftMain, newSecondary))) {
       void commit({
         mainStatus: draftMain,
         secondaryStatus: newSecondary,
@@ -98,18 +118,27 @@ export function useLeadStatusEditor(record: LeadStatusRecord, onSave: (patch: Le
         partialPaymentAmount: current.partialPaymentAmount,
       });
     }
+    // else: a payment type with no amount yet - staged until an amount is entered.
   }
 
   function changeFullPayment(amount: number | null) {
-    const mainStatus = draftMain === "נרשם" && draftSecondary === "תשלום מלא" ? draftMain : current.mainStatus;
-    const secondaryStatus = draftMain === "נרשם" && draftSecondary === "תשלום מלא" ? draftSecondary : current.secondaryStatus;
-    void commit({ mainStatus, secondaryStatus, fullPaymentAmount: amount, partialPaymentAmount: current.partialPaymentAmount });
+    const entered = isPositiveAmount(amount);
+    void commit({
+      mainStatus: ENROLLED_MAIN_STATUS,
+      secondaryStatus: entered ? "תשלום מלא" : (enrolledSecondaryFromPayment(null, current.partialPaymentAmount) ?? ENROLLED_MAIN_STATUS),
+      fullPaymentAmount: amount,
+      partialPaymentAmount: entered ? null : current.partialPaymentAmount,
+    });
   }
 
   function changePartialPayment(amount: number | null) {
-    const mainStatus = draftMain === "נרשם" && draftSecondary === "תשלום חלקי" ? draftMain : current.mainStatus;
-    const secondaryStatus = draftMain === "נרשם" && draftSecondary === "תשלום חלקי" ? draftSecondary : current.secondaryStatus;
-    void commit({ mainStatus, secondaryStatus, fullPaymentAmount: current.fullPaymentAmount, partialPaymentAmount: amount });
+    const entered = isPositiveAmount(amount);
+    void commit({
+      mainStatus: ENROLLED_MAIN_STATUS,
+      secondaryStatus: entered ? "תשלום חלקי" : (enrolledSecondaryFromPayment(current.fullPaymentAmount, null) ?? ENROLLED_MAIN_STATUS),
+      fullPaymentAmount: entered ? null : current.fullPaymentAmount,
+      partialPaymentAmount: amount,
+    });
   }
 
   return {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
-import type { LeadStatusRecord, MainStatus } from "@/lib/lead-status/types";
+import { ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 
 /**
  * Backed by Neon Postgres (see db.ts) - a `lead_status` table, one row per
@@ -35,6 +35,14 @@ export interface LeadStatusRepository {
   get(leadId: string): Promise<LeadStatusRecord | undefined>;
   /** Batch read for however many lead IDs are currently loaded on the Leads page - avoids one query per row. */
   getMany(leadIds: string[]): Promise<Map<string, LeadStatusRecord>>;
+  /** Every enrolled lead with no payment amount entered - across ALL dates, so the Leads page's warning never depends on the range it's showing. */
+  listEnrolledMissingPayment(): Promise<LeadStatusRecord[]>;
+  /** Lead IDs whose stored normalized phone is exactly this canonical value (see normalizeIsraeliPhone). */
+  findLeadIdsByNormalizedPhone(normalizedPhone: string): Promise<string[]>;
+  /** Every status row - for housekeeping only (see the orphan cleanup route). */
+  listAllStatusRows(): Promise<LeadStatusRecord[]>;
+  /** Deletes the given rows, but only those with no payment amount. Returns the IDs actually deleted. */
+  deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
 }
 
@@ -63,6 +71,7 @@ function mapRow(row: LeadStatusRow): LeadStatusRecord {
     secondaryStatus: row.secondary_status,
     fullPaymentAmount: parseAmount(row.full_payment_amount),
     partialPaymentAmount: parseAmount(row.partial_payment_amount),
+    studentRating: null,
     updatedAt: row.updated_at,
   };
 }
@@ -106,6 +115,63 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       return result;
     } catch (error) {
       throw wrapDatabaseError(error, "שגיאה בטעינת סטטוסי הלידים ממסד הנתונים.");
+    }
+  }
+
+  async listEnrolledMissingPayment(): Promise<LeadStatusRecord[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`
+        SELECT * FROM lead_status
+        WHERE main_status = ${ENROLLED_MAIN_STATUS}
+          AND COALESCE(full_payment_amount, 0) <= 0
+          AND COALESCE(partial_payment_amount, 0) <= 0
+        ORDER BY updated_at DESC
+      `) as LeadStatusRow[];
+      return rows.map(mapRow);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת לידים שנרשמו ללא תשלום ממסד הנתונים.");
+    }
+  }
+
+  async listAllStatusRows(): Promise<LeadStatusRecord[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT * FROM lead_status ORDER BY meta_lead_id`) as LeadStatusRow[];
+      return rows.map(mapRow);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בטעינת רשומות הסטטוס ממסד הנתונים.");
+    }
+  }
+
+  async deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]> {
+    if (leadIds.length === 0) return [];
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`
+        DELETE FROM lead_status
+        WHERE meta_lead_id = ANY(${leadIds})
+          AND COALESCE(full_payment_amount, 0) <= 0
+          AND COALESCE(partial_payment_amount, 0) <= 0
+        RETURNING meta_lead_id
+      `) as { meta_lead_id: string }[];
+      return rows.map((row) => row.meta_lead_id);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה במחיקת רשומות הסטטוס ממסד הנתונים.");
+    }
+  }
+
+  async findLeadIdsByNormalizedPhone(normalizedPhone: string): Promise<string[]> {
+    try {
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql`SELECT meta_lead_id FROM lead_status WHERE normalized_phone = ${normalizedPhone}`) as { meta_lead_id: string }[];
+      return rows.map((row) => row.meta_lead_id);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בחיפוש ליד לפי מספר טלפון במסד הנתונים.");
     }
   }
 

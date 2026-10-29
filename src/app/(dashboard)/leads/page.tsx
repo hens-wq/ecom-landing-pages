@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Info, RefreshCw, Search } from "lucide-react";
+import { Download, Info, RefreshCw, Search, X } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
@@ -11,6 +11,7 @@ import { LeadColumnVisibilityMenu } from "@/components/leads/lead-column-visibil
 import type { LeadColumnKey } from "@/components/leads/lead-columns";
 import { compareLeadSortValues, getLeadSortValue } from "@/components/leads/lead-sort";
 import { LeadsTable } from "@/components/leads/leads-table";
+import { MissingPaymentBanner } from "@/components/leads/missing-payment-banner";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
 import { useLeadColumnLayout } from "@/components/leads/use-lead-column-layout";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
@@ -19,15 +20,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
-import { presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
+import { CUSTOM_DATE_RANGE_PRESET_ID, presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { calculateIrrelevantRate, calculateSalesSummary, isSaleRecord } from "@/lib/lead-status/calculations";
+import { calculateIrrelevantRate, calculateSalesSummary, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { buildLeadExportCsv, toLeadExportRow } from "@/lib/leads/export";
+import { leadMatchesSearch } from "@/lib/leads/search";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -42,17 +45,6 @@ type LoadState =
   | { phase: "loading" }
   | { phase: "error"; code: string; message: string }
   | { phase: "ready"; data: PageData };
-
-function digitsOnly(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
-function leadMatchesPhoneQuery(lead: MetaFormLead, query: string): boolean {
-  const queryDigits = digitsOnly(query);
-  if (!queryDigits) return true;
-  const candidates = [lead.phone, lead.normalizedPhone].filter((v): v is string => Boolean(v));
-  return candidates.some((phone) => digitsOnly(phone).includes(queryDigits));
-}
 
 function uniqueOptions(leads: MetaFormLead[], idKey: "campaignId" | "adSetId" | "adId", nameKey: "campaignName" | "adSetName" | "adName"): FilterOption[] {
   const seen = new Map<string, string>();
@@ -236,7 +228,7 @@ export default function LeadsPage() {
 
   const [dbHealth, setDbHealth] = useState<{ status: DatabaseStatus; message?: string }>({ status: "checking" });
 
-  const [phoneSearch, setPhoneSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [campaignFilter, setCampaignFilter] = useState<string | null>(null);
   const [adSetFilter, setAdSetFilter] = useState<string | null>(null);
   const [adFilter, setAdFilter] = useState<string | null>(null);
@@ -244,8 +236,18 @@ export default function LeadsPage() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | "inactive" | null>(null);
   const [mainStatusFilter, setMainStatusFilter] = useState<MainStatus | null>(null);
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState<string | null>(null);
-  /** Toggled only via the "סה"כ מכירות" KPI card - the existing sale rule (isSaleRecord), never a new definition. A separate flag (not reusing mainStatusFilter/secondaryStatusFilter) since a sale is "נרשם" AND EITHER secondary status, which those single-value dropdowns can't express together. */
+  /** Toggled only via the "סה"כ מכירות" KPI card - every enrolled lead ("נרשם"), paid or not. A separate flag since a sale isn't one single-value status the dropdowns can express. */
   const [salesOnlyFilter, setSalesOnlyFilter] = useState(false);
+  /** Toggled via the missing-payment alert - enrolled leads with no payment amount entered. */
+  const [missingPaymentOnly, setMissingPaymentOnly] = useState(false);
+  /** Every enrolled lead still missing a payment amount, across all dates - the alert is built from this. */
+  const [missingLeads, setMissingLeads] = useState<MissingPaymentLead[]>([]);
+  const [missingMetaAvailable, setMissingMetaAvailable] = useState(true);
+  /** A lead the alert asked us to bring into view. Consumed once that lead's row has rendered. */
+  const pendingFocusLeadIdRef = useRef<string | null>(null);
+  const [statusSaveTick, setStatusSaveTick] = useState(0);
+  /** Ad spend from the 1st of this month through today - undefined while loading, null if unavailable. Independent of the date range on screen. */
+  const [monthToDateSpend, setMonthToDateSpend] = useState<number | null | undefined>(undefined);
   const tableSectionRef = useRef<HTMLDivElement>(null);
 
   if (rangeKey !== trackedRangeKey) {
@@ -316,6 +318,47 @@ export default function LeadsPage() {
     };
   }, [refreshTick]);
 
+  // Built across ALL dates (see /api/lead-status/missing-payment), so an old
+  // unpaid enrollment never disappears from view just because the range on
+  // screen is Today. Re-read after every saved status, so the alert follows
+  // payments as they're entered. On a failed read the last known list stays
+  // in place - a transient error must not hide an unpaid enrollment.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/lead-status/missing-payment", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: Partial<MissingPaymentResponse>) => {
+        if (cancelled || !Array.isArray(data.leads)) return;
+        setMissingLeads(data.leads);
+        setMissingMetaAvailable(data.metaAvailable !== false);
+        if (data.leads.length === 0) setMissingPaymentOnly(false);
+      })
+      .catch(() => {
+        // Keep the last known list (see the comment above).
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTick, statusSaveTick]);
+
+  // Month-to-date spend depends only on today's date, not on the Leads range -
+  // loaded once per page load/refresh, never on a range change.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/advertising/month-to-date", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: { spend?: unknown }) => {
+        if (cancelled) return;
+        setMonthToDateSpend(typeof data.spend === "number" ? data.spend : null);
+      })
+      .catch(() => {
+        if (!cancelled) setMonthToDateSpend(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTick]);
+
   const allLeads = useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
   const source = state.phase === "ready" ? state.data.leadsResult.source : undefined;
   const statusesByLeadId = useMemo(() => (state.phase === "ready" ? state.data.statusesByLeadId : new Map<string, LeadStatusRecord>()), [state]);
@@ -353,6 +396,7 @@ export default function LeadsPage() {
       next.set(record.leadId, record);
       return next;
     });
+    setStatusSaveTick((tick) => tick + 1);
   }
 
   /**
@@ -484,10 +528,11 @@ export default function LeadsPage() {
       if (mainStatusFilter && record.mainStatus !== mainStatusFilter) return false;
       if (secondaryStatusFilter && record.secondaryStatus !== secondaryStatusFilter) return false;
       if (salesOnlyFilter && !isSaleRecord(record)) return false;
-      return leadMatchesPhoneQuery(lead, phoneSearch);
+      if (missingPaymentOnly && !isEnrolledMissingPayment(record)) return false;
+      return leadMatchesSearch(lead, searchQuery);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, salesOnlyFilter, phoneSearch, effectiveStatusesByLeadId]);
+  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, salesOnlyFilter, missingPaymentOnly, searchQuery, effectiveStatusesByLeadId]);
 
   // Independent of every filter above (never reset by a filter change, and
   // never resets a filter itself) - sorts whatever's already been fetched
@@ -520,6 +565,19 @@ export default function LeadsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getStatus closes over effectiveStatusesByLeadId, already a dependency below
   }, [filteredLeads, sortKey, sortDirection, effectiveStatusesByLeadId]);
 
+  // Brings a lead that the alert asked for into view once its row has rendered.
+  // The table isn't mounted while the range is reloading, so the lead is kept
+  // pending until it appears.
+  useEffect(() => {
+    const leadId = pendingFocusLeadIdRef.current;
+    if (!leadId) return;
+    const row = tableSectionRef.current?.querySelector<HTMLElement>(`tr[data-lead-id="${CSS.escape(leadId)}"]`);
+    if (!row) return;
+    pendingFocusLeadIdRef.current = null;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.querySelector<HTMLElement>("select")?.focus({ preventScroll: true });
+  }, [sortedLeads, missingPaymentOnly]);
+
   const scopedSpend = useMemo(
     () =>
       sumScopedSpend(campaignRows, campaignStatuses, {
@@ -549,11 +607,12 @@ export default function LeadsPage() {
       mainStatusFilter ||
       secondaryStatusFilter ||
       salesOnlyFilter ||
-      phoneSearch.trim()
+      missingPaymentOnly ||
+      searchQuery.trim()
   );
 
   function resetAllFilters() {
-    setPhoneSearch("");
+    setSearchQuery("");
     setCampaignFilter(null);
     setAdSetFilter(null);
     setAdFilter(null);
@@ -562,17 +621,16 @@ export default function LeadsPage() {
     setMainStatusFilter(null);
     setSecondaryStatusFilter(null);
     setSalesOnlyFilter(false);
+    setMissingPaymentOnly(false);
   }
 
   /**
    * Shows exactly the leads that make up "סה"כ מכירות" for the currently
-   * selected date range - the existing isSaleRecord() rule (Main Status
-   * "נרשם" AND Secondary Status "תשלום מלא" or "תשלום חלקי"), never a new
-   * definition of a sale. Clicking again while already active clears just
-   * this filter (a plain toggle); turning it ON clears every OTHER filter
-   * first, so what's shown is unambiguously "all the sales in this date
-   * range" and not a further-narrowed subset of whatever else happened to be
-   * selected - the date range itself is the one thing left untouched.
+   * selected date range - every enrolled lead (Main Status "נרשם"), paid or
+   * not, per the existing isSaleRecord() rule. Clicking again while already
+   * active clears just this filter; turning it on clears every OTHER filter
+   * first, so what's shown is "all the sales in this date range" and not a
+   * narrowed subset of whatever else was selected.
    */
   function handleTotalSalesClick() {
     if (salesOnlyFilter) {
@@ -584,11 +642,50 @@ export default function LeadsPage() {
     tableSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  /**
+   * Shows every enrolled lead still missing a payment. The range widens just
+   * enough to include the oldest of them, and the current range is kept when
+   * it already covers them all. With one missing lead - or a specific lead
+   * from the list - that lead's row is brought into view.
+   */
+  function activateMissingPayment(focusLeadId?: string) {
+    const dates = missingLeads.flatMap((lead) => (lead.found && lead.leadDate ? [lead.leadDate] : []));
+    const since = [range.since, ...dates].reduce((earliest, date) => (date < earliest ? date : earliest));
+    const until = [range.until, ...dates].reduce((latest, date) => (date > latest ? date : latest));
+    if (since !== range.since || until !== range.until) {
+      setDateSelection({ presetId: CUSTOM_DATE_RANGE_PRESET_ID, customSince: since, customUntil: until });
+    }
+
+    const onlyLead = missingLeads.length === 1 ? missingLeads[0] : undefined;
+    const leadToFocus = focusLeadId ?? (onlyLead?.found ? onlyLead.leadId : undefined);
+
+    resetAllFilters();
+    setMissingPaymentOnly(true);
+
+    if (leadToFocus) {
+      pendingFocusLeadIdRef.current = leadToFocus;
+      window.setTimeout(() => {
+        pendingFocusLeadIdRef.current = null;
+      }, 15000);
+    } else {
+      tableSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   const columnLayout = useLeadColumnLayout(filteredLeads);
 
   return (
     <div className="flex flex-col gap-5">
       {dbHealth.status === "error" && <DatabaseStatusBadge status={dbHealth.status} message={dbHealth.message} />}
+
+      <MissingPaymentBanner
+        leads={missingLeads}
+        metaAvailable={missingMetaAvailable}
+        isFilterActive={missingPaymentOnly}
+        onActivateAll={() => activateMissingPayment()}
+        onActivateLead={(leadId) => activateMissingPayment(leadId)}
+        onClear={() => setMissingPaymentOnly(false)}
+      />
 
       <Card className="border-primary/25 bg-primary/[0.035]">
         <CardContent className="flex gap-3 px-5 py-4 text-sm leading-relaxed">
@@ -662,6 +759,7 @@ export default function LeadsPage() {
           <SalesKpiCards
             sales={salesSummary}
             irrelevant={irrelevantRate}
+            monthToDateSpend={monthToDateSpend}
             onTotalSalesClick={handleTotalSalesClick}
             isSalesFilterActive={salesOnlyFilter}
           />
@@ -670,12 +768,22 @@ export default function LeadsPage() {
             <div className="relative">
               <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={phoneSearch}
-                onChange={(e) => setPhoneSearch(e.target.value)}
-                placeholder="חיפוש לפי מספר טלפון..."
-                className="w-56 pr-8"
-                dir="ltr"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="חיפוש לפי שם או טלפון"
+                className={cn("w-64 pr-8", searchQuery && "pl-8")}
+                dir="auto"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="נקה חיפוש"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
             </div>
             <CustomDateRangeSelect selection={dateSelection} onChange={setDateSelection} />
             <FilterDropdown
@@ -728,6 +836,7 @@ export default function LeadsPage() {
             <span className="text-xs text-muted-foreground">
               מציג {filteredLeads.length.toLocaleString("he-IL")} מתוך {allLeads.length.toLocaleString("he-IL")} לידים
               {salesOnlyFilter && " (מכירות בלבד)"}
+              {missingPaymentOnly && " (חסרי תשלום)"}
             </span>
           </div>
 
@@ -736,11 +845,19 @@ export default function LeadsPage() {
               <EmptyStatePanel title="לא נמצאו לידים" description="לא נמצאו לידים בטווח התאריכים שנבחר." />
             ) : filteredLeads.length === 0 ? (
               <EmptyStatePanel
-                title={salesOnlyFilter ? "לא נמצאו מכירות" : "לא נמצאו לידים התואמים לסינון"}
+                title={
+                  missingPaymentOnly
+                    ? "אין לידים חסרי תשלום בטווח שנבחר"
+                    : salesOnlyFilter
+                      ? "לא נמצאו מכירות"
+                      : "לא נמצאו לידים התואמים לסינון"
+                }
                 description={
-                  salesOnlyFilter
-                    ? "אין לידים עם תשלום מלא או חלקי בטווח התאריכים שנבחר."
-                    : "נסו לשנות את החיפוש, המסננים או טווח התאריכים."
+                  missingPaymentOnly
+                    ? "הלידים החסרי תשלום מופיעים בפירוט שמעל, וחלקם אינם מזוהים כליד בדשבורד."
+                    : salesOnlyFilter
+                      ? "אין לידים שנרשמו בטווח התאריכים שנבחר."
+                      : "נסו לשנות את החיפוש, המסננים או טווח התאריכים."
                 }
               />
             ) : (

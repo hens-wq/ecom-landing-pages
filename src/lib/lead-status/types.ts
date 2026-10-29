@@ -6,7 +6,7 @@
  * The exact Hebrew strings below are the business's own vocabulary, verified
  * against the spec verbatim - do not rephrase or "clean up" them, since the
  * calculation functions in calculations.ts match against these exact string
- * values (e.g. "תשלום מלא" for a sale).
+ * values (e.g. "נרשם" for an enrolled, i.e. sold, lead).
  */
 export const MAIN_STATUSES = [
   "חדש",
@@ -50,13 +50,15 @@ export const SECONDARY_STATUSES_BY_MAIN: Record<MainStatus, readonly string[]> =
   ],
   "רשימה שחורה": ['ר"ש - תביעה', 'ר"ש - מסרב פניות', 'ר"ש - לקוח בעייתי'],
   "ביטול הרשמה": ["ביטל הרשמה - BDI שלילי", "ביטל הרשמה - לקוח התחרט"],
-  נרשם: ["תשלום מלא", "תשלום חלקי"],
+  נרשם: ["נרשם", "תשלום מלא", "תשלום חלקי"],
   DATA: ["דאטה"],
 };
 
-/** The two secondary values under "נרשם" that a sale can be recorded against - kept as a named export since calculations.ts, the payment-amount UI, and validation all need to check membership in exactly this set. */
-export const SALE_SECONDARY_STATUSES = ["תשלום מלא", "תשלום חלקי"] as const;
-export type SaleSecondaryStatus = (typeof SALE_SECONDARY_STATUSES)[number];
+/** Main Status "נרשם" = enrolled, which is a sale whether or not a payment amount has been entered yet. Its Secondary Status is "נרשם" until an amount is entered, then the matching payment type - see validation.ts. */
+export const ENROLLED_MAIN_STATUS = "נרשם" as const;
+
+export const PAYMENT_SECONDARY_STATUSES = ["תשלום מלא", "תשלום חלקי"] as const;
+export type PaymentSecondaryStatus = (typeof PAYMENT_SECONDARY_STATUSES)[number];
 
 export function isMainStatus(value: string): value is MainStatus {
   return (MAIN_STATUSES as readonly string[]).includes(value);
@@ -95,6 +97,8 @@ export interface LeadStatusRecord {
   secondaryStatus: string;
   fullPaymentAmount: number | null;
   partialPaymentAmount: number | null;
+  /** CRM "דירוג תלמיד" as received - null when the CRM has none. Never defaulted. */
+  studentRating: number | null;
   updatedAt: string; // ISO datetime
 }
 
@@ -106,6 +110,7 @@ export function defaultLeadStatusRecord(leadId: string, normalizedPhone: string 
     secondaryStatus: DEFAULT_SECONDARY_STATUS,
     fullPaymentAmount: null,
     partialPaymentAmount: null,
+    studentRating: null,
     updatedAt: new Date(0).toISOString(),
   };
 }

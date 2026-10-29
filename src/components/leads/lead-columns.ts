@@ -24,6 +24,7 @@ export const ANCHORED_LEAD_COLUMN_KEYS = [
  * the table by default").
  */
 export const DEFAULT_CONFIGURABLE_LEAD_COLUMN_ORDER = [
+  "studentRating",
   "campaign",
   "adSet",
   "ad",
@@ -55,6 +56,7 @@ export const LEAD_COLUMN_DEFAULTS: Record<LeadColumnKey, LeadColumnDefault> = {
   secondaryStatus: { width: 205, min: 140, max: 320 },
   fullPayment: { width: 140, min: 100, max: 220 },
   partialPayment: { width: 140, min: 100, max: 220 },
+  studentRating: { width: 130, min: 110, max: 200 },
   campaign: { width: 160, min: 90, max: 360, autoFit: true },
   adSet: { width: 160, min: 90, max: 360, autoFit: true },
   ad: { width: 160, min: 90, max: 360, autoFit: true },
@@ -119,6 +121,7 @@ export const LEAD_COLUMN_LABELS: Record<LeadColumnKey, string> = {
   secondaryStatus: "סטטוס משני (Secondary Status)",
   fullPayment: "תשלום מלא (Full Payment)",
   partialPayment: "תשלום חלקי (Partial Payment)",
+  studentRating: "דירוג תלמיד (Student Rating)",
   campaign: "קמפיין (Campaign)",
   adSet: "סדרת מודעות (Ad Set)",
   ad: "מודעה (Ad)",
