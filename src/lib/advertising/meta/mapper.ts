@@ -5,6 +5,8 @@ import type {
   MetaAdSetNode,
   MetaCampaignNode,
 } from "@/lib/advertising/meta/types";
+import type { AdvertisingSnapshot } from "@/lib/advertising/types";
+import { COURSE_SCOPE, type CampaignScope } from "@/lib/campaign-scope";
 import type { Ad, AdSet, Campaign, EntityStatus, RawMetrics } from "@/lib/types";
 
 /**
@@ -53,12 +55,40 @@ function insightsRowToRawMetrics(row: MetaAdInsightsRow): RawMetrics {
   };
 }
 
+/**
+ * Delivery of every insights row whose ad is not in the listed tree. Their spend still counts toward the account total,
+ * so they are kept as one unlisted figure. Only Meta's delivery numbers are read here, never its lead counts.
+ */
+function unlistedDelivery(insightsRows: MetaAdInsightsRow[], treeAdIds: ReadonlySet<string>, scope: CampaignScope): RawMetrics | null {
+  const total: RawMetrics = { ...ZERO_METRICS };
+  let count = 0;
+  for (const row of insightsRows) {
+    if (treeAdIds.has(row.ad_id) || scope.isExcluded(row.campaign_id)) continue;
+    count += 1;
+    total.spend += parseNumber(row.spend);
+    total.impressions += parseNumber(row.impressions);
+    total.reach += parseNumber(row.reach);
+    total.linkClicks += parseNumber(row.inline_link_clicks);
+  }
+  return count === 0 ? null : total;
+}
+
+/** Spend of the excluded (non-course) campaigns. It belongs to the account total, so the spend check removes it. */
+function excludedDelivery(insightsRows: MetaAdInsightsRow[], scope: CampaignScope): number {
+  let total = 0;
+  for (const row of insightsRows) {
+    if (scope.isExcluded(row.campaign_id)) total += parseNumber(row.spend);
+  }
+  return total;
+}
+
 export function mapMetaHierarchyToCampaigns(
   campaignNodes: MetaCampaignNode[],
   adSetNodes: MetaAdSetNode[],
   adNodes: MetaAdNode[],
-  insightsRows: MetaAdInsightsRow[]
-): Campaign[] {
+  insightsRows: MetaAdInsightsRow[],
+  scope: CampaignScope = COURSE_SCOPE
+): AdvertisingSnapshot {
   const metricsByAdId = new Map<string, RawMetrics>();
   for (const row of insightsRows) {
     metricsByAdId.set(row.ad_id, insightsRowToRawMetrics(row));
@@ -96,7 +126,8 @@ export function mapMetaHierarchyToCampaigns(
     adSetsByCampaignId.set(adSet.campaignId, bucket);
   }
 
-  return campaignNodes.map((campaignNode) => ({
+  const courseCampaignNodes = campaignNodes.filter((node) => !scope.isExcluded(node.id));
+  const campaigns: Campaign[] = courseCampaignNodes.map((campaignNode) => ({
     id: campaignNode.id,
     name: campaignNode.name,
     // Meta's campaign "objective" field is available but not requested in
@@ -105,4 +136,17 @@ export function mapMetaHierarchyToCampaigns(
     status: mapStatus(campaignNode),
     adSets: adSetsByCampaignId.get(campaignNode.id) ?? [],
   }));
+
+  // An insights row is "unlisted" when its ad did not survive into the tree: a missing ad, a missing ad set, or a missing campaign.
+  const treeAdIds = new Set<string>();
+  for (const campaign of campaigns) {
+    for (const adSet of campaign.adSets) {
+      for (const ad of adSet.ads) treeAdIds.add(ad.id);
+    }
+  }
+  return {
+    campaigns,
+    unlisted: unlistedDelivery(insightsRows, treeAdIds, scope),
+    excludedSpend: excludedDelivery(insightsRows, scope),
+  };
 }

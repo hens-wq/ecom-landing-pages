@@ -1,8 +1,8 @@
 import { campaigns as mockCampaigns } from "@/lib/mock-data/campaigns";
 import { scaleRawMetrics } from "@/lib/calculations";
 import { dateRangeDayCount } from "@/lib/advertising/date-range";
-import type { AdvertisingAccountInfo, AdvertisingDataProvider, DateRange } from "@/lib/advertising/types";
-import type { Campaign } from "@/lib/types";
+import type { AdvertisingAccountInfo, AdvertisingDataProvider, AdvertisingSnapshot, DateRange } from "@/lib/advertising/types";
+import { isExcludedCampaignId } from "@/lib/campaign-scope";
 
 const BASELINE_DAYS = 30;
 
@@ -17,10 +17,10 @@ const BASELINE_DAYS = 30;
 export class MockAdvertisingProvider implements AdvertisingDataProvider {
   readonly source = "mock" as const;
 
-  async getCampaigns(range: DateRange): Promise<Campaign[]> {
+  async getCampaigns(range: DateRange): Promise<AdvertisingSnapshot> {
     const scale = dateRangeDayCount(range) / BASELINE_DAYS;
 
-    return mockCampaigns.map((campaign) => ({
+    const campaigns = mockCampaigns.filter((campaign) => !isExcludedCampaignId(campaign.id)).map((campaign) => ({
       ...campaign,
       adSets: campaign.adSets.map((adSet) => ({
         ...adSet,
@@ -30,6 +30,8 @@ export class MockAdvertisingProvider implements AdvertisingDataProvider {
         })),
       })),
     }));
+
+    return { campaigns, unlisted: null, excludedSpend: 0 };
   }
 
   async getAccountInfo(): Promise<AdvertisingAccountInfo | null> {

@@ -1,4 +1,5 @@
 import { isoDateInTimezone } from "@/lib/advertising/timezone";
+import { isExcludedCampaignId } from "@/lib/campaign-scope";
 import type { DateRange } from "@/lib/advertising/types";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
@@ -78,7 +79,10 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
   const facts = new Map<string, LeadFact>();
   const meta: LeadFactsResult["sources"]["meta"] = { state: "ok", message: null };
   if (metaOutcome.status === "fulfilled") {
-    for (const lead of metaOutcome.value) facts.set(lead.id, metaFact(lead));
+    // Leads from excluded (non-course) campaigns are left out of every figure. Their records are not touched.
+    for (const lead of metaOutcome.value) {
+      if (!isExcludedCampaignId(lead.campaignId)) facts.set(lead.id, metaFact(lead));
+    }
   } else {
     meta.state = "unavailable";
     meta.message = describeFailure(metaOutcome.reason, "לא ניתן לטעון לידים מ-Meta כרגע.");
@@ -86,7 +90,9 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
 
   const landing: LeadFactsResult["sources"]["landing"] = { state: "ok", message: null };
   if (landingOutcome.status === "fulfilled") {
-    for (const record of landingOutcome.value) facts.set(record.internalLeadId, landingFact(record));
+    for (const record of landingOutcome.value) {
+      if (!isExcludedCampaignId(record.campaignId)) facts.set(record.internalLeadId, landingFact(record));
+    }
   } else {
     landing.state = "unavailable";
     landing.message = describeFailure(landingOutcome.reason, "לא ניתן לטעון לידים מדפי הנחיתה כרגע.");

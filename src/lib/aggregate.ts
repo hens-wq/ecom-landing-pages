@@ -19,6 +19,8 @@ import type { Campaign, EntityStatus, LeadSourceType, PerformanceMetrics, RawMet
 export interface RowFlags {
   /** Synthetic row for leads with no ad to attach them to. It has no spend, so spend-based figures don't apply. */
   isUnassigned: boolean;
+  /** Synthetic row for ad spend the Meta listing did not return. It has spend and delivery figures, but no leads. */
+  isUnlisted: boolean;
   /** False when the lead data could not be loaded. Lead-based figures are then unknown, never zero. */
   leadsKnown: boolean;
   /** Leads counted on this row whose status could not be loaded. Sales and revenue on it are a lower bound. */
@@ -54,9 +56,11 @@ export interface CampaignRow extends RowFlags {
 }
 
 export const UNASSIGNED_CAMPAIGN_ID = "unassigned-campaign";
+export const UNLISTED_CAMPAIGN_ID = "unlisted-ads";
 const UNASSIGNED_AD_NAME = "לידים ללא מודעה מזוהה";
 const UNASSIGNED_ADSET_NAME = "לידים ללא סדרת מודעות מזוהה";
 const UNASSIGNED_CAMPAIGN_NAME = "לידים ללא שיוך לקמפיין";
+const UNLISTED_CAMPAIGN_NAME = "הוצאה ממודעות שאינן ברשימה הנוכחית";
 
 /** A synthetic row has no Meta delivery figures of its own. */
 const NO_DELIVERY: RawMetrics = { spend: 0, impressions: 0, reach: 0, linkClicks: 0, leads: 0, sales: 0, revenue: 0 };
@@ -78,7 +82,7 @@ function rawFor(delivery: RawMetrics, bucket: LeadBucket | undefined): RawMetric
 }
 
 function ownFlags(bucket: LeadBucket | undefined, leadsKnown: boolean, isUnassigned: boolean): RowFlags {
-  return { isUnassigned, leadsKnown, unknownStatusLeads: bucket?.unknownStatusLeads ?? 0 };
+  return { isUnassigned, isUnlisted: false, leadsKnown, unknownStatusLeads: bucket?.unknownStatusLeads ?? 0 };
 }
 
 /** A parent row: the summed figures of its children. */
@@ -89,6 +93,7 @@ function rollUp(
   return {
     metrics: computeMetrics(sumRawMetrics(children.map((child) => child.metrics))),
     isUnassigned: false,
+    isUnlisted: false,
     leadsKnown,
     unknownStatusLeads: children.reduce((total, child) => total + child.unknownStatusLeads, 0),
   };
@@ -122,7 +127,7 @@ function unassignedAdSetRow(campaignId: string, status: EntityStatus, bucket: Le
  * Builds the campaign tree. Without `attribution` (the Leads page and the export
  * use the tree only for names and spend), lead figures are unknown rather than zero.
  */
-export function buildPerformanceTree(campaigns: Campaign[], attribution?: LeadAttribution): CampaignRow[] {
+export function buildPerformanceTree(campaigns: Campaign[], attribution?: LeadAttribution, unlisted?: RawMetrics | null): CampaignRow[] {
   const leadsKnown = attribution !== undefined;
 
   const rows: CampaignRow[] = campaigns.map((campaign) => {
@@ -184,6 +189,23 @@ export function buildPerformanceTree(campaigns: Campaign[], attribution?: LeadAt
     });
   }
 
+  // Ad spend the listing did not return. It counts toward every total, but it holds no leads, so lead figures don't apply to it.
+  if (unlisted) {
+    rows.push({
+      level: "campaign",
+      id: UNLISTED_CAMPAIGN_ID,
+      name: UNLISTED_CAMPAIGN_NAME,
+      objective: "",
+      status: "ended",
+      adSets: [],
+      isUnassigned: false,
+      isUnlisted: true,
+      leadsKnown: true,
+      unknownStatusLeads: 0,
+      metrics: computeMetrics(unlisted),
+    });
+  }
+
   return rows;
 }
 
@@ -194,9 +216,11 @@ export function aggregateTotals(rows: Array<{ metrics: RawMetrics }>): Performan
 
 /** Lead flags for a set of top-level rows: the lead figures are known only when every row's are. */
 export function aggregateFlags(rows: RowFlags[]): { leadsKnown: boolean; unknownStatusLeads: number } {
+  // The unlisted row holds no leads, so it says nothing about whether the lead data loaded.
+  const leadRows = rows.filter((row) => !row.isUnlisted);
   return {
-    leadsKnown: rows.every((row) => row.leadsKnown),
-    unknownStatusLeads: rows.reduce((total, row) => total + row.unknownStatusLeads, 0),
+    leadsKnown: leadRows.every((row) => row.leadsKnown),
+    unknownStatusLeads: leadRows.reduce((total, row) => total + row.unknownStatusLeads, 0),
   };
 }
 

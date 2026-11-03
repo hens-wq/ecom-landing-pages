@@ -35,6 +35,11 @@ const STATUS_KEYS = new Set<keyof PerformanceMetrics>(["sales", "closeRate", "co
 export function cellDisplay(row: DisplayRow, column: PerformanceColumnDef): CellDisplay {
   const key = column.key;
 
+  // Unlisted spend has no leads of its own, so every lead-based figure is not applicable to it.
+  if (row.isUnlisted && LEAD_KEYS.has(key)) {
+    return { state: "not_applicable", text: DASH, partial: false };
+  }
+
   if (row.isUnassigned && (DELIVERY_KEYS.has(key) || SPEND_KEYS.has(key))) {
     return { state: "not_applicable", text: DASH, partial: false };
   }

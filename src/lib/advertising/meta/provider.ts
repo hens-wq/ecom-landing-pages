@@ -5,8 +5,7 @@ import type { MetaConfig } from "@/lib/advertising/meta/config";
 import { mapMetaHierarchyToCampaigns } from "@/lib/advertising/meta/mapper";
 import { fetchAdNodes, fetchAdSetNodes, fetchCampaignNodes } from "@/lib/advertising/meta/nodes";
 import type { MetaAdAccountNode, MetaAdInsightsRow } from "@/lib/advertising/meta/types";
-import type { AdvertisingAccountInfo, AdvertisingDataProvider, DateRange } from "@/lib/advertising/types";
-import type { Campaign } from "@/lib/types";
+import type { AdvertisingAccountInfo, AdvertisingDataProvider, AdvertisingSnapshot, DateRange } from "@/lib/advertising/types";
 
 const INSIGHTS_PAGE_LIMIT = "500";
 
@@ -21,7 +20,7 @@ export class MetaAdvertisingProvider implements AdvertisingDataProvider {
     return { id: node.account_id ?? node.id, name: node.name ?? node.id };
   }
 
-  async getCampaigns(range: DateRange): Promise<Campaign[]> {
+  async getCampaigns(range: DateRange): Promise<AdvertisingSnapshot> {
     const [campaignNodes, adSetNodes, adNodes, insightsRows] = await Promise.all([
       fetchCampaignNodes(this.config),
       fetchAdSetNodes(this.config),

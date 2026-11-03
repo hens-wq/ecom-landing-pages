@@ -12,10 +12,12 @@ import { cn } from "@/lib/utils";
 interface SalesKpiCardsProps {
   kpis: LeadKpis;
   irrelevant: IrrelevantRateResult;
-  /** Ad spend from the 1st of this month through today, independent of the Leads page's date range. undefined = still loading, null = unavailable. */
-  monthToDateSpend: number | null | undefined;
-  /** The dates the month-to-date spend covers. */
-  monthToDateRange: { since: string; until: string } | null;
+  /** Spend for the selected date range and the campaign scope the leads use. CPL, Qualified CPL and cost per registration are computed from this same figure. */
+  periodSpend: number;
+  /** The exact range the spend covers: the range chosen in the date picker. */
+  periodRange: { since: string; until: string };
+  /** Whether the spend checks out against Meta's own account total for the range. */
+  spendCheck: "ok" | "gap" | "unavailable" | "none";
   /** Why the cost figures show "—" under the current filters. null when they are computed. */
   costNote: string | null;
   /** Present only when the Sales card should be clickable (see the Leads page) - filters the table to the sales it counts. */
@@ -32,13 +34,18 @@ interface KpiCard {
   tone: KpiTone;
   value: string;
   note?: string | null;
-  warnings?: string[];
+  warnings?: Array<string | null>;
   badge?: ReactNode;
 }
 
 /** "2026-11-03" -> "03.11.2026". */
 function formatIsoDate(iso: string): string {
   return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+}
+
+/** The exact dates of the selected range, as the date picker shows them. */
+function periodNote(range: { since: string; until: string }): string {
+  return range.since === range.until ? formatIsoDate(range.since) : `${formatIsoDate(range.since)} – ${formatIsoDate(range.until)}`;
 }
 
 /** A figure that cannot be computed shows as "—", never as 0. */
@@ -50,12 +57,16 @@ function percent(value: number | null): string {
   return value === null ? "—" : formatPercent(value, 1);
 }
 
-/** The six Leads KPI cards, plus CPL and Qualified CPL. Every lead figure comes from the shared lead KPIs (lib/performance), the same as on the dashboard. */
+/**
+ * The Leads KPI cards. Every lead figure comes from the shared lead KPIs (lib/performance), and every cost figure is built on
+ * the same selected-period spend, so the spend and the leads always share one date range and one campaign scope.
+ */
 export function SalesKpiCards({
   kpis,
   irrelevant,
-  monthToDateSpend,
-  monthToDateRange,
+  periodSpend,
+  periodRange,
+  spendCheck,
   costNote,
   onTotalSalesClick,
   isSalesFilterActive,
@@ -64,6 +75,8 @@ export function SalesKpiCards({
   const qualityNote = `מסווגים: ${green + red} (ירוקים ${green} · אדומים ${red}) · ממתינים: ${pending}`;
   const coverageWarning = unmapped > 0 ? `כיסוי חלקי: ${unmapped} לידים בסטטוס שלא מופה לסיווג, ולכן אינם נספרים כירוקים.` : null;
   const noGreenWarning = green === 0 && costNote === null ? "אין לידים ירוקים בטווח, לכן אין עלות לליד מוכשר." : null;
+  const spendUnverified = spendCheck === "gap" || spendCheck === "unavailable";
+  const unverifiedWarning = spendUnverified ? "מבוסס על הוצאה שלא אומתה מול חשבון Meta." : null;
 
   const cards: KpiCard[] = [
     { key: "sales", labelHe: "מכירות", labelEn: "Sales", icon: ShoppingCart, tone: "success", value: formatNumber(kpis.sales) },
@@ -83,7 +96,7 @@ export function SalesKpiCards({
       icon: Receipt,
       tone: "info",
       value: money(kpis.costPerRegistration),
-      warnings: costNote ? [costNote] : [],
+      warnings: [costNote, unverifiedWarning],
     },
     {
       key: "revenue",
@@ -95,13 +108,14 @@ export function SalesKpiCards({
       note: "רק תשלומים שהוזנו בפועל",
     },
     {
-      key: "monthSpend",
-      labelHe: "הוצאה החודש",
-      labelEn: "Month-to-Date Spend",
+      key: "periodSpend",
+      labelHe: "הוצאה בטווח הנבחר",
+      labelEn: "Selected Period Spend",
       icon: Wallet,
       tone: "info",
-      value: monthToDateSpend === undefined ? "..." : money(monthToDateSpend),
-      note: monthToDateRange ? `${formatIsoDate(monthToDateRange.since)} – ${formatIsoDate(monthToDateRange.until)}` : null,
+      value: money(periodSpend),
+      note: periodNote(periodRange),
+      warnings: [spendUnverified ? "לא מאומת מול חשבון Meta: הסכום עשוי להיות חלקי." : null],
     },
     {
       key: "irrelevant",
@@ -118,7 +132,7 @@ export function SalesKpiCards({
       icon: Target,
       tone: "info",
       value: money(kpis.cpl),
-      warnings: costNote ? [costNote] : [],
+      warnings: [costNote, unverifiedWarning],
       badge: <CplTierBadge cpl={kpis.cpl} />,
     },
     {
@@ -129,7 +143,7 @@ export function SalesKpiCards({
       tone: "success",
       value: money(kpis.qualifiedCpl),
       note: qualityNote,
-      warnings: [costNote, noGreenWarning, coverageWarning].filter((text): text is string => text !== null),
+      warnings: [costNote, noGreenWarning, coverageWarning, unverifiedWarning],
     },
   ];
 
@@ -138,6 +152,7 @@ export function SalesKpiCards({
       {cards.map((card) => {
         const isClickable = card.key === "sales" && Boolean(onTotalSalesClick);
         const isActive = card.key === "sales" && isSalesFilterActive;
+        const warnings = (card.warnings ?? []).filter((text): text is string => text !== null);
         return (
           <Card
             key={card.key}
@@ -175,7 +190,7 @@ export function SalesKpiCards({
                 {card.badge}
               </div>
               {card.note && <span className="text-[11px] leading-snug text-muted-foreground">{card.note}</span>}
-              {card.warnings?.map((warning) => (
+              {warnings.map((warning) => (
                 <span key={warning} className="flex items-start gap-1 text-[11px] leading-snug text-warning-foreground">
                   <TriangleAlert className="mt-px size-3 shrink-0" />
                   {warning}

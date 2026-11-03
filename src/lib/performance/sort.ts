@@ -20,7 +20,7 @@ const STATUS_RANK: Record<EntityStatus, number> = { active: 0, paused: 1, ended:
  */
 function sortValue(row: SortableRow, key: SortKey): number | string | null {
   if (key === "name") return row.name;
-  if (key === "status") return row.isUnassigned ? null : STATUS_RANK[row.status];
+  if (key === "status") return row.isUnassigned || row.isUnlisted ? null : STATUS_RANK[row.status];
 
   const column = columnByKey(key);
   if (!column || cellDisplay(row, column).state !== "value") return null;
@@ -43,12 +43,13 @@ function compareRows(a: SortableRow, b: SortableRow, sort: SortState): number {
   return 0;
 }
 
-/** Rows that hold unassigned leads always come after the real rows of the same level. */
+/** Rows that hold unassigned leads or unlisted spend always come after the real rows of the same level. */
 function orderSiblings<T extends SortableRow>(rows: T[], sort: SortState | null): T[] {
-  const real = rows.filter((row) => !row.isUnassigned);
-  const unassigned = rows.filter((row) => row.isUnassigned);
+  const isSynthetic = (row: SortableRow) => row.isUnassigned || row.isUnlisted;
+  const real = rows.filter((row) => !isSynthetic(row));
+  const synthetic = rows.filter((row) => isSynthetic(row));
   const ordered = sort ? [...real].sort((a, b) => compareRows(a, b, sort)) : real;
-  return [...ordered, ...unassigned];
+  return [...ordered, ...synthetic];
 }
 
 /**

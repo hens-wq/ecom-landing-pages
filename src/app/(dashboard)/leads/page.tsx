@@ -6,6 +6,7 @@ import { Download, Info, RefreshCw, Search, X } from "lucide-react";
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
 import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
+import { DataQualityBanner } from "@/components/shared/data-quality-banner";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadColumnVisibilityMenu } from "@/components/leads/lead-column-visibility-menu";
 import type { LeadColumnKey } from "@/components/leads/lead-columns";
@@ -19,7 +20,10 @@ import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/share
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
+import { type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
+import { sumScopedSpend } from "@/lib/performance/scope-spend";
+import { spendNotices } from "@/lib/performance/spend-notices";
+import { isExcludedCampaignId } from "@/lib/campaign-scope";
 import { CUSTOM_DATE_RANGE_PRESET_ID, presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
@@ -37,11 +41,18 @@ import { leadMatchesSearch } from "@/lib/leads/search";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
+/** The spend figures' own checks, carried from the advertising data together with the leads. */
+interface SpendCheck {
+  reconciliation: AdvertisingResult["reconciliation"];
+  unlistedSpend: number;
+}
+
 interface PageData {
   leadsResult: LeadsResult;
   campaignRows: CampaignRow[];
   statusesByLeadId: Map<string, LeadStatusRecord>;
   campaignStatuses: CampaignStatusMap;
+  spendCheck: SpendCheck;
 }
 
 type LoadState =
@@ -57,37 +68,6 @@ function uniqueOptions(leads: MetaFormLead[], idKey: "campaignId" | "adSetId" | 
     seen.set(id, lead[nameKey] || id);
   }
   return Array.from(seen, ([id, label]) => ({ id, label }));
-}
-
-function flattenAdRows(campaignRows: CampaignRow[]): Array<{ campaignId: string; adSetId: string; ad: AdRow }> {
-  const rows: Array<{ campaignId: string; adSetId: string; ad: AdRow }> = [];
-  for (const campaign of campaignRows) {
-    for (const adSet of campaign.adSets) {
-      for (const ad of adSet.ads) rows.push({ campaignId: campaign.id, adSetId: adSet.id, ad });
-    }
-  }
-  return rows;
-}
-
-/** Spend for whatever campaign/ad set/ad/campaign-status scope is currently selected - matched by ID only, exactly like the rest of this app's attribution. */
-function sumScopedSpend(
-  campaignRows: CampaignRow[],
-  campaignStatuses: CampaignStatusMap,
-  filters: { campaignId: string | null; adSetId: string | null; adId: string | null; campaignStatus: "active" | "inactive" | null }
-): number {
-  let total = 0;
-  for (const { campaignId, adSetId, ad } of flattenAdRows(campaignRows)) {
-    if (filters.campaignId && campaignId !== filters.campaignId) continue;
-    if (filters.adSetId && adSetId !== filters.adSetId) continue;
-    if (filters.adId && ad.id !== filters.adId) continue;
-    if (filters.campaignStatus) {
-      const isActive = (campaignStatuses[campaignId] ?? "ended") === "active";
-      if (filters.campaignStatus === "active" && !isActive) continue;
-      if (filters.campaignStatus === "inactive" && isActive) continue;
-    }
-    total += ad.metrics.spend;
-  }
-  return total;
 }
 
 /** The KPI layer's view of one lead on this page: its Meta IDs and its current status. Lead dates are only used for dashboard attribution, so an unreadable date is left empty here. */
@@ -119,6 +99,7 @@ interface CombinedLeadsFetchOk {
   campaignRows: CampaignRow[];
   campaignStatuses: CampaignStatusMap;
   statusesByLeadId: Map<string, LeadStatusRecord>;
+  spendCheck: SpendCheck;
 }
 interface CombinedLeadsFetchError {
   ok: false;
@@ -188,7 +169,8 @@ async function fetchCombinedLeads(
   // lib/landing-leads) - combined here into one list so the rest of this
   // page (filters, KPI math, the table, the export) never needs to know
   // leads came from two different places.
-  const campaignRows = buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns);
+  const advertising = advertisingJson as AdvertisingResult;
+  const campaignRows = buildPerformanceTree(advertising.campaigns, undefined, advertising.unlisted);
   const nameLookup = buildNameLookup(campaignRows);
   const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) => landingLeadToMetaFormLead(record, nameLookup));
   const leadsResult: LeadsResult = {
@@ -231,6 +213,7 @@ async function fetchCombinedLeads(
     campaignRows,
     campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
     statusesByLeadId,
+    spendCheck: { reconciliation: advertising.reconciliation, unlistedSpend: advertising.unlisted?.spend ?? 0 },
   };
 }
 
@@ -277,9 +260,6 @@ export default function LeadsPage() {
   /** A lead the alert asked us to bring into view. Consumed once that lead's row has rendered. */
   const pendingFocusLeadIdRef = useRef<string | null>(null);
   const [statusSaveTick, setStatusSaveTick] = useState(0);
-  /** Ad spend from the 1st of this month through today - undefined while loading, null if unavailable. Independent of the date range on screen. */
-  const [monthToDateSpend, setMonthToDateSpend] = useState<number | null | undefined>(undefined);
-  const [monthToDateRange, setMonthToDateRange] = useState<{ since: string; until: string } | null>(null);
   const tableSectionRef = useRef<HTMLDivElement>(null);
 
   if (rangeKey !== trackedRangeKey) {
@@ -305,10 +285,15 @@ export default function LeadsPage() {
         setState({
           phase: "ready",
           data: {
-            leadsResult: result.leadsResult,
+            leadsResult: {
+              ...result.leadsResult,
+              // Leads from excluded (non-course) campaigns stay out of this page. The export files are unchanged.
+              leads: result.leadsResult.leads.filter((lead) => !isExcludedCampaignId(lead.campaignId)),
+            },
             campaignRows: result.campaignRows,
             statusesByLeadId: result.statusesByLeadId,
             campaignStatuses: result.campaignStatuses,
+            spendCheck: result.spendCheck,
           },
         });
       } catch {
@@ -373,31 +358,7 @@ export default function LeadsPage() {
     };
   }, [refreshTick, statusSaveTick]);
 
-  // Month-to-date spend depends only on today's date, not on the Leads range -
-  // loaded once per page load/refresh, never on a range change.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/advertising/month-to-date", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data: { spend?: unknown; since?: unknown; until?: unknown }) => {
-        if (cancelled) return;
-        setMonthToDateSpend(typeof data.spend === "number" ? data.spend : null);
-        setMonthToDateRange(
-          typeof data.since === "string" && typeof data.until === "string" ? { since: data.since, until: data.until } : null
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMonthToDateSpend(null);
-          setMonthToDateRange(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshTick]);
-
-  const allLeads = useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
+  const allLeads =useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
   const source = state.phase === "ready" ? state.data.leadsResult.source : undefined;
   const statusesByLeadId = useMemo(() => (state.phase === "ready" ? state.data.statusesByLeadId : new Map<string, LeadStatusRecord>()), [state]);
   const campaignStatuses = useMemo(() => (state.phase === "ready" ? state.data.campaignStatuses : {}), [state]);
@@ -641,6 +602,15 @@ export default function LeadsPage() {
     [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter]
   );
   const costNote = sourceFilter === null ? null : 'בחרו "הכול" במקור ליד כדי לחשב עלויות - ההוצאה לא מפוצלת לפי מקור ליד.';
+  const spendCheck = state.phase === "ready" ? (state.data.spendCheck.reconciliation?.status ?? "none") : "none";
+  const pageNotices =
+    state.phase === "ready"
+      ? spendNotices({
+          reconciliation: state.data.spendCheck.reconciliation,
+          unlistedSpend: state.data.spendCheck.unlistedSpend,
+          isLive: state.data.leadsResult.source === "meta",
+        })
+      : [];
   const irrelevantRate = useMemo(
     () => calculateIrrelevantRate(scopedLeads.map((l) => l.id), effectiveStatusesByLeadId),
     [scopedLeads, effectiveStatusesByLeadId]
@@ -804,11 +774,13 @@ export default function LeadsPage() {
 
       {state.phase === "ready" && (
         <>
+          <DataQualityBanner notices={pageNotices} />
           <SalesKpiCards
             kpis={leadKpis}
             irrelevant={irrelevantRate}
-            monthToDateSpend={monthToDateSpend}
-            monthToDateRange={monthToDateRange}
+            periodSpend={scopedSpend}
+            periodRange={range}
+            spendCheck={spendCheck}
             costNote={costNote}
             onTotalSalesClick={handleTotalSalesClick}
             isSalesFilterActive={salesOnlyFilter}

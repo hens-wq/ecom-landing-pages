@@ -15,9 +15,11 @@ import type { AdvertisingResult } from "@/lib/advertising";
 import { resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID } from "@/lib/constants";
+import { spendNotices } from "@/lib/performance/spend-notices";
 import { dailyTrend } from "@/lib/mock-data";
 import { attributeLeadFacts } from "@/lib/performance/attribution";
 import { expandableRowIds } from "@/lib/performance/expansion";
+import { filterVisibleCampaignRows } from "@/lib/performance/visible-rows";
 import { sortCampaignRows, type SortKey, type SortState } from "@/lib/performance/sort";
 import type { LeadFactsResult } from "@/lib/performance/types";
 
@@ -178,21 +180,33 @@ export default function DashboardPage() {
     const facts = leadFacts.phase === "ok" ? leadFacts.facts : null;
     const leadsComplete = facts !== null && facts.sources.meta.state === "ok" && facts.sources.landing.state === "ok";
     const attribution = leadsComplete && facts ? attributeLeadFacts(advertising.campaigns, facts.leads) : undefined;
-    return buildPerformanceTree(advertising.campaigns, attribution);
+    return buildPerformanceTree(advertising.campaigns, attribution, advertising.unlisted);
   }, [state]);
 
   // "Active only" drops whole campaigns, and the campaign-less lead bucket with them. Paused ad sets and ads stay inside
   // an active campaign, because they may have had results in the selected range.
-  const visibleRows = useMemo(() => {
-    if (campaignStatusFilter !== "active") return campaignTree;
-    return campaignTree.filter((row) => !row.isUnassigned && (campaignStatuses[row.id] ?? "ended") === "active");
-  }, [campaignTree, campaignStatuses, campaignStatusFilter]);
+  const visibleRows = useMemo(
+    () => filterVisibleCampaignRows(campaignTree, campaignStatuses, campaignStatusFilter === "active"),
+    [campaignTree, campaignStatuses, campaignStatusFilter]
+  );
 
   const sortedRows = useMemo(() => sortCampaignRows(visibleRows, sort), [visibleRows, sort]);
   const totals = useMemo(() => aggregateTotals(visibleRows), [visibleRows]);
   const flags = useMemo(() => aggregateFlags(visibleRows), [visibleRows]);
   const expandable = useMemo(() => expandableRowIds(sortedRows), [sortedRows]);
-  const notices = state.phase === "ready" ? leadNotices(state.data.leadFacts) : [];
+  const notices =
+    state.phase === "ready"
+      ? [
+          ...leadNotices(state.data.leadFacts),
+          ...spendNotices({
+            reconciliation: state.data.advertising.reconciliation,
+            unlistedSpend: state.data.advertising.unlisted?.spend ?? 0,
+            isLive: state.data.advertising.source === "meta",
+          }),
+        ]
+      : [];
+  const reconciliationOk = state.phase === "ready" && state.data.advertising.reconciliation?.status === "ok";
+  const spendCheck = state.phase === "ready" ? (state.data.advertising.reconciliation?.status ?? "none") : "none";
   const source = state.phase === "ready" ? state.data.advertising.source : undefined;
 
   return (
@@ -216,7 +230,10 @@ export default function DashboardPage() {
             onChange={(id) => setCampaignStatusFilter(id as "active" | null)}
           />
         </div>
-        <DataSourceBadge source={source} />
+        <div className="flex flex-wrap items-center gap-3">
+          {reconciliationOk && <span className="text-xs font-medium text-emerald-700">ההוצאה מאומתת מול חשבון Meta</span>}
+          <DataSourceBadge source={source} />
+        </div>
       </div>
 
       {state.phase === "loading" && <LoadingPanel />}
@@ -235,7 +252,13 @@ export default function DashboardPage() {
       {state.phase === "ready" && (
         <>
           <DataQualityBanner notices={notices} />
-          <KpiCards totals={totals} leadsKnown={flags.leadsKnown} unknownStatusLeads={flags.unknownStatusLeads} />
+          <KpiCards
+            totals={totals}
+            leadsKnown={flags.leadsKnown}
+            unknownStatusLeads={flags.unknownStatusLeads}
+            periodRange={range}
+            spendCheck={spendCheck}
+          />
           {state.data.advertising.source === "mock" && <TrendChart data={dailyTrend} />}
 
           {sortedRows.length === 0 ? (

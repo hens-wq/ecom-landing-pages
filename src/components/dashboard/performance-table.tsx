@@ -171,7 +171,8 @@ function HierarchyRow({ flat, isExpanded, onToggleExpand, visibleColumns }: Hier
   const isExpandable = flat.type !== "ad" && hasChildren(flat);
   const depth = flat.type === "campaign" ? 0 : flat.type === "adset" ? 1 : 2;
   const Icon = flat.type === "campaign" ? Megaphone : flat.type === "adset" ? Layers3 : ImageIcon;
-  const isUnassigned = row.isUnassigned;
+  // Synthetic rows (unassigned leads, unlisted spend) have no status of their own, so they show a dash in the status column.
+  const isUnassigned = row.isUnassigned || row.isUnlisted;
 
   return (
     <TableRow
