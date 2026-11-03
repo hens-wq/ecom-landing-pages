@@ -36,5 +36,6 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
 - `leads-extra.cjs`: the demo-mode guard on Leads and the mobile layout.
 - `period-spend.cjs`: the selected-period spend for every preset and the custom range, and the warnings for a
   reconciliation that passes, has a gap, or cannot be checked.
+- `exports.cjs`: the agent CSV leaves out the excluded campaign's leads, and keeps the course leads.
 - `live-mode.cjs`: with no demo flag and no Meta settings, every Meta-backed route returns an explicit error, the
   export refuses to run, and no demo numbers appear.

@@ -3,7 +3,7 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
-const demoSuites = ["dashboard.cjs", "leads.cjs", "leads-extra.cjs", "period-spend.cjs"];
+const demoSuites = ["dashboard.cjs", "leads.cjs", "leads-extra.cjs", "period-spend.cjs", "exports.cjs"];
 let failed = 0;
 
 for (const file of demoSuites) {

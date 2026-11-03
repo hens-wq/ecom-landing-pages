@@ -38,6 +38,7 @@ import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { buildLeadExportCsv, toLeadExportRow } from "@/lib/leads/export";
 import { leadMatchesSearch } from "@/lib/leads/search";
+import { courseLeads } from "@/lib/leads/course-scope";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -416,7 +417,8 @@ export default function LeadsPage() {
         return;
       }
 
-      const rows = result.leadsResult.leads.map((lead) => toLeadExportRow(lead, result.statusesByLeadId.get(lead.id)));
+      // Course analysis only: leads of excluded campaigns (see lib/campaign-scope) never reach the agent file.
+      const rows = courseLeads(result.leadsResult.leads).map((lead) => toLeadExportRow(lead, result.statusesByLeadId.get(lead.id)));
       const csv = buildLeadExportCsv(rows);
       const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
