@@ -172,12 +172,13 @@ test("the active filter keeps a turned-off campaign that spent money, hides idle
   assert.equal(aggregateTotals(visible).spend, aggregateTotals(rows).spend);
 });
 
-test("spend notices: demo data is never announced as a verified exclusion, and live data is", () => {
-  assert.deepEqual(spendNotices({ reconciliation: null, unlistedSpend: 0, isLive: false }), []);
+test("spend notices: demo data is never announced, and live data without a verified exclusion is", () => {
+  assert.deepEqual(spendNotices({ reconciliation: null, unlistedSpend: 0, isLive: false, verifiedExclusions: false }), []);
+  assert.deepEqual(spendNotices({ reconciliation: null, unlistedSpend: 0, isLive: true, verifiedExclusions: true }), []);
 
-  const live = spendNotices({ reconciliation: null, unlistedSpend: 0, isLive: true });
-  assert.equal(live.length, 1);
-  assert.equal(live[0].text, RECRUITMENT_NOT_EXCLUDED_MESSAGE);
+  const unverified = spendNotices({ reconciliation: null, unlistedSpend: 0, isLive: true, verifiedExclusions: false });
+  assert.equal(unverified.length, 1);
+  assert.equal(unverified[0].text, RECRUITMENT_NOT_EXCLUDED_MESSAGE);
 });
 
 test("spend notices: a gap and unlisted spend are each announced as a warning", () => {
@@ -220,4 +221,6 @@ test("the Meta mapper leaves excluded campaigns out, counts their spend apart, a
   assert.ok(snapshot.unlisted);
   assert.equal(snapshot.unlisted.spend, 25, "only the course ad that the listing missed is unlisted");
   assert.equal(snapshot.unlisted.leads, 0, "Meta's own lead counts are never read into unlisted spend");
+  assert.deepEqual(snapshot.excludedCampaigns.map((campaign) => campaign.id), ["c-recruit"], "excluded data is kept, apart from the course campaigns");
+  assert.equal(snapshot.excludedCampaigns[0].adSets[0].ads[0].metrics.spend, 300);
 });

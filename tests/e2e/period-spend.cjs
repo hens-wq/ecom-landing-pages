@@ -143,7 +143,7 @@ async function scenarioWarnings(browser, status, today) {
   check(`[${status}] dashboard: the unlisted spend row is shown`, unlistedRow === 1);
   check(`[${status}] dashboard: the unlisted spend is announced`, dashboardText.includes("נכללו") && dashboardText.includes("ממודעות שאינן ברשימה"));
   check(`[${status}] dashboard: the spend card is marked by its check`, status === "ok" ? dashboardText.includes("ההוצאה מאומתת מול חשבון Meta") : dashboardText.includes("לא מאומת מול חשבון Meta"));
-  check(`[${status}] dashboard: no recruitment campaign is treated as excluded without an approved ID`, dashboardText.includes("עדיין לא הוחרג מהמדדים"));
+  check(`[${status}] dashboard: no 'not yet excluded' warning, because the campaign ID is verified`, !dashboardText.includes("עדיין לא הוחרג מהמדדים"));
   if (status === "gap") check("[gap] dashboard: the gap is shown with its size", dashboardText.includes("פער של ₪50"));
   if (status === "unavailable") check("[unavailable] dashboard: the failure is shown, not a silent total", dashboardText.includes("לא ניתן לאמת את ההוצאה"));
 
@@ -152,7 +152,7 @@ async function scenarioWarnings(browser, status, today) {
   const leadsText = await page.evaluate(() => document.body.innerText);
   const card = await periodCard(page);
   check(`[${status}] leads: the selected-period spend card shows the check`, card !== null && (status === "ok" ? !card.text.includes("לא מאומת") : card.text.includes("לא מאומת מול חשבון Meta")));
-  check(`[${status}] leads: the same warnings appear on the Leads page`, leadsText.includes("עדיין לא הוחרג מהמדדים") && (status === "ok" || leadsText.includes("נכללו")));
+  check(`[${status}] leads: the spend warnings appear on the Leads page, without the 'not yet excluded' notice`, !leadsText.includes("עדיין לא הוחרג מהמדדים") && (status === "ok" || leadsText.includes("נכללו")));
   check(`[${status}] leads: the card dates are today's`, card?.text.includes(dmy(today)) === true);
   await context.close();
 }

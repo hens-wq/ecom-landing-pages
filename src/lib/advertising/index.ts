@@ -30,7 +30,14 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
     }
     const provider = new MockAdvertisingProvider();
     const snapshot = await provider.getCampaigns(range);
-    return { source: "mock", campaigns: snapshot.campaigns, account: null, unlisted: null, reconciliation: null };
+    return {
+      source: "mock",
+      campaigns: snapshot.campaigns,
+      account: null,
+      unlisted: null,
+      reconciliation: null,
+      excludedCampaigns: snapshot.excludedCampaigns,
+    };
   }
 
   if (check.status === "incomplete") {
@@ -62,7 +69,14 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
     excludedSpend: snapshot.excludedSpend,
     accountSpend,
   });
-  return { source: "meta", campaigns: snapshot.campaigns, account, unlisted: snapshot.unlisted, reconciliation };
+  return {
+    source: "meta",
+    campaigns: snapshot.campaigns,
+    account,
+    unlisted: snapshot.unlisted,
+    reconciliation,
+    excludedCampaigns: snapshot.excludedCampaigns,
+  };
 }
 
 export type MetaConnectionStatus =

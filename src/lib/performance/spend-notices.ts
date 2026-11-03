@@ -15,9 +15,12 @@ export function spendNotices(input: {
   reconciliation: SpendReconciliation | null;
   unlistedSpend: number;
   isLive: boolean;
+  /** Whether a verified exclusion list is configured. Defaults to the app's own list. */
+  verifiedExclusions?: boolean;
 }): SpendNotice[] {
+  const verifiedExclusions = input.verifiedExclusions ?? hasVerifiedExclusions();
   const notices: SpendNotice[] = [];
-  if (input.isLive && !hasVerifiedExclusions()) {
+  if (input.isLive && !verifiedExclusions) {
     notices.push({ tone: "warning", text: RECRUITMENT_NOT_EXCLUDED_MESSAGE });
   }
   if (input.reconciliation && input.reconciliation.status !== "ok") {

@@ -33,6 +33,8 @@ export interface AdvertisingSnapshot {
   unlisted: RawMetrics | null;
   /** Spend of the excluded (non-course) campaigns in the range. The account total includes it, so the check subtracts it. */
   excludedSpend: number;
+  /** The excluded campaigns' own data, with their hierarchy. Kept so it stays in the system; no course figure reads it. */
+  excludedCampaigns: Campaign[];
 }
 
 export type ReconciliationStatus = "ok" | "gap" | "unavailable";
@@ -60,6 +62,8 @@ export interface AdvertisingResult {
   unlisted: RawMetrics | null;
   /** The spend check against the account total. Null in demo mode. */
   reconciliation: SpendReconciliation | null;
+  /** Excluded (non-course) campaigns, kept in the response for the record. The course figures never read them. */
+  excludedCampaigns: Campaign[];
 }
 
 export interface AdvertisingDataProvider {

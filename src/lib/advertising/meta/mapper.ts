@@ -73,11 +73,14 @@ function unlistedDelivery(insightsRows: MetaAdInsightsRow[], treeAdIds: Readonly
   return count === 0 ? null : total;
 }
 
-/** Spend of the excluded (non-course) campaigns. It belongs to the account total, so the spend check removes it. */
-function excludedDelivery(insightsRows: MetaAdInsightsRow[], scope: CampaignScope): number {
+/**
+ * Spend of excluded campaigns' ads that the listing did not return. Those ads are not in the tree, so they are counted only
+ * here. The spend of an excluded campaign's listed ads is counted from the tree itself.
+ */
+function excludedDelivery(insightsRows: MetaAdInsightsRow[], treeAdIds: ReadonlySet<string>, scope: CampaignScope): number {
   let total = 0;
   for (const row of insightsRows) {
-    if (scope.isExcluded(row.campaign_id)) total += parseNumber(row.spend);
+    if (!treeAdIds.has(row.ad_id) && scope.isExcluded(row.campaign_id)) total += parseNumber(row.spend);
   }
   return total;
 }
@@ -126,8 +129,7 @@ export function mapMetaHierarchyToCampaigns(
     adSetsByCampaignId.set(adSet.campaignId, bucket);
   }
 
-  const courseCampaignNodes = campaignNodes.filter((node) => !scope.isExcluded(node.id));
-  const campaigns: Campaign[] = courseCampaignNodes.map((campaignNode) => ({
+  const allCampaigns: Campaign[] = campaignNodes.map((campaignNode) => ({
     id: campaignNode.id,
     name: campaignNode.name,
     // Meta's campaign "objective" field is available but not requested in
@@ -136,17 +138,27 @@ export function mapMetaHierarchyToCampaigns(
     status: mapStatus(campaignNode),
     adSets: adSetsByCampaignId.get(campaignNode.id) ?? [],
   }));
+  // Course campaigns feed every course figure. Excluded campaigns keep their data, but nothing course-related reads it.
+  const campaigns = allCampaigns.filter((campaign) => !scope.isExcluded(campaign.id));
+  const excludedCampaigns = allCampaigns.filter((campaign) => scope.isExcluded(campaign.id));
 
   // An insights row is "unlisted" when its ad did not survive into the tree: a missing ad, a missing ad set, or a missing campaign.
   const treeAdIds = new Set<string>();
-  for (const campaign of campaigns) {
+  for (const campaign of allCampaigns) {
     for (const adSet of campaign.adSets) {
       for (const ad of adSet.ads) treeAdIds.add(ad.id);
     }
   }
+
+  const excludedTreeSpend = excludedCampaigns.reduce(
+    (total, campaign) =>
+      total + campaign.adSets.reduce((adSetTotal, adSet) => adSetTotal + adSet.ads.reduce((adTotal, ad) => adTotal + ad.metrics.spend, 0), 0),
+    0
+  );
   return {
     campaigns,
+    excludedCampaigns,
     unlisted: unlistedDelivery(insightsRows, treeAdIds, scope),
-    excludedSpend: excludedDelivery(insightsRows, scope),
+    excludedSpend: excludedTreeSpend + excludedDelivery(insightsRows, treeAdIds, scope),
   };
 }
