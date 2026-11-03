@@ -2,6 +2,7 @@ import { Banknote, Percent, Receipt, ShieldCheck, ShoppingCart, Target, Triangle
 import type { ReactNode } from "react";
 
 import { CplTierBadge } from "@/components/shared/cpl-tier-badge";
+import { KpiIcon, type KpiTone } from "@/components/shared/kpi-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import type { IrrelevantRateResult } from "@/lib/lead-status/calculations";
@@ -28,6 +29,7 @@ interface KpiCard {
   labelHe: string;
   labelEn: string;
   icon: LucideIcon;
+  tone: KpiTone;
   value: string;
   note?: string | null;
   warnings?: string[];
@@ -64,12 +66,13 @@ export function SalesKpiCards({
   const noGreenWarning = green === 0 && costNote === null ? "אין לידים ירוקים בטווח, לכן אין עלות לליד מוכשר." : null;
 
   const cards: KpiCard[] = [
-    { key: "sales", labelHe: "מכירות", labelEn: "Sales", icon: ShoppingCart, value: formatNumber(kpis.sales) },
+    { key: "sales", labelHe: "מכירות", labelEn: "Sales", icon: ShoppingCart, tone: "success", value: formatNumber(kpis.sales) },
     {
       key: "closeRate",
       labelHe: "אחוז סגירה",
       labelEn: "Close Rate",
       icon: Percent,
+      tone: "success",
       value: percent(kpis.closeRate),
       note: `${formatNumber(kpis.sales)} מתוך ${formatNumber(kpis.leads)} לידים`,
     },
@@ -78,6 +81,7 @@ export function SalesKpiCards({
       labelHe: "עלות להרשמה",
       labelEn: "Cost per Registration",
       icon: Receipt,
+      tone: "info",
       value: money(kpis.costPerRegistration),
       warnings: costNote ? [costNote] : [],
     },
@@ -86,6 +90,7 @@ export function SalesKpiCards({
       labelHe: "הכנסות שהוזנו",
       labelEn: "Recorded Revenue",
       icon: Banknote,
+      tone: "success",
       value: money(kpis.revenue),
       note: "רק תשלומים שהוזנו בפועל",
     },
@@ -94,6 +99,7 @@ export function SalesKpiCards({
       labelHe: "הוצאה החודש",
       labelEn: "Month-to-Date Spend",
       icon: Wallet,
+      tone: "info",
       value: monthToDateSpend === undefined ? "..." : money(monthToDateSpend),
       note: monthToDateRange ? `${formatIsoDate(monthToDateRange.since)} – ${formatIsoDate(monthToDateRange.until)}` : null,
     },
@@ -102,6 +108,7 @@ export function SalesKpiCards({
       labelHe: "אחוז לידים לא רלוונטיים",
       labelEn: "Irrelevant Lead Rate",
       icon: TriangleAlert,
+      tone: "warning",
       value: percent(irrelevant.rate),
     },
     {
@@ -109,6 +116,7 @@ export function SalesKpiCards({
       labelHe: "עלות לליד",
       labelEn: "CPL",
       icon: Target,
+      tone: "info",
       value: money(kpis.cpl),
       warnings: costNote ? [costNote] : [],
       badge: <CplTierBadge cpl={kpis.cpl} />,
@@ -118,6 +126,7 @@ export function SalesKpiCards({
       labelHe: "עלות לליד מוכשר",
       labelEn: "Qualified CPL",
       icon: ShieldCheck,
+      tone: "success",
       value: money(kpis.qualifiedCpl),
       note: qualityNote,
       warnings: [costNote, noGreenWarning, coverageWarning].filter((text): text is string => text !== null),
@@ -127,7 +136,6 @@ export function SalesKpiCards({
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {cards.map((card) => {
-        const Icon = card.icon;
         const isClickable = card.key === "sales" && Boolean(onTotalSalesClick);
         const isActive = card.key === "sales" && isSalesFilterActive;
         return (
@@ -158,10 +166,12 @@ export function SalesKpiCards({
                   <span>{card.labelHe}</span>
                   <span className="text-muted-foreground/70">({card.labelEn})</span>
                 </span>
-                <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                <KpiIcon icon={card.icon} tone={card.tone} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="tabular-nums-he text-xl font-bold">{card.value}</span>
+                <span className={cn("tabular-nums-he text-2xl font-bold", card.value === "—" ? "text-muted-foreground" : "text-heading")}>
+                  {card.value}
+                </span>
                 {card.badge}
               </div>
               {card.note && <span className="text-[11px] leading-snug text-muted-foreground">{card.note}</span>}

@@ -99,7 +99,7 @@ export function PerformanceTable({
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-primary">
+          <h2 className="text-base font-bold text-heading">
             היררכיית ביצועים <span className="font-normal text-muted-foreground">(Campaign → Ad Set → Ad)</span>
           </h2>
           <p className="text-xs text-muted-foreground">שורה אחת לכל קמפיין. פתחו קמפיין כדי לראות את סדרות המודעות שלו, ופתחו סדרה כדי לראות את המודעות.</p>
@@ -179,14 +179,14 @@ function HierarchyRow({ flat, isExpanded, onToggleExpand, visibleColumns }: Hier
       data-row-id={row.id}
       className={cn(
         "group",
-        flat.type === "adset" && "bg-muted/30",
+        flat.type === "adset" && "bg-table-subtle",
         isUnassigned && "text-muted-foreground italic"
       )}
     >
       <TableCell
         className={cn(
-          "sticky right-0 z-10 border-l border-border group-hover:bg-muted/40",
-          flat.type === "campaign" ? "bg-card font-semibold" : flat.type === "adset" ? "bg-muted/30 font-medium" : "bg-card",
+          "sticky right-0 z-10 border-l border-border group-hover:bg-table-hover",
+          flat.type === "campaign" ? "bg-card font-semibold text-heading" : flat.type === "adset" ? "bg-table-subtle font-medium" : "bg-card",
           flat.type === "campaign" && "border-r-2 border-r-primary/60"
         )}
         style={{ paddingInlineStart: `${depth * 22 + 12}px` }}

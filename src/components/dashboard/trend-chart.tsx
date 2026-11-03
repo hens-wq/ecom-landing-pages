@@ -48,7 +48,7 @@ export function TrendChart({ data }: { data: DailyTrendPoint[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="text-heading font-bold">
           מגמת הוצאה מול הכנסות - 30 הימים האחרונים{" "}
           <span className="font-normal text-muted-foreground">(Spend vs Revenue Trend)</span>
         </CardTitle>

@@ -1,20 +1,21 @@
-import { Banknote, Gauge, Percent, Receipt, ShoppingCart, Tags, Target, Users } from "lucide-react";
+import { Banknote, Gauge, Percent, Receipt, ShoppingCart, Tags, Target, Users, type LucideIcon } from "lucide-react";
 
 import { CplTierBadge } from "@/components/shared/cpl-tier-badge";
+import { KpiIcon, type KpiTone } from "@/components/shared/kpi-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { cellDisplay, columnByKey } from "@/lib/performance/display";
 import { cn } from "@/lib/utils";
 import type { PerformanceMetrics } from "@/lib/types";
 
-const KPI_ORDER: Array<{ key: keyof PerformanceMetrics; icon: React.ComponentType<{ className?: string }> }> = [
-  { key: "spend", icon: Tags },
-  { key: "leads", icon: Users },
-  { key: "cpl", icon: Target },
-  { key: "sales", icon: ShoppingCart },
-  { key: "closeRate", icon: Percent },
-  { key: "costPerSale", icon: Receipt },
-  { key: "revenue", icon: Banknote },
-  { key: "roas", icon: Gauge },
+const KPI_ORDER: Array<{ key: keyof PerformanceMetrics; icon: LucideIcon; tone: KpiTone }> = [
+  { key: "spend", icon: Tags, tone: "info" },
+  { key: "leads", icon: Users, tone: "info" },
+  { key: "cpl", icon: Target, tone: "info" },
+  { key: "sales", icon: ShoppingCart, tone: "success" },
+  { key: "closeRate", icon: Percent, tone: "success" },
+  { key: "costPerSale", icon: Receipt, tone: "info" },
+  { key: "revenue", icon: Banknote, tone: "success" },
+  { key: "roas", icon: Gauge, tone: "info" },
 ];
 
 /** Shown under a KPI wherever its basis needs saying. */
@@ -35,7 +36,7 @@ export function KpiCards({ totals, leadsKnown, unknownStatusLeads }: KpiCardsPro
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {KPI_ORDER.map(({ key, icon: Icon }) => {
+      {KPI_ORDER.map(({ key, icon: Icon, tone }) => {
         const column = columnByKey(key);
         if (!column) return null;
         const display = cellDisplay(displayRow, column);
@@ -48,10 +49,10 @@ export function KpiCards({ totals, leadsKnown, unknownStatusLeads }: KpiCardsPro
                   <span>{column.labelHe}</span>
                   <span className="text-muted-foreground/70">({column.labelEn})</span>
                 </span>
-                <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                <KpiIcon icon={Icon} tone={tone} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={cn("tabular-nums-he text-xl font-bold", display.state !== "value" && "text-muted-foreground")}>
+                <span className={cn("tabular-nums-he text-2xl font-bold", display.state === "value" ? "text-heading" : "text-muted-foreground")}>
                   {display.text}
                 </span>
                 {display.partial && (
