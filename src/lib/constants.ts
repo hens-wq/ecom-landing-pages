@@ -11,8 +11,9 @@ export const NAV_ITEMS = [
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
   { id: "today", label: "היום", resolve: (today) => singleDayDateRange(0, today) },
   { id: "yesterday", label: "אתמול", resolve: (today) => singleDayDateRange(1, today) },
-  { id: "last_7", label: "7 הימים האחרונים", resolve: (today) => presetDaysToDateRange(7, today) },
-  { id: "last_30", label: "30 הימים האחרונים", resolve: (today) => presetDaysToDateRange(30, today) },
+  { id: "today_and_yesterday", label: "היום ואתמול", resolve: (today) => presetDaysToDateRange(2, today) },
+  { id: "last_7", label: "7 ימים אחרונים", resolve: (today) => presetDaysToDateRange(7, today) },
+  { id: "last_30", label: "30 ימים אחרונים", resolve: (today) => presetDaysToDateRange(30, today) },
   { id: "current_month", label: "חודש נוכחי", resolve: (today) => currentMonthDateRange(today) },
 ];
 

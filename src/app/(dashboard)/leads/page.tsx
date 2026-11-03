@@ -24,7 +24,10 @@ import { CUSTOM_DATE_RANGE_PRESET_ID, presetDaysToDateRange, resolveDateRangeSel
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { calculateIrrelevantRate, calculateSalesSummary, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import { calculateIrrelevantRate, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import { isoDateInTimezone } from "@/lib/advertising/timezone";
+import { computeLeadKpis, type LeadKpis } from "@/lib/performance/lead-metrics";
+import type { LeadFact } from "@/lib/performance/types";
 import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
@@ -85,6 +88,24 @@ function sumScopedSpend(
     total += ad.metrics.spend;
   }
   return total;
+}
+
+/** The KPI layer's view of one lead on this page: its Meta IDs and its current status. Lead dates are only used for dashboard attribution, so an unreadable date is left empty here. */
+function toLeadFact(lead: MetaFormLead, record: LeadStatusRecord): LeadFact {
+  const created = new Date(lead.createdTime);
+  return {
+    id: lead.id,
+    sourceType: lead.sourceType,
+    leadDate: Number.isNaN(created.getTime()) ? "" : isoDateInTimezone(created),
+    campaignId: lead.campaignId || null,
+    adSetId: lead.adSetId || null,
+    adId: lead.adId || null,
+    statusKnown: true,
+    mainStatus: record.mainStatus,
+    secondaryStatus: record.secondaryStatus,
+    fullPaymentAmount: record.fullPaymentAmount,
+    partialPaymentAmount: record.partialPaymentAmount,
+  };
 }
 
 const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [
@@ -248,6 +269,7 @@ export default function LeadsPage() {
   const [statusSaveTick, setStatusSaveTick] = useState(0);
   /** Ad spend from the 1st of this month through today - undefined while loading, null if unavailable. Independent of the date range on screen. */
   const [monthToDateSpend, setMonthToDateSpend] = useState<number | null | undefined>(undefined);
+  const [monthToDateRange, setMonthToDateRange] = useState<{ since: string; until: string } | null>(null);
   const tableSectionRef = useRef<HTMLDivElement>(null);
 
   if (rangeKey !== trackedRangeKey) {
@@ -347,12 +369,18 @@ export default function LeadsPage() {
     let cancelled = false;
     fetch("/api/advertising/month-to-date", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data: { spend?: unknown }) => {
+      .then((data: { spend?: unknown; since?: unknown; until?: unknown }) => {
         if (cancelled) return;
         setMonthToDateSpend(typeof data.spend === "number" ? data.spend : null);
+        setMonthToDateRange(
+          typeof data.since === "string" && typeof data.until === "string" ? { since: data.since, until: data.until } : null
+        );
       })
       .catch(() => {
-        if (!cancelled) setMonthToDateSpend(null);
+        if (!cancelled) {
+          setMonthToDateSpend(null);
+          setMonthToDateRange(null);
+        }
       });
     return () => {
       cancelled = true;
@@ -589,10 +617,20 @@ export default function LeadsPage() {
     [campaignRows, campaignStatuses, campaignFilter, adSetFilter, adFilter, campaignStatusFilter]
   );
 
-  const salesSummary = useMemo(
-    () => calculateSalesSummary(scopedLeads.map((l) => l.id), effectiveStatusesByLeadId, scopedSpend),
-    [scopedLeads, effectiveStatusesByLeadId, scopedSpend]
+  // The same KPI formulas the dashboard uses (lib/performance). The cost figures need spend for exactly these leads, so they
+  // stay "—" while a lead-source filter is on: spend is not split by lead source.
+  const leadKpis = useMemo<LeadKpis>(
+    () =>
+      computeLeadKpis(
+        scopedLeads.map((lead) =>
+          toLeadFact(lead, effectiveStatusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone))
+        ),
+        scopedSpend,
+        { spendMatchesLeads: sourceFilter === null }
+      ),
+    [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter]
   );
+  const costNote = sourceFilter === null ? null : 'בחרו "הכול" במקור ליד כדי לחשב עלויות - ההוצאה לא מפוצלת לפי מקור ליד.';
   const irrelevantRate = useMemo(
     () => calculateIrrelevantRate(scopedLeads.map((l) => l.id), effectiveStatusesByLeadId),
     [scopedLeads, effectiveStatusesByLeadId]
@@ -757,9 +795,11 @@ export default function LeadsPage() {
       {state.phase === "ready" && (
         <>
           <SalesKpiCards
-            sales={salesSummary}
+            kpis={leadKpis}
             irrelevant={irrelevantRate}
             monthToDateSpend={monthToDateSpend}
+            monthToDateRange={monthToDateRange}
+            costNote={costNote}
             onTotalSalesClick={handleTotalSalesClick}
             isSalesFilterActive={salesOnlyFilter}
           />

@@ -38,54 +38,6 @@ export function isIrrelevantRecord(record: LeadStatusRecord): boolean {
   return false;
 }
 
-export interface SalesSummary {
-  totalLeads: number;
-  totalSales: number;
-  /** Percent (0-100), or null if there are no leads at all. */
-  conversionRate: number | null;
-  /** Meta Spend / Total Sales, or null if there are no sales (display "-"). */
-  costPerAcquisition: number | null;
-  /** Sum of every counted (active) payment amount. */
-  recordedRevenue: number;
-  /** Recorded Revenue / Meta Spend, or null if spend is 0. */
-  roas: number | null;
-}
-
-/**
- * `statusesByLeadId` covers leads with no manual record yet as "חדש"/"חדש" by
- * omission (see defaultLeadStatusRecord) - callers pass whatever the
- * repository actually has, never needing to pre-fill missing entries.
- */
-export function calculateSalesSummary(
-  leadIds: string[],
-  statusesByLeadId: Map<string, LeadStatusRecord>,
-  totalSpend: number
-): SalesSummary {
-  let totalSales = 0;
-  let recordedRevenue = 0;
-
-  for (const leadId of leadIds) {
-    const record = statusesByLeadId.get(leadId);
-    if (!record) continue;
-    if (isSaleRecord(record)) {
-      totalSales += 1;
-      recordedRevenue += activePaymentAmount(record) ?? 0;
-    }
-  }
-
-  const totalLeads = leadIds.length;
-  const conversionRateRatio = safeDivide(totalSales, totalLeads);
-
-  return {
-    totalLeads,
-    totalSales,
-    conversionRate: conversionRateRatio === null ? null : conversionRateRatio * 100,
-    costPerAcquisition: safeDivide(totalSpend, totalSales),
-    recordedRevenue,
-    roas: safeDivide(recordedRevenue, totalSpend),
-  };
-}
-
 export interface IrrelevantRateResult {
   totalLeads: number;
   irrelevantLeads: number;
