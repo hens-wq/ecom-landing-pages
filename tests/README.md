@@ -37,5 +37,13 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
 - `period-spend.cjs`: the selected-period spend for every preset and the custom range, and the warnings for a
   reconciliation that passes, has a gap, or cannot be checked.
 - `exports.cjs`: the agent CSV leaves out the excluded campaign's leads, and keeps the course leads.
+- `optimization.cjs`: the optimization centre (demo data): the sidebar item, the four tabs, the shared date range, no
+  analysis on load, a tab switch or a reload (only the button starts one), saved action statuses, the phone layout.
 - `live-mode.cjs`: with no demo flag and no Meta settings, every Meta-backed route returns an explicit error, the
   export refuses to run, and no demo numbers appear.
+- `optimization-live.cjs`: the optimization centre without demo mode or Meta/database settings: every route refuses with
+  an explicit message, and the page shows it without demo data.
+
+The optimization unit tests (`tests/unit/optimization-*.test.ts`) cover the spec's ten mandatory checks (section 18),
+the period rules (no overlap, partial today), every threshold band, the level and conflict rules, and the guards: no AI
+call, no write to Meta, and pure rule modules.

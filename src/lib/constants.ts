@@ -5,6 +5,7 @@ export const NAV_ITEMS = [
   { href: "/", label: "דשבורד", labelEn: "Dashboard" },
   { href: "/leads", label: "לידים", labelEn: "Leads" },
   { href: "/sales-matching", label: "מכירות והתאמות", labelEn: "Sales & Matching" },
+  { href: "/optimization", label: "המלצות אופטימיזציה", labelEn: "Optimization" },
   { href: "/integrations", label: "חיבורים", labelEn: "Integrations" },
 ] as const;
 
