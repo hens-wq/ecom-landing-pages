@@ -27,7 +27,7 @@ export function DashboardControls({ selection, onSelectionChange, onRefresh, isR
         <TooltipTrigger asChild>
           <Button variant="outline" size="sm" disabled className="gap-2 text-muted-foreground">
             <Lock className="size-3.5" />
-            {accountLabel ?? AD_ACCOUNTS[0].name}
+            {accountLabel ?? `${AD_ACCOUNTS[0].name} · טרם חובר (Not connected)`}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
