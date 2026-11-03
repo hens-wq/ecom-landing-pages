@@ -173,6 +173,16 @@ async function fetchCombinedLeads(
     };
   }
 
+  // Without a Meta connection /api/leads returns demo leads. They must never be combined with real landing leads and
+  // statuses, so the page reports the state instead of showing a mix of the two.
+  if ((leadsJson as LeadsResult).source !== "meta") {
+    return {
+      ok: false,
+      code: "demo_mode",
+      message: "החשבון לא מחובר ל-Meta Ads (מצב דמו), לכן לא ניתן להציג כאן לידים אמיתיים.",
+    };
+  }
+
   // Meta Instant Form leads keep being fetched live, exactly as before;
   // landing-page leads are the only ones persisted in Neon (see
   // lib/landing-leads) - combined here into one list so the rest of this
