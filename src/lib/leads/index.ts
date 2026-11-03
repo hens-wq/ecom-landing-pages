@@ -5,10 +5,11 @@ import { AdvertisingApiError, type DateRange } from "@/lib/advertising/types";
 import { MockLeadsProvider } from "@/lib/leads/mock-provider";
 import { MetaLeadsProvider } from "@/lib/leads/meta/provider";
 import type { LeadsResult } from "@/lib/leads/types";
+import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
 
 /**
- * Mirrors lib/advertising/index.ts exactly: not configured -> mock leads
- * (Phase 1 data, reshaped); partially configured -> a real configuration
+ * Mirrors lib/advertising/index.ts exactly: not configured -> an explicit error,
+ * or demo leads only when ECOM_DEMO_DATA=1; partially configured -> a real configuration
  * error, never a silent mock fallback; fully configured -> live Meta Instant
  * Form leads, or throws AdvertisingApiError if the call fails. Reuses the
  * exact same Meta config/credentials as the advertising integration - there
@@ -18,6 +19,9 @@ export async function getLeadsData(range: DateRange): Promise<LeadsResult> {
   const check = checkMetaConfig();
 
   if (check.status === "unconfigured") {
+    if (!demoDataEnabled()) {
+      throw new AdvertisingApiError("not_configured", META_NOT_CONFIGURED_MESSAGE, "Meta env vars are empty and ECOM_DEMO_DATA is not set");
+    }
     const provider = new MockLeadsProvider();
     const leads = await provider.getLeads(range);
     return { source: "mock", leads };

@@ -42,6 +42,7 @@ export interface AdvertisingDataProvider {
 export type AdvertisingErrorCode =
   | "missing_token"
   | "missing_account_id"
+  | "not_configured"
   | "invalid_token"
   | "permission_error"
   | "rate_limited"
@@ -80,6 +81,8 @@ export function httpStatusForErrorCode(code: AdvertisingErrorCode): number {
     case "missing_account_id":
     case "empty_account":
       return 404;
+    case "not_configured":
+      return 503;
     case "rate_limited":
       return 429;
     case "network_error":

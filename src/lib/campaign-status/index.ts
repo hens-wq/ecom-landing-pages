@@ -6,6 +6,7 @@ import { checkMetaConfig } from "@/lib/advertising/meta/config";
 import { mapStatus } from "@/lib/advertising/meta/mapper";
 import { fetchCampaignNodes } from "@/lib/advertising/meta/nodes";
 import { AdvertisingApiError } from "@/lib/advertising/types";
+import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
 import { campaigns as mockCampaigns } from "@/lib/mock-data/campaigns";
 import type { EntityStatus } from "@/lib/types";
 
@@ -54,6 +55,9 @@ export async function getCampaignStatuses(): Promise<CampaignStatusMap> {
   const check = checkMetaConfig();
 
   if (check.status === "unconfigured") {
+    if (!demoDataEnabled()) {
+      throw new AdvertisingApiError("not_configured", META_NOT_CONFIGURED_MESSAGE, "Meta env vars are empty and ECOM_DEMO_DATA is not set");
+    }
     const map: CampaignStatusMap = {};
     for (const campaign of mockCampaigns) map[campaign.id] = campaign.status;
     return map;

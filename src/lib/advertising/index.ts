@@ -4,13 +4,14 @@ import { checkMetaConfig } from "@/lib/advertising/meta/config";
 import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
 import { AdvertisingApiError, type AdvertisingAccountInfo, type AdvertisingResult, type DateRange } from "@/lib/advertising/types";
+import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
 
 /**
  * The one function every consumer (the /api/advertising route, the
  * Integrations page) calls to get advertising data - it decides mock vs. Meta
  * so nothing else has to.
  *
- *  - Meta not configured at all -> mock data (Phase 1's expected default state).
+ *  - Meta not configured at all -> an explicit error. Demo data is served only when ECOM_DEMO_DATA=1 is set on purpose.
  *  - Meta partially configured (one of the two required env vars set, not
  *    both) -> that's a real configuration mistake, throws rather than
  *    silently using mock data.
@@ -23,6 +24,9 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
   const check = checkMetaConfig();
 
   if (check.status === "unconfigured") {
+    if (!demoDataEnabled()) {
+      throw new AdvertisingApiError("not_configured", META_NOT_CONFIGURED_MESSAGE, "Meta env vars are empty and ECOM_DEMO_DATA is not set");
+    }
     const provider = new MockAdvertisingProvider();
     const campaigns = await provider.getCampaigns(range);
     return { source: "mock", campaigns, account: null };
@@ -52,6 +56,9 @@ export async function getAccountSpendForRange(range: DateRange): Promise<{ sourc
   const check = checkMetaConfig();
 
   if (check.status === "unconfigured") {
+    if (!demoDataEnabled()) {
+      throw new AdvertisingApiError("not_configured", META_NOT_CONFIGURED_MESSAGE, "Meta env vars are empty and ECOM_DEMO_DATA is not set");
+    }
     const campaigns = await new MockAdvertisingProvider().getCampaigns(range);
     const spend = campaigns.reduce(
       (total, campaign) =>
