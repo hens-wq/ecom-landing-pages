@@ -4,26 +4,29 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DashboardControls } from "@/components/dashboard/controls";
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
-import { InsightsCallout } from "@/components/dashboard/insights-callout";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
-import { MetaSalesNote } from "@/components/dashboard/meta-sales-note";
 import { PerformanceTable } from "@/components/dashboard/performance-table";
+import { TrendChart } from "@/components/dashboard/trend-chart";
+import { DataQualityBanner, type QualityNotice } from "@/components/shared/data-quality-banner";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
-import { TrendChart } from "@/components/dashboard/trend-chart";
-import { type CampaignRow, aggregateTotals, buildPerformanceTree } from "@/lib/aggregate";
-import { dateRangeDayCount } from "@/lib/advertising/date-range";
-import { getInternalSalesTotals, INTERNAL_SALES_BASELINE_DAYS } from "@/lib/advertising/internal-sales";
+import { aggregateFlags, aggregateTotals, buildPerformanceTree, type CampaignRow } from "@/lib/aggregate";
 import type { AdvertisingResult } from "@/lib/advertising";
+import { resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
-import { calcCloseRate, calcCostPerSale, calcROAS } from "@/lib/calculations";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID } from "@/lib/constants";
 import { dailyTrend } from "@/lib/mock-data";
-import type { PerformanceMetrics } from "@/lib/types";
+import { attributeLeadFacts } from "@/lib/performance/attribution";
+import { expandableRowIds } from "@/lib/performance/expansion";
+import { sortCampaignRows, type SortKey, type SortState } from "@/lib/performance/sort";
+import type { LeadFactsResult } from "@/lib/performance/types";
+
+type LeadFactsState = { phase: "ok"; facts: LeadFactsResult } | { phase: "unavailable"; message: string };
 
 interface PageData {
   advertising: AdvertisingResult;
   campaignStatuses: CampaignStatusMap;
+  leadFacts: LeadFactsState;
 }
 
 type LoadState =
@@ -32,26 +35,69 @@ type LoadState =
   | { phase: "ready"; data: PageData };
 
 const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [{ id: "active", label: "פעילים בלבד" }];
+const DEFAULT_SELECTION: DateRangeSelection = { presetId: DEFAULT_DATE_RANGE_PRESET_ID, customSince: null, customUntil: null };
+/** Names and statuses open A-Z on the first click; every number opens highest-first. */
+const TEXT_SORT_KEYS = new Set<SortKey>(["name", "status"]);
+
+function nextSort(current: SortState | null, key: SortKey): SortState {
+  if (current?.key === key) return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+  return { key, direction: TEXT_SORT_KEYS.has(key) ? "asc" : "desc" };
+}
+
+function toggleId(ids: Set<string>, id: string): Set<string> {
+  const next = new Set(ids);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
+
+/** Plain-language notices for every lead figure that is missing or only partly covered. */
+function leadNotices(leadFacts: LeadFactsState): QualityNotice[] {
+  if (leadFacts.phase === "unavailable") {
+    return [
+      {
+        tone: "error",
+        text: `לידים ומכירות לא זמינים כרגע: ${leadFacts.message} מדדי הלידים, ה-CPL והמכירות מוצגים כ-"—" ולא כאפס.`,
+      },
+    ];
+  }
+
+  const { sources } = leadFacts.facts;
+  const notices: QualityNotice[] = [];
+  if (sources.meta.state === "unavailable") {
+    notices.push({ tone: "error", text: `לידי Meta לא נטענו: ${sources.meta.message ?? "שגיאה לא ידועה."} מדדי הלידים מוצגים כ-"—".` });
+  }
+  if (sources.landing.state === "unavailable") {
+    notices.push({ tone: "error", text: `לידים מדפי הנחיתה לא נטענו: ${sources.landing.message ?? "שגיאה לא ידועה."} מדדי הלידים מוצגים כ-"—".` });
+  }
+  if (sources.statuses.state === "unavailable") {
+    notices.push({ tone: "error", text: `סטטוסי הלידים לא זמינים: ${sources.statuses.message ?? "שגיאה לא ידועה."} מכירות והכנסות מוצגות כ-"—".` });
+  } else if (sources.statuses.state === "partial") {
+    notices.push({
+      tone: "warning",
+      text: `סטטוס חסר ל-${sources.statuses.unknownCount} לידים. מכירות והכנסות שמסומנות "חלקי" מציגות רק את הלידים שנטענו.`,
+    });
+  }
+  return notices;
+}
 
 export default function DashboardPage() {
-  const [presetId, setPresetId] = useState(DEFAULT_DATE_RANGE_PRESET_ID);
-  const preset = DATE_RANGE_PRESETS.find((p) => p.id === presetId) ?? DATE_RANGE_PRESETS[0];
-  const range = useMemo(() => preset.resolve(), [preset]);
+  const [selection, setSelection] = useState<DateRangeSelection>(DEFAULT_SELECTION);
+  const range = useMemo(() => resolveDateRangeSelection(selection, DATE_RANGE_PRESETS), [selection]);
   const rangeKey = `${range.since}_${range.until}`;
 
   const [state, setState] = useState<LoadState>({ phase: "loading" });
   const [trackedRangeKey, setTrackedRangeKey] = useState(rangeKey);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
-  // Defaults to "active" (not null/"הכל") per spec - a fresh page load should
-  // already be scoped to currently-active campaigns, not the account's
-  // entire history.
+  // Defaults to "active" - a fresh page load shows currently-active campaigns, not the account's entire history.
   const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | null>("active");
+  const [sort, setSort] = useState<SortState | null>(null);
+  // Kept on the page, not inside the table, so a refresh or a reload never closes what the user opened.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
-  // Reset to the loading state when the selected date range changes - done
-  // during render (React's documented "adjust state when a prop changes"
-  // pattern), not in an effect, so a manual refresh (which doesn't touch the
-  // range) never blanks the page - only the fetch effect below does that work.
+  // Reset to the loading state when the selected date range changes. This happens during render (React's documented
+  // "adjust state when a prop changes" pattern), so a manual refresh never blanks the page.
   if (rangeKey !== trackedRangeKey) {
     setTrackedRangeKey(rangeKey);
     setState({ phase: "loading" });
@@ -62,13 +108,18 @@ export default function DashboardPage() {
 
     async function run() {
       try {
-        const [advertisingRes, campaignStatusRes] = await Promise.all([
+        const [advertisingRes, campaignStatusRes, leadFactsRes] = await Promise.all([
           fetch(`/api/advertising?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
           fetch(`/api/campaign-status`, { cache: "no-store" }),
+          fetch(`/api/lead-facts?since=${range.since}&until=${range.until}`, { cache: "no-store" }),
         ]);
         if (cancelled) return;
 
-        const [advertisingJson, campaignStatusJson] = await Promise.all([advertisingRes.json(), campaignStatusRes.json()]);
+        const [advertisingJson, campaignStatusJson, leadFactsJson] = await Promise.all([
+          advertisingRes.json(),
+          campaignStatusRes.json(),
+          leadFactsRes.json().catch(() => null),
+        ]);
         if (cancelled) return;
 
         const failed = [
@@ -84,11 +135,18 @@ export default function DashboardPage() {
           return;
         }
 
+        // Lead data is a separate request on purpose: when it fails, the spend and the campaign tree still show.
+        const leadFacts: LeadFactsState =
+          leadFactsRes.ok && leadFactsJson && !leadFactsJson.error
+            ? { phase: "ok", facts: leadFactsJson as LeadFactsResult }
+            : { phase: "unavailable", message: leadFactsJson?.error?.message ?? "לא ניתן היה לטעון לידים ומכירות כרגע." };
+
         setState({
           phase: "ready",
           data: {
             advertising: advertisingJson as AdvertisingResult,
             campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
+            leadFacts,
           },
         });
       } catch {
@@ -110,64 +168,40 @@ export default function DashboardPage() {
     };
   }, [range.since, range.until, refreshTick]);
 
-  const allCampaignRows = useMemo(
-    () => (state.phase === "ready" ? buildPerformanceTree(state.data.advertising.campaigns) : []),
-    [state]
-  );
-  const campaignStatuses = useMemo<CampaignStatusMap>(
-    () => (state.phase === "ready" ? state.data.campaignStatuses : {}),
-    [state]
-  );
+  const campaignStatuses = useMemo<CampaignStatusMap>(() => (state.phase === "ready" ? state.data.campaignStatuses : {}), [state]);
 
-  // "Active Only" (the default) drops entire campaign subtrees (their Ad
-  // Sets and Ads along with them) rather than deleting anything - a fresh
-  // fetch with "הכל" selected shows the exact same historical data again.
-  // Status comes from Meta's real effective_status by campaign ID (see
-  // lib/campaign-status), never from campaign names.
-  const campaignRows: CampaignRow[] = useMemo(() => {
-    if (campaignStatusFilter !== "active") return allCampaignRows;
-    return allCampaignRows.filter((campaign) => (campaignStatuses[campaign.id] ?? "ended") === "active");
-  }, [allCampaignRows, campaignStatuses, campaignStatusFilter]);
+  // Lead figures are trusted only when both lead sources loaded. A partial lead set would make CPL and close rate look
+  // better or worse than they are, so without it the lead figures show as unknown instead.
+  const campaignTree = useMemo<CampaignRow[]>(() => {
+    if (state.phase !== "ready") return [];
+    const { advertising, leadFacts } = state.data;
+    const facts = leadFacts.phase === "ok" ? leadFacts.facts : null;
+    const leadsComplete = facts !== null && facts.sources.meta.state === "ok" && facts.sources.landing.state === "ok";
+    const attribution = leadsComplete && facts ? attributeLeadFacts(advertising.campaigns, facts.leads) : undefined;
+    return buildPerformanceTree(advertising.campaigns, attribution);
+  }, [state]);
 
+  // "Active only" drops whole campaigns, and the campaign-less lead bucket with them. Paused ad sets and ads stay inside
+  // an active campaign, because they may have had results in the selected range.
+  const visibleRows = useMemo(() => {
+    if (campaignStatusFilter !== "active") return campaignTree;
+    return campaignTree.filter((row) => !row.isUnassigned && (campaignStatuses[row.id] ?? "ended") === "active");
+  }, [campaignTree, campaignStatuses, campaignStatusFilter]);
+
+  const sortedRows = useMemo(() => sortCampaignRows(visibleRows, sort), [visibleRows, sort]);
+  const totals = useMemo(() => aggregateTotals(visibleRows), [visibleRows]);
+  const flags = useMemo(() => aggregateFlags(visibleRows), [visibleRows]);
+  const expandable = useMemo(() => expandableRowIds(sortedRows), [sortedRows]);
+  const notices = state.phase === "ready" ? leadNotices(state.data.leadFacts) : [];
   const source = state.phase === "ready" ? state.data.advertising.source : undefined;
-  // Sales/Revenue/Close Rate/Cost per Sale/ROAS only ever come from the
-  // internal/mock sales layer, which has no real attribution to live Meta
-  // campaigns. In mock mode that cross-join is the whole point of the demo;
-  // in Meta Live mode showing those mock numbers next to real spend/leads
-  // would look like real performance, so they're left disconnected ("טרם
-  // חובר") until a real sales-attribution source is wired up.
-  const salesDataConnected = source !== "meta";
-
-  const totals: PerformanceMetrics = useMemo(() => {
-    const advTotals = aggregateTotals(campaignRows);
-    if (!salesDataConnected) {
-      return { ...advTotals, sales: 0, revenue: 0, closeRate: null, costPerSale: null, roas: null };
-    }
-    // Scaled by the same day-count factor as the mock advertising baseline, so
-    // Sales stays proportional to whatever period is selected (a 1-day view
-    // shouldn't carry a full 30-day sales total, which would blow up Close
-    // Rate / ROAS into nonsensical values) - see lib/advertising/internal-sales.ts.
-    const internalSales = getInternalSalesTotals(dateRangeDayCount(range) / INTERNAL_SALES_BASELINE_DAYS);
-    return {
-      ...advTotals,
-      // Sales-side KPIs are always sourced from the internal/mock sales layer,
-      // independent of whichever advertising provider supplied the rest of
-      // these numbers.
-      sales: internalSales.sales,
-      revenue: internalSales.revenue,
-      closeRate: calcCloseRate(internalSales.sales, advTotals.leads),
-      costPerSale: calcCostPerSale(advTotals.spend, internalSales.sales),
-      roas: calcROAS(internalSales.revenue, advTotals.spend),
-    };
-  }, [campaignRows, range, salesDataConnected]);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <DashboardControls
-            presetId={presetId}
-            onPresetChange={setPresetId}
+            selection={selection}
+            onSelectionChange={setSelection}
             onRefresh={() => {
               setIsRefreshing(true);
               setRefreshTick((tick) => tick + 1);
@@ -200,11 +234,11 @@ export default function DashboardPage() {
 
       {state.phase === "ready" && (
         <>
-          <KpiCards metrics={totals} salesDataConnected={salesDataConnected} />
+          <DataQualityBanner notices={notices} />
+          <KpiCards totals={totals} leadsKnown={flags.leadsKnown} unknownStatusLeads={flags.unknownStatusLeads} />
           {state.data.advertising.source === "mock" && <TrendChart data={dailyTrend} />}
-          {state.data.advertising.source === "meta" && <MetaSalesNote />}
 
-          {campaignRows.length === 0 ? (
+          {sortedRows.length === 0 ? (
             <EmptyStatePanel
               title="לא נמצאו קמפיינים"
               description={
@@ -214,10 +248,16 @@ export default function DashboardPage() {
               }
             />
           ) : (
-            <>
-              <InsightsCallout campaignRows={campaignRows} />
-              <PerformanceTable campaignRows={campaignRows} salesDataConnected={salesDataConnected} />
-            </>
+            <PerformanceTable
+              rows={sortedRows}
+              sort={sort}
+              onSort={(key) => setSort((current) => nextSort(current, key))}
+              expandedIds={expandedIds}
+              onToggleExpand={(id) => setExpandedIds((current) => toggleId(current, id))}
+              onExpandAll={() => setExpandedIds(new Set(expandable))}
+              onCollapseAll={() => setExpandedIds(new Set())}
+              hasExpandableRows={expandable.length > 0}
+            />
           )}
         </>
       )}

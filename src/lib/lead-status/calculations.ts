@@ -1,6 +1,7 @@
 import { safeDivide } from "@/lib/calculations";
 import { ENROLLED_MAIN_STATUS, type LeadStatusRecord } from "@/lib/lead-status/types";
 import { isPositiveAmount } from "@/lib/lead-status/validation";
+import { activeAmount } from "@/lib/performance/lead-metrics";
 
 /**
  * The amount that actually counts as revenue for this lead, given its
@@ -10,10 +11,7 @@ import { isPositiveAmount } from "@/lib/lead-status/validation";
  * that isn't a sale at all.
  */
 export function activePaymentAmount(record: LeadStatusRecord): number | null {
-  if (record.mainStatus !== "נרשם") return null;
-  if (record.secondaryStatus === "תשלום מלא") return record.fullPaymentAmount;
-  if (record.secondaryStatus === "תשלום חלקי") return record.partialPaymentAmount;
-  return null;
+  return activeAmount(record.mainStatus, record.secondaryStatus, record.fullPaymentAmount, record.partialPaymentAmount);
 }
 
 /** A sale is any enrolled lead (Main Status "נרשם"), whether or not a payment amount has been entered yet - revenue still only counts entered amounts (see activePaymentAmount). */

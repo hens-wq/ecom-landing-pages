@@ -2,25 +2,26 @@
 
 import { Lock, RefreshCw } from "lucide-react";
 
+import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { DateRangeSelect } from "@/components/shared/date-range-select";
+import type { DateRangeSelection } from "@/lib/advertising/date-range";
 import { AD_ACCOUNTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface DashboardControlsProps {
-  presetId: string;
-  onPresetChange: (presetId: string) => void;
+  selection: DateRangeSelection;
+  onSelectionChange: (selection: DateRangeSelection) => void;
   onRefresh: () => void;
   isRefreshing: boolean;
   /** Real Meta ad account name once connected; falls back to the Phase 1 placeholder otherwise. */
   accountLabel?: string;
 }
 
-export function DashboardControls({ presetId, onPresetChange, onRefresh, isRefreshing, accountLabel }: DashboardControlsProps) {
+export function DashboardControls({ selection, onSelectionChange, onRefresh, isRefreshing, accountLabel }: DashboardControlsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <DateRangeSelect presetId={presetId} onPresetChange={onPresetChange} />
+      <CustomDateRangeSelect selection={selection} onChange={onSelectionChange} />
 
       <Tooltip>
         <TooltipTrigger asChild>

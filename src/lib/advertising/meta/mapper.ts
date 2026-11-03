@@ -46,8 +46,8 @@ function insightsRowToRawMetrics(row: MetaAdInsightsRow): RawMetrics {
     reach: parseNumber(row.reach),
     linkClicks: parseNumber(row.inline_link_clicks),
     leads: leadResult.leads,
-    // Sales-side numbers never come from Meta (see lib/advertising/internal-sales.ts) -
-    // real ads always report 0 here until real sales attribution exists.
+    // Sales-side numbers never come from Meta. They come from the lead data
+    // (see lib/performance), so this is always 0 here.
     sales: 0,
     revenue: 0,
   };

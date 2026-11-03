@@ -30,26 +30,11 @@ export const PERFORMANCE_COLUMNS: PerformanceColumnDef[] = [
   { key: "cpl", labelHe: "עלות לליד", labelEn: "CPL", label: "עלות לליד (CPL)", format: (m) => formatCurrency(m.cpl), defaultVisible: true, highlight: true },
   { key: "sales", labelHe: "מכירות", labelEn: "Sales", label: "מכירות (Sales)", format: (m) => formatNumber(m.sales), defaultVisible: true, highlight: true },
   { key: "closeRate", labelHe: "אחוז סגירה", labelEn: "Close Rate", label: "אחוז סגירה (Close Rate)", format: (m) => formatPercent(m.closeRate, 1), defaultVisible: true, highlight: true },
-  { key: "costPerSale", labelHe: "עלות למכירה", labelEn: "Cost per Sale", label: "עלות למכירה (Cost per Sale)", format: (m) => formatCurrency(m.costPerSale), defaultVisible: true, highlight: true },
-  { key: "revenue", labelHe: "הכנסות", labelEn: "Revenue", label: "הכנסות (Revenue)", format: (m) => formatCurrency(m.revenue), defaultVisible: true, highlight: true },
+  { key: "costPerSale", labelHe: "עלות להרשמה", labelEn: "Cost per Registration", label: "עלות להרשמה (Cost per Registration)", format: (m) => formatCurrency(m.costPerSale), defaultVisible: true, highlight: true },
+  { key: "revenue", labelHe: "הכנסות שהוזנו", labelEn: "Recorded Revenue", label: "הכנסות שהוזנו (Recorded Revenue)", format: (m) => formatCurrency(m.revenue), defaultVisible: true, highlight: true },
   { key: "roas", labelHe: "החזר על הוצאות פרסום", labelEn: "ROAS", label: "החזר על הוצאות פרסום (ROAS)", format: (m) => formatMultiplier(m.roas), defaultVisible: true, highlight: true },
 ];
 
 export const DEFAULT_VISIBLE_COLUMN_KEYS = new Set(
   PERFORMANCE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key)
 );
-
-/**
- * The metric keys sourced from the internal/mock sales layer, never from Meta
- * (see lib/advertising/internal-sales.ts). Shared between KpiCards and
- * PerformanceTable so both show the same "טרם חובר" treatment for these five
- * columns whenever the advertising data source is Meta Live and no real sales
- * attribution exists yet.
- */
-export const SALES_METRIC_KEYS = new Set<keyof PerformanceMetrics>([
-  "sales",
-  "closeRate",
-  "costPerSale",
-  "revenue",
-  "roas",
-]);
