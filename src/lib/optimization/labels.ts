@@ -1,11 +1,12 @@
 /** Hebrew labels, tones and priorities for the optimization center. Pure and shared by the engine, the API and the UI. */
 
-export const ACTION_CODES = ["KEEP", "WATCH", "WARNING", "PAUSE_CANDIDATE", "PAUSE", "SCALE_CANDIDATE", "TEST", "FIX"] as const;
+export const ACTION_CODES = ["KEEP", "WATCH", "WARNING", "PAUSE_CANDIDATE", "PAUSE", "SCALE_CANDIDATE", "TEST", "FIX", "CHECK_DATA"] as const;
 export type ActionCode = (typeof ACTION_CODES)[number];
 
 /**
  * PAUSE (direct) is part of the spec's action list, but no rule in this version emits it: every rule that could pause
  * stops at PAUSE CANDIDATE, so a person decides. The label is kept so a later rule can use it without a UI change.
+ * CHECK DATA is not a performance verdict: it names a data gap (for example, leads with no attribution ID) to check first.
  */
 export const ACTION_LABELS: Record<ActionCode, string> = {
   KEEP: "להשאיר (KEEP)",
@@ -16,6 +17,7 @@ export const ACTION_LABELS: Record<ActionCode, string> = {
   SCALE_CANDIDATE: "מועמד להגדלה (SCALE CANDIDATE)",
   TEST: "לבדוק / לנסות (TEST)",
   FIX: "לתקן (FIX)",
+  CHECK_DATA: "לבדוק נתונים (CHECK DATA)",
 };
 
 export type Tone = "positive" | "watch" | "problem" | "info" | "insufficient";
@@ -42,6 +44,7 @@ export function toneForAction(action: ActionCode): Tone {
       return "problem";
     case "TEST":
     case "FIX":
+    case "CHECK_DATA":
       return "info";
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ToneBadge } from "@/components/optimization/shared";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Bilingual } from "@/components/optimization/shared";
 import { ACTION_CODES, ACTION_LABELS, LEVEL_LABELS, type Tone } from "@/lib/optimization/labels";
 import type { SonilChecks } from "@/lib/optimization/sonil/checks";
 import { OUTCOME_LABELS, type SonilComparisonRow, type SonilOutcome } from "@/lib/optimization/sonil/compare";
@@ -54,7 +55,16 @@ async function sendSonil(runId: string, path: "" | "/preview", file: File, mappi
  * Compares Sonil's report with our own recommendations for the same run. It is a comparison only: our recommendations are
  * shown as saved, and nothing in the uploaded file changes them.
  */
-export function SonilTab({ runId, selected }: { runId: string; selected: DateRangeView }) {
+export function SonilTab({
+  runId,
+  selected,
+  isInScope,
+}: {
+  runId: string;
+  selected: DateRangeView;
+  /** Whether a unit of the saved report is in the campaign scope on screen (the same Campaign Status filter as the other tabs). */
+  isInScope: (key: string) => boolean;
+}) {
   const [saved, setSaved] = useState<SonilLatest | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -345,15 +355,15 @@ export function SonilTab({ runId, selected }: { runId: string; selected: DateRan
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>יחידה</TableHead>
-                  <TableHead>המלצת המערכת שלנו</TableHead>
-                  <TableHead>המלצת סוניל</TableHead>
-                  <TableHead>תוצאה</TableHead>
-                  <TableHead>פעולה מוצעת לבדיקה</TableHead>
+                  <TableHead><Bilingual en="Unit" he="יחידה" /></TableHead>
+                  <TableHead><Bilingual en="Our recommendation" he="המלצת המערכת שלנו" /></TableHead>
+                  <TableHead><Bilingual en="Sonil recommendation" he="המלצת סוניל" /></TableHead>
+                  <TableHead><Bilingual en="Result" he="תוצאה" /></TableHead>
+                  <TableHead><Bilingual en="Suggested check" he="פעולה מוצעת לבדיקה" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visible.map((row) => (
+                {visible.filter((row) => isInScope(row.key)).map((row) => (
                   <ComparisonRow key={row.key} row={row} />
                 ))}
               </TableBody>

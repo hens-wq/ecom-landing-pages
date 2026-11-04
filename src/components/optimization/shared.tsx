@@ -22,6 +22,19 @@ export function ToneBadge({ tone, label }: { tone: Tone; label?: string }) {
   );
 }
 
+/**
+ * English first, the Hebrew translation small underneath. Every heading of the optimization centre (tabs, section titles,
+ * table columns) uses this, so the English name is always the main line and the Hebrew reads below it.
+ */
+export function Bilingual({ en, he, className }: { en: string; he: string; className?: string }) {
+  return (
+    <span className={cn("block", className)}>
+      <span className="block font-medium">{en}</span>
+      <span className="block text-xs font-normal text-slate-500">{he}</span>
+    </span>
+  );
+}
+
 export const STATUS_TEXT: Record<EntityEvaluation["status"], string> = {
   active: "פעיל",
   paused: "כבוי",

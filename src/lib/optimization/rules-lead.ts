@@ -20,38 +20,66 @@ import type { ActionCode } from "@/lib/optimization/labels";
 
 /**
  * Tracking (priority 1). Meta and the dashboard must agree that a unit has leads before any verdict is made on it.
- * When they disagree, the unit is not judged: the disagreement itself is the finding.
+ * When they disagree, the unit is not judged: the disagreement itself is the finding. When leads of the same window carry
+ * no unit (a missing or unlisted ID), the finding names what is missing. Every tracking action is a check of the data,
+ * never a verdict on the unit. Landing-page leads that are attributed to the unit are part of its dashboard count.
  */
 export function trackingFindings(ctx: RuleContext): Finding[] {
   const s = ctx.sel;
   if (!s.leadsKnown) return [];
+
+  const gaps = ctx.gaps;
+  if (gaps && gaps.unassigned > 0 && s.metaLeads > s.leads) {
+    return [
+      makeFinding({
+        ruleCode: "TRK_ATTRIBUTION_MISSING",
+        priority: 1,
+        action: "CHECK_DATA",
+        ruleText: "ATTRIBUTION MISSING · שיוך חסר: Meta מדווחת יותר לידים ממה שמשויך ליחידה בדשבורד",
+        facts: [
+          `לידים שמדווחים ב-Meta ליחידה: ${formatCount(s.metaLeads)}`,
+          `לידים משויכים ליחידה בדשבורד: ${formatCount(s.leads)}`,
+          `לידים בטווח בלי שיוך מלא: ${formatCount(gaps.unassigned)} (בלי מזהה: ${formatCount(gaps.noIds)}, מזהה שלא ברשימה: ${formatCount(gaps.idNotListed)}, מדפי נחיתה: ${formatCount(gaps.landing)})`,
+        ],
+        reason: "החסר הוא בשיוך הלידים, לא בביצועים של היחידה. מהפער הזה אי אפשר להסיק שהיחידה לא מניבה לידים.",
+        confidence: "medium",
+        missingData: [
+          gaps.noIds > 0
+            ? "Campaign / Ad Set / Ad ID בלידים שנשמרו בלי מזהה"
+            : "לידים עם מזהה שלא נמצא ברשימה הנוכחית של Meta",
+        ],
+        nextCheck:
+          "לבדוק שכתובת המודעה ב-Meta מעבירה לדף הנחיתה campaign_id, adset_id ו-ad_id (לדוגמה campaign_id={{campaign.id}}) ושהם מופיעים בלידים החדשים. לידים שנשמרו בלי מזהה אינם ניתנים לשיוך מחדש.",
+      }),
+    ];
+  }
+
+  if (s.metaLeads > 0 && s.leads === 0) {
+    return [
+      makeFinding({
+        ruleCode: "TRK_DASH_ZERO_META_POS",
+        priority: 1,
+        action: "CHECK_DATA",
+        ruleText: "SOURCE MISMATCH · פער מקורות: Meta מדווחת לידים, והדשבורד מציג 0",
+        facts: [`לידים שמדווחים ב-Meta: ${formatCount(s.metaLeads)}`, "לידים בדשבורד ליחידה: 0"],
+        reason: "אין בטווח לידים בלי שיוך שיסביר את הפער, לכן זה פער בין המקורות ולא מסקנה על היחידה.",
+        confidence: "medium",
+        nextCheck: "לבדוק שהלידים נשמרים במערכת ושמקור הטופס תקין לפני כל החלטה על היחידה.",
+      }),
+    ];
+  }
 
   if (s.metaLeads === 0 && s.metaFormLeads > 0) {
     return [
       makeFinding({
         ruleCode: "TRK_META_ZERO_DASH_POS",
         priority: 1,
-        action: "FIX",
-        ruleText: "TRACKING / ATTRIBUTION ISSUE: הדשבורד מציג לידי Meta, אבל Meta מדווח 0 לידים לאותה יחידה",
-        facts: [`לידי Meta בדשבורד: ${formatCount(s.metaFormLeads)}`, "לידים שמדווחים ב-Meta: 0"],
+        action: "CHECK_DATA",
+        ruleText: "SOURCE MISMATCH · פער מקורות: הדשבורד מציג לידי טופס Meta, ו-Meta מדווחת 0",
+        facts: [`לידי טופס Meta בדשבורד: ${formatCount(s.metaFormLeads)}`, "לידים שמדווחים ב-Meta: 0"],
         reason: "כשהמקורות לא מסכימים אי אפשר להעריך את היחידה. לא מענישים אותה כאילו באמת אין לה לידים, וגם לא מסיקים שהיא מצליחה.",
         confidence: "medium",
-        nextCheck: "לבדוק את שיוך הלידים (Ad ID) ואת חיבור טופס הלידים ב-Meta לפני כל החלטה על היחידה.",
-      }),
-    ];
-  }
-
-  if (s.metaLeads > 0 && s.metaFormLeads === 0) {
-    return [
-      makeFinding({
-        ruleCode: "TRK_DASH_ZERO_META_POS",
-        priority: 1,
-        action: "FIX",
-        ruleText: "TRACKING: Meta מדווח לידים שלא מופיעים בדשבורד",
-        facts: [`לידים שמדווחים ב-Meta: ${formatCount(s.metaLeads)}`, "לידי Meta בדשבורד: 0"],
-        reason: "הלידים לא נטענים לדשבורד, ולכן כל מדד לידים ביחידה חסר. זו בעיית מעקב, לא ביצועים.",
-        confidence: "medium",
-        nextCheck: "לבדוק שהלידים נטענים ממקור הטפסים ושהשיוך נכון לפני כל החלטה.",
+        nextCheck: "לבדוק את חיבור טופס הלידים ב-Meta ואת שיוך הלידים לפני כל החלטה על היחידה.",
       }),
     ];
   }
@@ -66,6 +94,8 @@ export function trackingFindings(ctx: RuleContext): Finding[] {
 export function zeroLeadsFindings(ctx: RuleContext): Finding[] {
   const s = ctx.sel;
   if (!s.leadsKnown || ctx.entity.status !== "active") return [];
+  // A lead with no ID could belong to this unit, so a zero is not confirmed while one exists in the window.
+  if ((ctx.gaps?.noIds ?? 0) > 0) return [];
   if (s.spend <= ZERO_LEADS_MIN_SPEND || s.leads !== 0 || s.metaLeads !== 0) return [];
   if (s.impressions === 0) return [];
 

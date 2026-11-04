@@ -4,10 +4,39 @@ export type LandingLeadValidationResult = { ok: true; input: LandingLeadInput } 
 
 const MAX_TEXT_LENGTH = 500;
 
+/** A Meta ID is digits only. An empty value, or an unfilled template such as {{campaign.id}}, is not an ID. */
+const META_ID_PATTERN = /^\d{5,25}$/;
+
 function trimmedOrNull(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, MAX_TEXT_LENGTH) : null;
+}
+
+/**
+ * A Meta ID as text, or null. A bare JSON number is never trusted here: an 18-digit ID loses digits as a JS number, so
+ * parseLandingLeadBody reads those fields as text before this check runs.
+ */
+export function metaIdOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return META_ID_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * Parses the request body as JSON. The Meta ID fields are read as text even when they arrive as bare numbers: JSON.parse
+ * rounds an 18-digit number such as 120248773681350125 before any check could see it, so those values are quoted first.
+ */
+export function parseLandingLeadBody(text: string): { ok: true; value: unknown } | { ok: false } {
+  const withIdsQuoted = text.replace(
+    /("(?:campaign_id|adset_id|ad_id)"\s*:\s*)(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])/g,
+    '$1"$2"'
+  );
+  try {
+    return { ok: true, value: JSON.parse(withIdsQuoted) };
+  } catch {
+    return { ok: false };
+  }
 }
 
 /**
@@ -41,9 +70,9 @@ export function validateLandingLeadInput(body: unknown): LandingLeadValidationRe
       email: trimmedOrNull(record.email),
       submittedAt,
       landingPageUrl: trimmedOrNull(record.landing_page_url),
-      campaignId: trimmedOrNull(record.campaign_id),
-      adSetId: trimmedOrNull(record.adset_id),
-      adId: trimmedOrNull(record.ad_id),
+      campaignId: metaIdOrNull(record.campaign_id),
+      adSetId: metaIdOrNull(record.adset_id),
+      adId: metaIdOrNull(record.ad_id),
       utmSource: trimmedOrNull(record.utm_source),
       utmMedium: trimmedOrNull(record.utm_medium),
       utmCampaign: trimmedOrNull(record.utm_campaign),

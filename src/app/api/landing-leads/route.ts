@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isValidDateRange } from "@/lib/advertising/date-range";
 import { LandingLeadsDatabaseError } from "@/lib/landing-leads/db";
 import { getLandingLeadsInRange, insertLandingLead } from "@/lib/landing-leads/repository";
-import { validateLandingLeadInput } from "@/lib/landing-leads/validation";
+import { parseLandingLeadBody, validateLandingLeadInput } from "@/lib/landing-leads/validation";
 import { buildLeadEvent } from "@/lib/meta-capi/build-event";
 import { sendLeadEvent } from "@/lib/meta-capi/send-event";
 import { denyWithoutSession } from "@/lib/auth/session";
@@ -52,14 +52,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "אימות נכשל." } }, { status: 401 });
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  // The body is read as text so the Meta ID fields keep every digit (see parseLandingLeadBody).
+  const parsed = parseLandingLeadBody(await request.text().catch(() => ""));
+  if (!parsed.ok) {
     return NextResponse.json({ error: { message: "גוף הבקשה אינו JSON תקין." } }, { status: 400 });
   }
 
-  const validation = validateLandingLeadInput(body);
+  const validation = validateLandingLeadInput(parsed.value);
   if (!validation.ok) {
     return NextResponse.json({ error: { message: validation.error } }, { status: 400 });
   }

@@ -2,6 +2,7 @@ import type { DateRange } from "@/lib/advertising/types";
 import { inclusiveDayCount } from "@/lib/optimization/periods";
 import type { EngineInput, EngineOutput } from "@/lib/optimization/model";
 import { MAX_RUN_RANGE_DAYS } from "@/lib/optimization/thresholds";
+import type { AttributionGaps } from "@/lib/performance/attribution";
 
 /** A saved analysis run: what was read, what was decided, and the rule version. Opening it never runs a new analysis. */
 
@@ -47,6 +48,8 @@ export interface RunRecord {
   sources: RunSources;
   /** The figures the rules read, per entity and per window. Kept so a saved report can be read back exactly. */
   metricsSnapshot: { entities: EngineInput["entities"] };
+  /** Leads of the selected window that no unit carries. Absent in reports saved before this field existed. */
+  attributionGaps?: AttributionGaps | null;
   output: EngineOutput;
 }
 

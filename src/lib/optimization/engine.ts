@@ -52,6 +52,7 @@ const SEVERITY: Record<ActionCode, number> = {
   PAUSE: 0,
   WARNING: 1,
   FIX: 2,
+  CHECK_DATA: 2.5,
   WATCH: 3,
   TEST: 4,
   KEEP: 5,

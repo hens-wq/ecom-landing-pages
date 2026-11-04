@@ -23,6 +23,7 @@ const DIRECTION: Record<ActionCode, -1 | 0 | 1> = {
   WATCH: 0,
   TEST: 0,
   FIX: 0,
+  CHECK_DATA: 0,
   WARNING: -1,
   PAUSE_CANDIDATE: -1,
   PAUSE: -1,

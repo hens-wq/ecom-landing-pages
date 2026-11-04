@@ -37,9 +37,14 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
 - `period-spend.cjs`: the selected-period spend for every preset and the custom range, and the warnings for a
   reconciliation that passes, has a gap, or cannot be checked.
 - `exports.cjs`: the agent CSV leaves out the excluded campaign's leads, and keeps the course leads.
-- `optimization.cjs`: the optimization centre (demo data): the sidebar item, the four tabs, the shared date range, no
-  analysis on load, a tab switch or a reload (only the button starts one), the Sonil comparison (upload, mapping by ID,
+- `optimization.cjs`: the optimization centre (demo data): the sidebar item, the four tabs (English name first, Hebrew
+  underneath), the run header order, no analysis on load, a tab switch or a reload (only the button starts one), the range
+  state (a changed picker says to run again, and an older report is never shown for another range), the Campaign Status
+  scope (Active Only hides the paused demo campaign, All shows it with its spend), the synced scrollbars of the exposure and
+  leads tables, the Attribution Missing notice (on a run given attribution gaps), the Sonil comparison (upload, mapping by ID,
   check, save; the saved run is unchanged and no analysis starts), saved action statuses, the phone layout.
+- `optimization-screenshots.cjs`: not part of `run-all`. It runs Today and the last 7 days at 1366 px, saves one screenshot
+  of each to the folder given on the command line, and checks that the bottom scrollbar moves the table. Demo data only.
 - `security.cjs`: the team sign-in, against the demo server and the live server. Without a session every private page
   goes to the sign-in page and every private API answers 401 with no data. With the session the data routes answer. Sign-out
   closes the pages again. The public routes stay open as designed: the sign-in page, the creative page, Make's webhook and
@@ -60,6 +65,14 @@ allowlist, and the failed-sign-in brake.
 The optimization unit tests (`tests/unit/optimization-*.test.ts`) cover the spec's ten mandatory checks (section 18),
 the period rules (no overlap, partial today), every threshold band, the level and conflict rules, and the guards: no AI
 call, no write to Meta, and pure rule modules.
+
+`tests/unit/optimization-attribution.test.ts` checks how leads are attached to units by ID only: a lead with no ID or
+with an unlisted ID is a gap (never a zero), a zero is confirmed only when every lead of the window carries an ID, and a
+landing-page lead raises no tracking verdict. `tests/unit/landing-leads-ids.test.ts` checks that Meta IDs keep every digit
+(an unquoted 18-digit number is read as text), that placeholders are refused, and that a numeric `utm_campaign` is used only
+as an ID. `tests/unit/lead-data-state.test.ts` checks the states (confirmed zero, attribution missing, source mismatch, data
+unavailable, no delivery). `tests/unit/campaign-filter-range-format.test.ts` checks the Campaign Status scope, the range
+state of a saved report, and the date and time formats.
 
 `tests/unit/reach-levels.test.ts` checks that reach is never a sum: a campaign's or ad set's reach is Meta's own level
 reach, its frequency is its own impressions over that reach, and missing reach is unknown, never zero. It also checks

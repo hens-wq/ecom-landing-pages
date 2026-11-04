@@ -33,6 +33,7 @@ export async function createOptimizationRun(selected: DateRange, now: Date): Pro
     scope: collected.scope,
     sources: collected.sources,
     metricsSnapshot: { entities: collected.engineInput.entities },
+    attributionGaps: collected.engineInput.attributionGaps ?? null,
     output,
   };
   await getOptimizationRepository().saveRun(record);

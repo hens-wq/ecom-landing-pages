@@ -3,7 +3,7 @@
  * left a value open, the value chosen here is marked "הנחה" and is listed in the report. Changing any number here must
  * come with a new OPTIMIZATION_RULE_VERSION, so a saved report always says which rules produced it.
  */
-export const OPTIMIZATION_RULE_VERSION = "stage2-v1";
+export const OPTIMIZATION_RULE_VERSION = "stage2-v2";
 
 /** The spec's weekly analysis window. Frequency and "3+ registrations" are judged only on a selection of exactly this many days. */
 export const WEEKLY_ANALYSIS_DAYS = 7;

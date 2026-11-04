@@ -1,10 +1,12 @@
 "use client";
 
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 
+import { TableBottomScrollbar, TableTopScrollbar } from "@/components/shared/table-top-scrollbar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { STATUS_TEXT, ToneBadge, buildEntityTree, primaryRecommendation, recommendationIndex, type TreeNode } from "@/components/optimization/shared";
+import { Bilingual, STATUS_TEXT, ToneBadge, buildEntityTree, primaryRecommendation, recommendationIndex, type TreeNode } from "@/components/optimization/shared";
+import { campaignStatusesOf, inCampaignScope, type CampaignStatusFilter } from "@/lib/optimization/campaign-filter";
 import { trendChanges, type TrendChanges } from "@/lib/optimization/context";
 import { formatChange, formatCount, formatIls, formatIlsExact, formatPercent, formatRatio } from "@/lib/optimization/format";
 import { CONFIDENCE_LABELS, TONE_LABELS } from "@/lib/optimization/labels";
@@ -22,9 +24,16 @@ function trendText(changes: TrendChanges): string {
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
-export function ExposureTab({ record }: { record: RunRecord }) {
+export function ExposureTab({ record, campaignStatus }: { record: RunRecord; campaignStatus: CampaignStatusFilter }) {
   const recommendations = useMemo(() => recommendationIndex(record.output.recommendations), [record]);
-  const tree = useMemo(() => buildEntityTree(record.output.entities), [record]);
+  // The same campaign scope as the other three tabs: a unit is in or out by its campaign's status.
+  const statuses = useMemo(() => campaignStatusesOf(record.output.entities), [record]);
+  const scoped = useMemo(
+    () => record.output.entities.filter((entity) => inCampaignScope(entity.campaignId, statuses, campaignStatus)),
+    [record, statuses, campaignStatus]
+  );
+  const tree = useMemo(() => buildEntityTree(scoped), [scoped]);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const toggle = (key: string) =>
@@ -87,26 +96,34 @@ export function ExposureTab({ record }: { record: RunRecord }) {
   if (record.output.entities.length === 0) {
     return <p className="text-sm text-slate-600">אין קמפיינים עם נתונים בטווח הזה.</p>;
   }
+  if (scoped.length === 0) {
+    return (
+      <p className="text-sm text-slate-600">
+        אין יחידות בסטטוס הנבחר בטווח הזה. בחרו &quot;All&quot; כדי לראות גם קמפיינים כבויים שהוציאו כסף.
+      </p>
+    );
+  }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <Table>
+    <div className="rounded-lg border border-slate-200 bg-white">
+      <TableTopScrollbar targetRef={scrollRef} />
+      <Table ref={scrollRef}>
         <TableHeader>
           <TableRow>
-            <TableHead>קמפיין / יחידה</TableHead>
-            <TableHead>הוצאה</TableHead>
-            <TableHead>Reach</TableHead>
-            <TableHead>Impressions</TableHead>
-            <TableHead>Frequency</TableHead>
-            <TableHead>Link Clicks</TableHead>
-            <TableHead>Link CTR</TableHead>
-            <TableHead>Link CPC</TableHead>
-            <TableHead>CPM</TableHead>
-            <TableHead>מגמה מול התקופה הקודמת</TableHead>
-            <TableHead>חשיפה</TableHead>
-            <TableHead>רמת ביטחון</TableHead>
-            <TableHead>המלצה</TableHead>
-            <TableHead>הסבר מספרי</TableHead>
+            <TableHead><Bilingual en="Campaign / unit" he="קמפיין / יחידה" /></TableHead>
+            <TableHead><Bilingual en="Spend" he="הוצאה" /></TableHead>
+            <TableHead><Bilingual en="Reach" he="תפוצה" /></TableHead>
+            <TableHead><Bilingual en="Impressions" he="חשיפות" /></TableHead>
+            <TableHead><Bilingual en="Frequency" he="תדירות" /></TableHead>
+            <TableHead><Bilingual en="Link Clicks" he="קליקים על קישור" /></TableHead>
+            <TableHead><Bilingual en="Link CTR" he="שיעור הקלקה" /></TableHead>
+            <TableHead><Bilingual en="Link CPC" he="עלות לקליק" /></TableHead>
+            <TableHead><Bilingual en="CPM" he="עלות לאלף חשיפות" /></TableHead>
+            <TableHead><Bilingual en="Trend" he="מגמה מול התקופה הקודמת" /></TableHead>
+            <TableHead><Bilingual en="Exposure" he="חשיפה" /></TableHead>
+            <TableHead><Bilingual en="Confidence" he="רמת ביטחון" /></TableHead>
+            <TableHead><Bilingual en="Recommendation" he="המלצה" /></TableHead>
+            <TableHead><Bilingual en="Numbers" he="הסבר מספרי" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -115,6 +132,7 @@ export function ExposureTab({ record }: { record: RunRecord }) {
           ))}
         </TableBody>
       </Table>
+      <TableBottomScrollbar targetRef={scrollRef} />
       <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
         Frequency נשפטת רק בטווח של 7 ימים. CTR ו-CPM נשפטים רק כשיש מדגם של לפחות 2,000 Impressions בכל תקופה. מדד שאין לו מספיק נתונים מסומן באפור: {TONE_LABELS.insufficient}.
       </p>

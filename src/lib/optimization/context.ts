@@ -1,6 +1,7 @@
 import { CLASSIFIED_MEANINGFUL_FROM, LEADS_MEANINGFUL_FROM, TREND_MIN_IMPRESSIONS, TREND_MIN_LINK_CLICKS } from "@/lib/optimization/thresholds";
 import { deriveFigures, pctChange, type Derived } from "@/lib/optimization/derive";
 import type { EngineInput, EntityInput } from "@/lib/optimization/model";
+import type { AttributionGaps } from "@/lib/performance/attribution";
 
 /** Everything a rule may read about one entity. Rules are pure functions of this object. */
 export interface RuleContext {
@@ -13,6 +14,8 @@ export interface RuleContext {
   prev: Derived | null;
   /** The parent's selected impressions were zero, so the parent already carries the delivery problem. */
   parentZeroImpressions: boolean;
+  /** Leads of the selected window that no unit carries. Null when the lead data did not load in full. */
+  gaps: AttributionGaps | null;
 }
 
 export function buildRuleContext(entity: EntityInput, input: EngineInput, parentZeroImpressions: boolean): RuleContext {
@@ -28,6 +31,7 @@ export function buildRuleContext(entity: EntityInput, input: EngineInput, parent
     cur,
     prev,
     parentZeroImpressions,
+    gaps: input.attributionGaps ?? null,
   };
 }
 

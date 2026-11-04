@@ -6,6 +6,7 @@ import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
 import { isoDateInTimezone } from "@/lib/advertising/timezone";
 import { AdvertisingApiError, type AdvertisingSnapshot, type DateRange } from "@/lib/advertising/types";
+import { attributeLeadFacts } from "@/lib/performance/attribution";
 import { liveLeadFactsSources } from "@/lib/performance/lead-fact-sources";
 import { loadLeadFacts } from "@/lib/performance/load-lead-facts";
 import type { LeadFact, SourceState } from "@/lib/performance/types";
@@ -169,6 +170,14 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
     leadsKnown ? leadResult.leads.filter((lead) => dateInRange(lead.leadDate, range)) : null;
 
   const selectedData = dataFor(plan.selected);
+  // Leads of the selected window that no unit carries. Counted once, here, so the rules and the saved report agree.
+  const selectedLeads = leadFactsFor(plan.selected);
+  const attributionGaps = selectedLeads === null ? null : attributeLeadFacts(selectedData.snapshot.campaigns, selectedLeads).gaps;
+  if (attributionGaps && attributionGaps.unassigned > 0) {
+    notes.push(
+      `יש ${attributionGaps.unassigned} לידים בטווח בלי שיוך מלא ליחידה (בלי מזהה: ${attributionGaps.noIds}, מזהה שלא ברשימה: ${attributionGaps.idNotListed}). הם נספרים בחשבון, אבל לא ביחידה.`
+    );
+  }
   const selectedEntities = buildWindowEntities({
     campaigns: selectedData.snapshot.campaigns,
     leadFacts: leadFactsFor(plan.selected),
@@ -204,6 +213,7 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
     dailyAdSpend,
     entities,
     sourceNotes: notes,
+    attributionGaps,
   };
 
   const scope: RunScope = {

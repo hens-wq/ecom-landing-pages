@@ -1,5 +1,6 @@
 import type { ActionCode, Tone } from "@/lib/optimization/labels";
 import type { Derived, WindowFigures } from "@/lib/optimization/derive";
+import type { AttributionGaps } from "@/lib/performance/attribution";
 import type { EntityStatus } from "@/lib/types";
 
 export type Level = "campaign" | "adset" | "ad";
@@ -46,6 +47,8 @@ export interface EngineInput {
   entities: EntityInput[];
   /** Notes about the data as a whole (for example, lead data that did not load), shown with the results. */
   sourceNotes: string[];
+  /** Leads of the selected window that no unit carries. Null when the lead data did not load in full. */
+  attributionGaps?: AttributionGaps | null;
 }
 
 /** What one rule concludes about one entity, before the engine resolves conflicts and levels. */

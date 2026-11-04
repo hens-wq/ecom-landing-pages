@@ -2,6 +2,7 @@ import { isoDateInTimezone } from "@/lib/advertising/timezone";
 import { isExcludedCampaignId } from "@/lib/campaign-scope";
 import type { DateRange } from "@/lib/advertising/types";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
+import { metaIdOrNull } from "@/lib/landing-leads/validation";
 import { defaultLeadStatusRecord, type LeadStatusRecord } from "@/lib/lead-status/types";
 import type { MetaFormLead } from "@/lib/leads/types";
 import type { LeadFact, LeadFactsResult, SourceState } from "@/lib/performance/types";
@@ -33,6 +34,15 @@ function reportingDate(isoTimestamp: string): string {
   return Number.isNaN(parsed.getTime()) ? "" : isoDateInTimezone(parsed);
 }
 
+/**
+ * The campaign a landing lead carries, by ID only: its own campaign_id, or else a numeric campaign ID that was sent as
+ * utm_campaign (a common Meta URL setup). A name in utm_campaign is never used. Whether the ID belongs to a listed
+ * campaign is decided later, by attributeLeadFacts.
+ */
+export function landingCampaignId(record: LandingLeadRecord): string | null {
+  return record.campaignId || metaIdOrNull(record.utmCampaign);
+}
+
 function metaFact(lead: MetaFormLead): LeadFact {
   return {
     id: lead.id,
@@ -54,7 +64,7 @@ function landingFact(record: LandingLeadRecord): LeadFact {
     id: record.internalLeadId,
     sourceType: "landing_page",
     leadDate: reportingDate(record.submittedAt),
-    campaignId: record.campaignId || null,
+    campaignId: landingCampaignId(record),
     adSetId: record.adSetId || null,
     adId: record.adId || null,
     statusKnown: false,
@@ -91,7 +101,7 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
   const landing: LeadFactsResult["sources"]["landing"] = { state: "ok", message: null };
   if (landingOutcome.status === "fulfilled") {
     for (const record of landingOutcome.value) {
-      if (!isExcludedCampaignId(record.campaignId)) facts.set(record.internalLeadId, landingFact(record));
+      if (!isExcludedCampaignId(landingCampaignId(record))) facts.set(record.internalLeadId, landingFact(record));
     }
   } else {
     landing.state = "unavailable";
