@@ -2,7 +2,7 @@ import readXlsxFile from "read-excel-file/node";
 
 import { cellText, isBlank } from "@/lib/optimization/sonil/cells";
 import { SONIL_MAX_COLUMNS, SONIL_MAX_ROWS } from "@/lib/optimization/sonil/limits";
-import { checkZipLimits } from "@/lib/optimization/sonil/zip-guard";
+import { checkXlsxSafety } from "@/lib/optimization/sonil/zip-guard";
 
 /**
  * Reads a Sonil report from an XLSX or a CSV file. Pure: no network and no writes. Every cell comes back as it was stored,
@@ -66,7 +66,7 @@ interface GridInput {
 async function parseXlsx(bytes: Uint8Array): Promise<ParsedSonilFile> {
   const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
   if (!isZip) throw new SonilFileError("הקובץ אינו XLSX תקין. שמרו אותו מחדש כ-XLSX או ייצאו אותו כ-CSV.");
-  const problem = checkZipLimits(bytes);
+  const problem = checkXlsxSafety(bytes);
   if (problem) throw new SonilFileError(problem);
 
   let sheets: Array<{ sheet: string; data: RawCell[][] }>;
