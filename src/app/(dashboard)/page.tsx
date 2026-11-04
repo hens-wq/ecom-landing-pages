@@ -180,7 +180,7 @@ export default function DashboardPage() {
     const facts = leadFacts.phase === "ok" ? leadFacts.facts : null;
     const leadsComplete = facts !== null && facts.sources.meta.state === "ok" && facts.sources.landing.state === "ok";
     const attribution = leadsComplete && facts ? attributeLeadFacts(advertising.campaigns, facts.leads) : undefined;
-    return buildPerformanceTree(advertising.campaigns, attribution, advertising.unlisted);
+    return buildPerformanceTree(advertising.campaigns, attribution, advertising.unlisted, advertising.levelReach);
   }, [state]);
 
   // "Active only" drops whole campaigns, and the campaign-less lead bucket with them. Paused ad sets and ads stay inside
@@ -191,7 +191,10 @@ export default function DashboardPage() {
   );
 
   const sortedRows = useMemo(() => sortCampaignRows(visibleRows, sort), [visibleRows, sort]);
-  const totals = useMemo(() => aggregateTotals(visibleRows), [visibleRows]);
+  // Reach is not additive, so the total is Meta's own unique reach across the course campaigns. The view filter only hides
+  // rows with no spend, impressions or leads, which cannot change that unique reach.
+  const courseReach = state.phase === "ready" ? state.data.advertising.courseReach : null;
+  const totals = useMemo(() => aggregateTotals(visibleRows, courseReach), [visibleRows, courseReach]);
   const flags = useMemo(() => aggregateFlags(visibleRows), [visibleRows]);
   const expandable = useMemo(() => expandableRowIds(sortedRows), [sortedRows]);
   const notices =
@@ -203,6 +206,7 @@ export default function DashboardPage() {
             unlistedSpend: state.data.advertising.unlisted?.spend ?? 0,
             isLive: state.data.advertising.source === "meta",
           }),
+          ...(state.data.advertising.reachNotice ? [{ tone: "warning" as const, text: state.data.advertising.reachNotice }] : []),
         ]
       : [];
   const reconciliationOk = state.phase === "ready" && state.data.advertising.reconciliation?.status === "ok";

@@ -5,7 +5,18 @@ import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
 import { buildSpendReconciliation, type AccountSpendResult } from "@/lib/advertising/reconciliation";
 import { AdvertisingApiError, type AdvertisingAccountInfo, type AdvertisingResult, type DateRange } from "@/lib/advertising/types";
+import { EXCLUDED_CAMPAIGNS } from "@/lib/campaign-scope";
 import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
+import type { LevelReach } from "@/lib/types";
+
+/** Which reach could not be loaded, in Hebrew, or null when all of it loaded. */
+function reachNoticeFor(levelReachLoaded: boolean, courseReachLoaded: boolean): string | null {
+  const missing: string[] = [];
+  if (!levelReachLoaded) missing.push("קמפיין ו-Ad Set");
+  if (!courseReachLoaded) missing.push("סך כל הקורסים");
+  if (missing.length === 0) return null;
+  return `התפוצה של ${missing.join(" ו-")} לא נטענה מ-Meta. במקום לחשב אותה מסכום המודעות, היא מוצגת כלא זמינה ("—").`;
+}
 
 /**
  * The one function every consumer (the /api/advertising route, the
@@ -30,6 +41,7 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
     }
     const provider = new MockAdvertisingProvider();
     const snapshot = await provider.getCampaigns(range);
+    const [levelReach, courseReach] = await Promise.all([provider.getLevelReach(range), provider.getCourseReach(range)]);
     return {
       source: "mock",
       campaigns: snapshot.campaigns,
@@ -37,6 +49,9 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
       unlisted: null,
       reconciliation: null,
       excludedCampaigns: snapshot.excludedCampaigns,
+      levelReach,
+      courseReach,
+      reachNotice: null,
     };
   }
 
@@ -50,8 +65,8 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
   }
 
   const provider = new MetaAdvertisingProvider(check.config);
-  // The account total is a separate request. If it fails, only the check is weakened; the campaign data still loads.
-  const [snapshot, account, accountSpend] = await Promise.all([
+  // Each reach request is separate. If one fails, only that reach is shown as unknown; the campaign data still loads.
+  const [snapshot, account, accountSpend, levelReach, courseReach] = await Promise.all([
     provider.getCampaigns(range),
     provider.getAccountInfo(),
     provider.getAccountSpend(range).then(
@@ -60,6 +75,14 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
         ok: false,
         message: error instanceof AdvertisingApiError ? error.message : "שגיאה לא צפויה בקריאת סך ההוצאה בחשבון.",
       })
+    ),
+    provider.getLevelReach(range).then(
+      (levels): LevelReach => levels,
+      (error: unknown): null => logReachFailure("campaign and ad set", error)
+    ),
+    provider.getCourseReach(range, EXCLUDED_CAMPAIGNS.map((campaign) => campaign.id)).then(
+      (reach): number => reach,
+      (error: unknown): null => logReachFailure("course total", error)
     ),
   ]);
 
@@ -76,7 +99,17 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
     unlisted: snapshot.unlisted,
     reconciliation,
     excludedCampaigns: snapshot.excludedCampaigns,
+    levelReach,
+    courseReach,
+    reachNotice: reachNoticeFor(levelReach !== null, courseReach !== null),
   };
+}
+
+/** Logs only the error code: the message and detail never contain a token, so this is safe to keep in the server log. */
+function logReachFailure(which: string, error: unknown): null {
+  const code = error instanceof AdvertisingApiError ? error.code : "unknown_error";
+  console.warn(`Meta reach for ${which} could not be loaded (${code}).`);
+  return null;
 }
 
 export type MetaConnectionStatus =

@@ -11,10 +11,10 @@ import { loadLeadFacts } from "@/lib/performance/load-lead-facts";
 import type { LeadFact, SourceState } from "@/lib/performance/types";
 import { dateInRange, planPeriods, type PeriodPlan } from "@/lib/optimization/periods";
 import type { DailyAdSpendRow, EngineInput } from "@/lib/optimization/model";
-import { buildWindowEntities, combineWindowEntities, type ReachSource } from "@/lib/optimization/snapshot";
+import { buildWindowEntities, combineWindowEntities } from "@/lib/optimization/snapshot";
 import type { DataSource, RunScope, RunSources } from "@/lib/optimization/run";
 import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
-import type { Campaign } from "@/lib/types";
+import type { Campaign, LevelReach } from "@/lib/types";
 
 /**
  * Reads everything one analysis run needs, for the selected range and its trend windows. Read-only: Meta is only read,
@@ -55,27 +55,29 @@ function uniqueRanges(ranges: Array<DateRange | null>): DateRange[] {
 
 interface WindowData {
   snapshot: AdvertisingSnapshot;
-  reach: ReachSource;
+  /** Meta's unique reach per campaign and ad set for the window. Null when it could not be read. */
+  levelReach: LevelReach | null;
 }
 
 async function fetchWindow(mode: Mode, range: DateRange, notes: string[]): Promise<WindowData> {
   if (mode.kind === "demo") {
-    const snapshot = await new MockAdvertisingProvider().getCampaigns(range);
-    return { snapshot, reach: { mode: "sum" } };
+    const provider = new MockAdvertisingProvider();
+    const [snapshot, levelReach] = await Promise.all([provider.getCampaigns(range), provider.getLevelReach(range)]);
+    return { snapshot, levelReach };
   }
 
   const provider = new MetaAdvertisingProvider(mode.config);
-  const [snapshot, reach] = await Promise.all([
+  const [snapshot, levelReach] = await Promise.all([
     provider.getCampaigns(range),
     provider.getLevelReach(range).then(
-      (levels): ReachSource => ({ mode: "meta", campaign: levels.campaign, adset: levels.adset }),
-      (): ReachSource => ({ mode: "unknown" })
+      (levels): LevelReach => levels,
+      (): null => null
     ),
   ]);
-  if (reach.mode === "unknown") {
+  if (levelReach === null) {
     notes.push("התפוצה של הקמפיין וה-Ad Set לא נטענה מ-Meta: תפוצה ותדירות ברמות האלה לא מוצגות.");
   }
-  return { snapshot, reach };
+  return { snapshot, levelReach };
 }
 
 /** Demo only: a flat daily split, so the daily check runs without inventing a pattern. */
@@ -132,7 +134,7 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
   const plan = planPeriods(selected, isoDateInTimezone(now));
   const notes: string[] = [];
   if (mode.kind === "demo") {
-    notes.push("מצב דמו: הנתונים סינתטיים. התפוצה של הקמפיין וה-Ad Set היא סכום המודעות, כקירוב.");
+    notes.push("מצב דמו: הנתונים סינתטיים. התפוצה של הקמפיין וה-Ad Set היא ערך סינתטי משלה, לא סכום המודעות.");
   }
 
   const windowRanges = uniqueRanges([plan.selected, plan.trendCurrent, plan.trendPrevious]);
@@ -170,20 +172,20 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
   const selectedEntities = buildWindowEntities({
     campaigns: selectedData.snapshot.campaigns,
     leadFacts: leadFactsFor(plan.selected),
-    reach: selectedData.reach,
+    levelReach: selectedData.levelReach,
   });
   const currentEntities = plan.trendCurrent
     ? buildWindowEntities({
         campaigns: dataFor(plan.trendCurrent).snapshot.campaigns,
         leadFacts: leadFactsFor(plan.trendCurrent),
-        reach: dataFor(plan.trendCurrent).reach,
+        levelReach: dataFor(plan.trendCurrent).levelReach,
       })
     : null;
   const previousEntities = plan.trendPrevious
     ? buildWindowEntities({
         campaigns: dataFor(plan.trendPrevious).snapshot.campaigns,
         leadFacts: leadFactsFor(plan.trendPrevious),
-        reach: dataFor(plan.trendPrevious).reach,
+        levelReach: dataFor(plan.trendPrevious).levelReach,
       })
     : null;
 

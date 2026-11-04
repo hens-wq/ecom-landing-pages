@@ -2,30 +2,23 @@ import { buildPerformanceTree } from "@/lib/aggregate";
 import { attributeLeadFacts } from "@/lib/performance/attribution";
 import { classifyLeadQuality } from "@/lib/performance/lead-quality";
 import type { LeadFact } from "@/lib/performance/types";
-import type { Campaign, EntityStatus } from "@/lib/types";
+import type { Campaign, EntityStatus, LevelReach } from "@/lib/types";
 import { emptyFigures, type WindowFigures } from "@/lib/optimization/derive";
 import { entityKey, type EntityInput, type Level } from "@/lib/optimization/model";
 
 /**
  * Builds per-entity figures for one window from the Meta tree and the lead facts. The lead attribution is the same one
- * the dashboard uses (aggregate.ts and attribution.ts), so the two numbers always agree. Reach at campaign and ad set
- * level is never a sum of child reach, because unique reach is not additive: it comes from Meta, or it is unknown.
+ * the dashboard uses (aggregate.ts and attribution.ts), so the two numbers always agree. The reach of a campaign and of
+ * an ad set is the unique reach Meta reports at that level (`levelReach`). It is never a sum of child reach. Without the
+ * level reach it is unknown, and no frequency verdict is given for it.
  */
-
-/** Where the reach of campaigns and ad sets comes from. */
-export type ReachSource =
-  /** Meta's own unique reach at each level, read for this window. */
-  | { mode: "meta"; campaign: ReadonlyMap<string, number>; adset: ReadonlyMap<string, number> }
-  /** Demo data only: a parent's reach is the sum of its ads' reach, which is shown as an approximation. */
-  | { mode: "sum" }
-  /** Meta's level reach could not be read: parent reach is unknown and no parent frequency verdict is given. */
-  | { mode: "unknown" };
 
 export interface WindowSource {
   campaigns: Campaign[];
   /** Leads whose reporting date falls inside this window. Null when lead data did not load in full. */
   leadFacts: LeadFact[] | null;
-  reach: ReachSource;
+  /** Meta's unique reach per campaign and ad set for this window. Null when it could not be read. */
+  levelReach: LevelReach | null;
 }
 
 export interface WindowEntity {
@@ -104,7 +97,7 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
   const facts = source.leadFacts;
   const leadsKnown = facts !== null;
   const attribution = facts === null ? undefined : attributeLeadFacts(source.campaigns, facts);
-  const tree = buildPerformanceTree(source.campaigns, attribution);
+  const tree = buildPerformanceTree(source.campaigns, attribution, undefined, source.levelReach);
   const own = facts === null ? new Map<string, LeadCounts>() : ownLeadCounts(source.campaigns, facts);
   const countsOf = (keys: string[]): LeadCounts =>
     keys.reduce((total, key) => addCounts(total, own.get(key) ?? ZERO_COUNTS), ZERO_COUNTS);
@@ -131,7 +124,6 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
     const campaignAdKeys = ads.map((ad) => entityKey("ad", ad.id));
     const campaignCounts = countsOf([entityKey("campaign", campaignRows.id), ...adSets.map((adSet) => entityKey("adset", adSet.id)), ...campaignAdKeys]);
     const campaignMetaLeads = ads.reduce((total, ad) => total + (metaLeadsByAd.get(ad.id) ?? 0), 0);
-    const campaignSumReach = ads.reduce((total, ad) => total + ad.metrics.reach, 0);
     put({
       level: "campaign",
       id: campaignRows.id,
@@ -145,8 +137,8 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
         spend: campaignRows.metrics.spend,
         impressions: campaignRows.metrics.impressions,
         linkClicks: campaignRows.metrics.linkClicks,
-        reach: source.reach.mode === "meta" ? source.reach.campaign.get(campaignRows.id) ?? 0 : campaignSumReach,
-        reachKnown: source.reach.mode !== "unknown",
+        reach: campaignRows.metrics.reach ?? 0,
+        reachKnown: campaignRows.metrics.reach !== null,
         metaLeads: campaignMetaLeads,
         metaFormLeads: campaignCounts.metaForm,
         leads: campaignRows.metrics.leads,
@@ -164,7 +156,6 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
       const adSetAds = adSetRow.ads.filter((ad) => !ad.isUnassigned);
       const adSetCounts = countsOf([entityKey("adset", adSetRow.id), ...adSetAds.map((ad) => entityKey("ad", ad.id))]);
       const adSetMetaLeads = adSetAds.reduce((total, ad) => total + (metaLeadsByAd.get(ad.id) ?? 0), 0);
-      const adSetSumReach = adSetAds.reduce((total, ad) => total + ad.metrics.reach, 0);
       put({
         level: "adset",
         id: adSetRow.id,
@@ -178,8 +169,8 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
           spend: adSetRow.metrics.spend,
           impressions: adSetRow.metrics.impressions,
           linkClicks: adSetRow.metrics.linkClicks,
-          reach: source.reach.mode === "meta" ? source.reach.adset.get(adSetRow.id) ?? 0 : adSetSumReach,
-          reachKnown: source.reach.mode !== "unknown",
+          reach: adSetRow.metrics.reach ?? 0,
+          reachKnown: adSetRow.metrics.reach !== null,
           metaLeads: adSetMetaLeads,
           metaFormLeads: adSetCounts.metaForm,
           leads: adSetRow.metrics.leads,
@@ -209,8 +200,8 @@ export function buildWindowEntities(source: WindowSource): Map<string, WindowEnt
             impressions: adRow.metrics.impressions,
             linkClicks: adRow.metrics.linkClicks,
             // An ad's own reach is exact: it is read for the ad itself, not summed.
-            reach: adRow.metrics.reach,
-            reachKnown: true,
+            reach: adRow.metrics.reach ?? 0,
+            reachKnown: adRow.metrics.reach !== null,
             metaLeads: metaLeadsByAd.get(adRow.id) ?? 0,
             metaFormLeads: counts.metaForm,
             leads: adRow.metrics.leads,

@@ -43,6 +43,10 @@ export function cellDisplay(row: DisplayRow, column: PerformanceColumnDef): Cell
   if (row.isUnassigned && (DELIVERY_KEYS.has(key) || SPEND_KEYS.has(key))) {
     return { state: "not_applicable", text: DASH, partial: false };
   }
+  // Reach that Meta did not give for this row is unknown, never zero. Frequency depends on it, so it is unknown too.
+  if (row.metrics.reach === null && (key === "reach" || key === "frequency")) {
+    return { state: "unknown", text: DASH, partial: false };
+  }
   if (!row.leadsKnown && LEAD_KEYS.has(key)) {
     return { state: "unknown", text: DASH, partial: false };
   }

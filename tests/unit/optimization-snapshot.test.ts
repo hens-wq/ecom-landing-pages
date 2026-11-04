@@ -89,7 +89,7 @@ async function buildFixture() {
 
 test("the recruitment campaign is left out of every entity and every lead, by its ID", async () => {
   const { snapshot, leads } = await buildFixture();
-  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, reach: { mode: "sum" } });
+  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, levelReach: null });
   assert.equal(entities.has(`campaign:${RECRUITMENT_ID}`), false);
   assert.equal(entities.has("ad:ad-recruit"), false);
   assert.equal(leads.leads.some((lead) => lead.id === "lead-recruit"), false, "its leads are not loaded into any figure");
@@ -99,7 +99,7 @@ test("the recruitment campaign is left out of every entity and every lead, by it
 
 test("a paused campaign with spend in the window is analysed, and it is never a change recommendation", async () => {
   const { snapshot, leads } = await buildFixture();
-  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, reach: { mode: "sum" } });
+  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, levelReach: null });
   const paused = entities.get("campaign:c-paused");
   assert.ok(paused, "the paused campaign is listed");
   assert.equal(paused.status, "paused");
@@ -115,7 +115,7 @@ test("a paused campaign with spend in the window is analysed, and it is never a 
 
 test("the optimization figures agree with the dashboard tree: lead counts and quality counts add up for every entity", async () => {
   const { snapshot, leads } = await buildFixture();
-  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, reach: { mode: "sum" } });
+  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, levelReach: null });
   const tree = buildPerformanceTree(snapshot.campaigns, attributeLeadFacts(snapshot.campaigns, leads.leads));
   const campaignRow = tree.find((row) => row.id === "c-course");
   const campaignEntity = entities.get("campaign:c-course");
@@ -135,7 +135,7 @@ test("parent reach comes from Meta's own level reach when it is supplied, and is
   const entities = buildWindowEntities({
     campaigns: snapshot.campaigns,
     leadFacts: leads.leads,
-    reach: { mode: "meta", campaign: new Map([["c-course", 6_500]]), adset: new Map([["as-course", 6_500]]) },
+    levelReach: { campaign: { "c-course": 6_500 }, adset: { "as-course": 6_500 } },
   });
   assert.equal(entities.get("campaign:c-course")?.figures.reach, 6_500, "unique reach as Meta reports it");
   assert.equal(entities.get("ad:ad-course")?.figures.reach, 8_000, "an ad's own reach is exact");
@@ -143,14 +143,14 @@ test("parent reach comes from Meta's own level reach when it is supplied, and is
 
 test("when Meta's level reach is unavailable, parent reach is unknown and no parent frequency is judged", async () => {
   const { snapshot, leads } = await buildFixture();
-  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, reach: { mode: "unknown" } });
+  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: leads.leads, levelReach: null });
   assert.equal(entities.get("campaign:c-course")?.figures.reachKnown, false);
   assert.equal(entities.get("ad:ad-course")?.figures.reachKnown, true);
 });
 
 test("when lead data did not load in full, every lead figure is unknown rather than zero", async () => {
   const { snapshot } = await buildFixture();
-  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: null, reach: { mode: "sum" } });
+  const entities = buildWindowEntities({ campaigns: snapshot.campaigns, leadFacts: null, levelReach: null });
   const course = entities.get("campaign:c-course");
   assert.equal(course?.figures.leadsKnown, false);
   const output = evaluateOptimization(engineInput(combineWindowEntities({ selected: entities, current: null, previous: null })));

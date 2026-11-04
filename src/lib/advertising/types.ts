@@ -1,4 +1,6 @@
-import type { Campaign, RawMetrics } from "@/lib/types";
+import type { Campaign, LevelReach, RawMetrics } from "@/lib/types";
+
+export type { LevelReach } from "@/lib/types";
 
 /**
  * The advertising-data boundary. Everything on either side of this file only
@@ -64,12 +66,28 @@ export interface AdvertisingResult {
   reconciliation: SpendReconciliation | null;
   /** Excluded (non-course) campaigns, kept in the response for the record. The course figures never read them. */
   excludedCampaigns: Campaign[];
+  /**
+   * Meta's unique reach of each campaign and each ad set for the range, read at that level. Null when it could not be
+   * loaded: the parents' reach is then unknown, never a sum of their ads.
+   */
+  levelReach: LevelReach | null;
+  /** Meta's unique reach across the course campaigns for the range, read at account level. Null when it could not be loaded. */
+  courseReach: number | null;
+  /** One Hebrew sentence when some reach could not be loaded, otherwise null. */
+  reachNotice: string | null;
 }
 
 export interface AdvertisingDataProvider {
   readonly source: AdvertisingSource;
   getCampaigns(range: DateRange): Promise<AdvertisingSnapshot>;
   getAccountInfo(): Promise<AdvertisingAccountInfo | null>;
+  /** Unique reach of each campaign and each ad set, each read at its own level. Reach is never summed from ads. */
+  getLevelReach(range: DateRange): Promise<LevelReach>;
+  /**
+   * Unique reach across all course campaigns for the range, read at account level. Campaigns in `excludedCampaignIds` are
+   * filtered out by Meta, so the excluded campaign's people are not counted.
+   */
+  getCourseReach(range: DateRange, excludedCampaignIds: readonly string[]): Promise<number>;
 }
 
 /**

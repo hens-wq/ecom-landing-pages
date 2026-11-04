@@ -13,7 +13,8 @@ export function safeDivide(numerator: number, denominator: number): number | nul
   return result;
 }
 
-export const calcFrequency = (impressions: number, reach: number) => safeDivide(impressions, reach);
+/** Impressions per unique person reached, at the same level as the reach. Unknown reach gives an unknown frequency. */
+export const calcFrequency = (impressions: number, reach: number | null) => (reach === null ? null : safeDivide(impressions, reach));
 
 export const calcCTR = (linkClicks: number, impressions: number) => {
   const rate = safeDivide(linkClicks, impressions);
@@ -58,7 +59,7 @@ export function scaleRawMetrics(raw: RawMetrics, scale: number): RawMetrics {
   return {
     spend: raw.spend * scale,
     impressions: Math.round(raw.impressions * scale),
-    reach: Math.round(raw.reach * scale),
+    reach: raw.reach === null ? null : Math.round(raw.reach * scale),
     linkClicks: Math.round(raw.linkClicks * scale),
     leads: Math.round(raw.leads * scale),
     sales: Math.round(raw.sales * scale),
@@ -66,18 +67,22 @@ export function scaleRawMetrics(raw: RawMetrics, scale: number): RawMetrics {
   };
 }
 
+/**
+ * Adds up the additive figures of several rows. Reach is never added up: rows can reach the same people, so a sum
+ * overstates it. The result's reach is null, and the caller sets the parent's reach from Meta at the parent's level.
+ */
 export function sumRawMetrics(items: RawMetrics[]): RawMetrics {
   return items.reduce<RawMetrics>(
     (acc, item) => ({
       spend: acc.spend + item.spend,
       impressions: acc.impressions + item.impressions,
-      reach: acc.reach + item.reach,
+      reach: null,
       linkClicks: acc.linkClicks + item.linkClicks,
       leads: acc.leads + item.leads,
       sales: acc.sales + item.sales,
       revenue: acc.revenue + item.revenue,
     }),
-    { spend: 0, impressions: 0, reach: 0, linkClicks: 0, leads: 0, sales: 0, revenue: 0 }
+    { spend: 0, impressions: 0, reach: null, linkClicks: 0, leads: 0, sales: 0, revenue: 0 }
   );
 }
 

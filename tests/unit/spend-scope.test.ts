@@ -91,7 +91,7 @@ test("reconciliation: unavailable, never a silent 'complete', when the account t
 
 test("no double counting: parents equal their children, and unlisted spend enters the total once", () => {
   const rows = buildPerformanceTree(courseCampaigns, undefined, UNLISTED);
-  assert.equal(aggregateTotals(rows).spend, 200);
+  assert.equal(aggregateTotals(rows, null).spend, 200);
 
   const course = rows.find((row) => row.id === "c-course");
   assert.ok(course);
@@ -169,7 +169,7 @@ test("the active filter keeps a turned-off campaign that spent money, hides idle
   assert.ok(ids.includes("c-course"));
   assert.ok(ids.includes("c-ended"), "a turned-off campaign that spent money stays visible");
   assert.ok(!ids.includes("c-idle"), "an idle, turned-off campaign is hidden");
-  assert.equal(aggregateTotals(visible).spend, aggregateTotals(rows).spend);
+  assert.equal(aggregateTotals(visible, null).spend, aggregateTotals(rows, null).spend);
 });
 
 test("spend notices: demo data is never announced, and live data without a verified exclusion is", () => {

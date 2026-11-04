@@ -171,7 +171,7 @@ async function fetchCombinedLeads(
   // page (filters, KPI math, the table, the export) never needs to know
   // leads came from two different places.
   const advertising = advertisingJson as AdvertisingResult;
-  const campaignRows = buildPerformanceTree(advertising.campaigns, undefined, advertising.unlisted);
+  const campaignRows = buildPerformanceTree(advertising.campaigns, undefined, advertising.unlisted, advertising.levelReach);
   const nameLookup = buildNameLookup(campaignRows);
   const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) => landingLeadToMetaFormLead(record, nameLookup));
   const leadsResult: LeadsResult = {

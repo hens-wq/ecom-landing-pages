@@ -5,16 +5,19 @@ import type { MetaConfig } from "@/lib/advertising/meta/config";
 import { mapMetaHierarchyToCampaigns } from "@/lib/advertising/meta/mapper";
 import { fetchAdNodes, fetchAdSetNodes, fetchCampaignNodes } from "@/lib/advertising/meta/nodes";
 import type { MetaAdAccountNode, MetaAdInsightsRow } from "@/lib/advertising/meta/types";
-import type { AdvertisingAccountInfo, AdvertisingDataProvider, AdvertisingSnapshot, DateRange } from "@/lib/advertising/types";
+import {
+  type AdvertisingAccountInfo,
+  type AdvertisingDataProvider,
+  type AdvertisingSnapshot,
+  type DateRange,
+} from "@/lib/advertising/types";
+import { courseReachFromRows, courseReachParams, levelReachParams, reachById, type ReachRow } from "@/lib/advertising/meta/reach-params";
+import type { LevelReach } from "@/lib/types";
 
 const INSIGHTS_PAGE_LIMIT = "500";
 
 /** Reach at one level of the hierarchy. Meta returns the reach as a string. */
-export interface MetaLevelReachRow {
-  campaign_id?: string;
-  adset_id?: string;
-  reach?: string;
-}
+export type MetaLevelReachRow = ReachRow;
 
 /** One ad's spend on one day (time_increment=1). Spend only: reach is never split by day. */
 export interface MetaDailyAdInsightsRow {
@@ -85,30 +88,26 @@ export class MetaAdvertisingProvider implements AdvertisingDataProvider {
    * Unique reach of each campaign and each ad set for the range, read at that level. Meta de-duplicates people across
    * the children itself, which a sum of ad reach never does. Read only; no write call exists in this provider.
    */
-  async getLevelReach(range: DateRange): Promise<{ campaign: Map<string, number>; adset: Map<string, number> }> {
-    const timeRange = JSON.stringify({ since: range.since, until: range.until });
+  async getLevelReach(range: DateRange): Promise<LevelReach> {
     const [campaignRows, adSetRows] = await Promise.all([
-      fetchAllPages<MetaLevelReachRow>(
-        buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, {
-          level: "campaign",
-          fields: "campaign_id,reach",
-          time_range: timeRange,
-          limit: INSIGHTS_PAGE_LIMIT,
-        })
-      ),
-      fetchAllPages<MetaLevelReachRow>(
-        buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, {
-          level: "adset",
-          fields: "adset_id,reach",
-          time_range: timeRange,
-          limit: INSIGHTS_PAGE_LIMIT,
-        })
-      ),
+      fetchAllPages<MetaLevelReachRow>(buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, levelReachParams("campaign", range))),
+      fetchAllPages<MetaLevelReachRow>(buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, levelReachParams("adset", range))),
     ]);
     return {
-      campaign: new Map(campaignRows.map((row) => [row.campaign_id ?? "", Number(row.reach ?? 0)] as const)),
-      adset: new Map(adSetRows.map((row) => [row.adset_id ?? "", Number(row.reach ?? 0)] as const)),
+      campaign: reachById(campaignRows, (row) => row.campaign_id),
+      adset: reachById(adSetRows, (row) => row.adset_id),
     };
+  }
+
+  /**
+   * Unique reach across the course campaigns for the range, read at account level. Meta filters the excluded campaigns
+   * out itself, so their people are not counted. Read only.
+   */
+  async getCourseReach(range: DateRange, excludedCampaignIds: readonly string[]): Promise<number> {
+    const rows = await fetchAllPages<MetaLevelReachRow>(
+      buildGraphUrl(this.config, `${this.config.adAccountId}/insights`, courseReachParams(range, excludedCampaignIds))
+    );
+    return courseReachFromRows(rows);
   }
 
   /** Each ad's spend for every day of the range. Spend is additive, so the daily split adds up to the range total. */

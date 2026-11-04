@@ -58,16 +58,17 @@ function insightsRowToRawMetrics(row: MetaAdInsightsRow): RawMetrics {
 /**
  * Delivery of every insights row whose ad is not in the listed tree. Their spend still counts toward the account total,
  * so they are kept as one unlisted figure. Only Meta's delivery numbers are read here, never its lead counts.
+ * Their reach is unknown, not summed: the group is not a level Meta reports reach for, and people reached by several of
+ * these ads would be counted more than once.
  */
 function unlistedDelivery(insightsRows: MetaAdInsightsRow[], treeAdIds: ReadonlySet<string>, scope: CampaignScope): RawMetrics | null {
-  const total: RawMetrics = { ...ZERO_METRICS };
+  const total: RawMetrics = { ...ZERO_METRICS, reach: null };
   let count = 0;
   for (const row of insightsRows) {
     if (treeAdIds.has(row.ad_id) || scope.isExcluded(row.campaign_id)) continue;
     count += 1;
     total.spend += parseNumber(row.spend);
     total.impressions += parseNumber(row.impressions);
-    total.reach += parseNumber(row.reach);
     total.linkClicks += parseNumber(row.inline_link_clicks);
   }
   return count === 0 ? null : total;

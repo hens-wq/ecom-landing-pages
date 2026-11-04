@@ -195,7 +195,7 @@ check("ad A1 keeps its Meta spend", c1.adSets[0].ads[0].metrics.spend, 100);
 check("ad set S1 holds a synthetic row for its direct lead", c1.adSets[0].ads.map((ad) => ad.id), ["A1", "A2", "unassigned-ad:S1"]);
 check("campaign C2 holds a synthetic ad set for its direct lead", c2.adSets.map((adSet) => adSet.id), ["S3", "unassigned-adset:C2"]);
 check("unassigned row carries only its lead", [unassigned.isUnassigned, unassigned.metrics.leads, unassigned.metrics.spend], [true, 1, 0]);
-const totals = aggregateTotals(tree);
+const totals = aggregateTotals(tree, null);
 check("totals count every lead exactly once", totals.leads, facts.length);
 check("totals sales", totals.sales, 1);
 check("totals revenue", totals.revenue, 300);

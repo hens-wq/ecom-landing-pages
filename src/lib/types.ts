@@ -42,19 +42,35 @@ export type TimeToSaleBucket = "one_shot" | "1_3_days" | "4_7_days" | "8_plus_da
 export type MatchStatus = "matched" | "unmatched" | "needs_review";
 
 /**
- * Raw, additive metrics as they would come back from an ads platform / DB.
- * Every other performance number is *derived* from these (see lib/calculations.ts) -
- * nothing here is pre-computed, so aggregating Ads -> AdSets -> Campaigns is a
- * straight sum and never drifts out of sync with the derived metrics.
+ * Raw metrics as they would come back from an ads platform / DB. Every other performance number is *derived*
+ * from these (see lib/calculations.ts), so nothing here is pre-computed.
+ *
+ * Spend, impressions, link clicks and the lead figures are additive: a parent row is their straight sum.
+ * Reach is the exception. Two ads can reach the same people, so a sum of reach overstates the unique reach of the
+ * parent. A parent's reach is therefore read from Meta at the parent's own level (see LevelReach), and sumRawMetrics
+ * never produces one.
  */
 export interface RawMetrics {
   spend: number;
   impressions: number;
-  reach: number;
+  /**
+   * Unique reach of this row as Meta reports it at this row's own level. Null when it is not known or does not apply
+   * (a parent without its level reach, or a synthetic row with no delivery of its own). Never a sum of children.
+   */
+  reach: number | null;
   linkClicks: number;
   leads: number;
   sales: number;
   revenue: number;
+}
+
+/**
+ * Meta's unique reach for one date range, read at two levels: each campaign and each ad set. Keyed by Meta's id.
+ * A campaign or ad set with no delivery in the range has no entry here.
+ */
+export interface LevelReach {
+  campaign: Record<string, number>;
+  adset: Record<string, number>;
 }
 
 /** RawMetrics plus every calculated KPI, with `null` standing in for "not available" (never NaN/Infinity). */
