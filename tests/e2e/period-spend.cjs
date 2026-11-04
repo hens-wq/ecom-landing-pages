@@ -1,7 +1,7 @@
 // Browser checks for the selected-period spend and its warnings. Uses the demo server (ECOM_DEMO_DATA=1) for the date checks,
 // and route-mocked Meta reconciliation states for the warnings. Run: node tests/e2e/period-spend.cjs
 const { chromium } = require("playwright");
-const { BASE, DESKTOP, installLeadRoutes, json, numberFrom, kpiValues } = require("./fixtures.cjs");
+const { BASE, DESKTOP, installLeadRoutes, json, numberFrom, kpiValues, authedFetch, newAuthedContext } = require("./fixtures.cjs");
 
 const results = [];
 const failures = [];
@@ -60,7 +60,7 @@ function recordAdvertisingRequests(page) {
 }
 
 async function scenarioPresets(browser, today) {
-  const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
   await installLeadRoutes(context);
   const page = await context.newPage();
   const requests = recordAdvertisingRequests(page);
@@ -112,7 +112,7 @@ async function scenarioPresets(browser, today) {
 /** Route-mocks the advertising response with a given Meta check state, and returns the mocked spend total. */
 async function installSpendCheck(context, status) {
   const today = jerusalemToday();
-  const demo = await (await fetch(`${BASE}/api/advertising?since=${today}&until=${today}`)).json();
+  const demo = await (await authedFetch(`${BASE}/api/advertising?since=${today}&until=${today}`)).json();
   const listed = demo.campaigns.reduce(
     (sum, campaign) => sum + campaign.adSets.reduce((adSetSum, adSet) => adSetSum + adSet.ads.reduce((adSum, ad) => adSum + ad.metrics.spend, 0), 0),
     0
@@ -131,7 +131,7 @@ async function installSpendCheck(context, status) {
 }
 
 async function scenarioWarnings(browser, status, today) {
-  const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
   await installLeadRoutes(context);
   await installSpendCheck(context, status);
   const page = await context.newPage();

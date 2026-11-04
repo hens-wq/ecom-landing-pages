@@ -2,7 +2,7 @@ require("node:fs").mkdirSync(process.env.OUTPUT_DIR || __dirname + "/output", { 
 // Extra Leads checks (scratch test, not part of the repo): the demo-mode guard and the mobile layout.
 const { chromium } = require("playwright");
 const path = require("node:path");
-const { installLeadRoutes, BASE } = require("./fixtures.cjs");
+const { installLeadRoutes, BASE, newAuthedContext } = require("./fixtures.cjs");
 
 const SCR = process.env.OUTPUT_DIR || __dirname + "/output";
 const DESKTOP = { width: 1280, height: 900 };
@@ -20,7 +20,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: "applica
 
   // E: Meta not connected (demo leads) while the other sources answer. The page must say so and show no table.
   {
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     await context.route((url) => url.pathname === "/api/leads", (route) =>
       json(route, { source: "mock", leads: [{ id: "demo-1", createdTime: "2026-11-03T08:00:00.000Z", name: "דמו", phone: null, normalizedPhone: null, email: null, formId: "f", campaignId: "camp-ai", campaignName: "x", adSetId: "as-ai-cold", adSetName: "x", adId: "ad-ai-webinar", adName: "x", sourceType: "meta_standard_form" }] })
     );
@@ -40,7 +40,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: "applica
 
   // F: mobile layout with the mocked data - 8 cards, no horizontal page scroll.
   {
-    const context = await browser.newContext({ viewport: MOBILE, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: MOBILE, locale: "he-IL" });
     await installLeadRoutes(context);
     const page = await context.newPage();
     await page.goto(`${BASE}/leads`, { waitUntil: "networkidle" });

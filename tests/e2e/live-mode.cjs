@@ -1,7 +1,7 @@
 // Browser and API checks for a live server that has NO demo flag and NO Meta settings: every Meta-backed figure must be an
 // explicit error, never demo numbers, and the export must refuse to run. Run: LIVE_BASE_URL=http://localhost:3200 node tests/e2e/live-mode.cjs
 const { chromium } = require("playwright");
-const { DESKTOP } = require("./fixtures.cjs");
+const { DESKTOP, authedFetch, newAuthedContext } = require("./fixtures.cjs");
 
 const LIVE = process.env.LIVE_BASE_URL || "http://localhost:3200";
 const results = [];
@@ -15,27 +15,27 @@ const DAY = "2026-11-03";
 const RANGE = `since=${DAY}&until=${DAY}`;
 
 async function apiChecks() {
-  const advertising = await fetch(`${LIVE}/api/advertising?${RANGE}`);
+  const advertising = await authedFetch(`${LIVE}/api/advertising?${RANGE}`);
   const advertisingBody = await advertising.json();
   check("API advertising: an explicit not_configured error, HTTP 503", advertising.status === 503 && advertisingBody.error?.code === "not_configured", `status=${advertising.status}`);
   check("API advertising: no demo campaigns in the response", advertisingBody.campaigns === undefined);
 
-  const statuses = await fetch(`${LIVE}/api/campaign-status`);
+  const statuses = await authedFetch(`${LIVE}/api/campaign-status`);
   check("API campaign-status: explicit error, not demo statuses", statuses.status === 503);
 
-  const leads = await fetch(`${LIVE}/api/leads?${RANGE}`);
+  const leads = await authedFetch(`${LIVE}/api/leads?${RANGE}`);
   check("API leads: explicit error, not demo leads", leads.status === 503);
 
-  const exported = await fetch(`${LIVE}/api/leads/export-xlsx?${RANGE}`);
+  const exported = await authedFetch(`${LIVE}/api/leads/export-xlsx?${RANGE}`);
   const exportBody = await exported.json();
   check("API export: refuses without Meta, with the not_configured error", exported.status === 503 && exportBody.error?.code === "not_configured", `status=${exported.status}`);
 
-  const facts = await (await fetch(`${LIVE}/api/lead-facts?${RANGE}`)).json();
+  const facts = await (await authedFetch(`${LIVE}/api/lead-facts?${RANGE}`)).json();
   check("API lead-facts: Meta reported unavailable, no leads invented", facts.sources?.meta?.state === "unavailable" && facts.leads.length === 0);
 }
 
 async function uiChecks(browser) {
-  const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" }, LIVE);
   const page = await context.newPage();
 
   await page.goto(`${LIVE}/`, { waitUntil: "networkidle" });

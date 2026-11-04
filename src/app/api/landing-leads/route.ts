@@ -8,6 +8,7 @@ import { getLandingLeadsInRange, insertLandingLead } from "@/lib/landing-leads/r
 import { validateLandingLeadInput } from "@/lib/landing-leads/validation";
 import { buildLeadEvent } from "@/lib/meta-capi/build-event";
 import { sendLeadEvent } from "@/lib/meta-capi/send-event";
+import { denyWithoutSession } from "@/lib/auth/session";
 
 // Never statically cached (live, frequently-changing business data), Node
 // runtime only - consistent with every other data route in this app.
@@ -99,6 +100,9 @@ export async function POST(request: NextRequest) {
  * /api/advertising, ...), none of which sit behind auth today either.
  */
 export async function GET(request: NextRequest) {
+  const denied = denyWithoutSession(request);
+  if (denied) return denied;
+
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";
 

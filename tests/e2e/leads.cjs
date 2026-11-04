@@ -2,6 +2,7 @@ require("node:fs").mkdirSync(process.env.OUTPUT_DIR || __dirname + "/output", { 
 // Browser checks for the Leads page and its agreement with the dashboard (scratch test, not part of the repo).
 // The lead lists, statuses and lead facts are route mocks built from one fixture. Spend and campaigns come from the real server in demo mode.
 const { chromium } = require("playwright");
+const { authedFetch, newAuthedContext } = require("./fixtures.cjs");
 const path = require("node:path");
 
 const SCR = process.env.OUTPUT_DIR || __dirname + "/output";
@@ -130,7 +131,7 @@ async function kpiValues(page) {
 }
 
 async function fetchDemoSpend() {
-  const res = await fetch(`${BASE}/api/advertising?since=${DAY}&until=${DAY}`);
+  const res = await authedFetch(`${BASE}/api/advertising?since=${DAY}&until=${DAY}`);
   const body = await res.json();
   let total = 0;
   for (const campaign of body.campaigns) for (const adSet of campaign.adSets) for (const ad of adSet.ads) total += ad.metrics.spend;
@@ -151,7 +152,7 @@ async function fetchDemoSpend() {
   check("expected spend is positive (demo data)", spend > 0, `spend=${spend.toFixed(2)}`);
 
   // ---------- Leads page, mocked lead data
-  const leadsCtx = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const leadsCtx = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
   const page = await leadsCtx.newPage();
   const leadsConsoleErrors = [];
   page.on("console", (msg) => {
@@ -196,7 +197,7 @@ async function fetchDemoSpend() {
   const leadsValues = { leads: EXPECTED.leads, sales, revenue, closeRate, cpl, costPerRegistration };
 
   // ---------- Dashboard with the same fixture: the same formulas must give the same numbers
-  const dashCtx = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const dashCtx = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
   const dash = await dashCtx.newPage();
   await installDashboardRoutes(dashCtx);
   await dash.goto(`${BASE}/`, { waitUntil: "networkidle" });
@@ -255,7 +256,7 @@ async function fetchDemoSpend() {
   await leadsCtx.close();
 
   // ---------- Demo mode, real server, no route mocks: nothing should show as real numbers
-  const demoCtx = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+  const demoCtx = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
   const demo = await demoCtx.newPage();
   await demo.goto(`${BASE}/leads`, { waitUntil: "networkidle" });
   await demo.waitForFunction(() => document.body.innerText.includes("לא ניתן היה לטעון נתוני לידים") || document.querySelector("tr[data-lead-id]") !== null, null, { timeout: 20000 });

@@ -7,12 +7,16 @@ import { badRequest, optimizationErrorResponse } from "@/lib/optimization/server
 import { createOptimizationRun } from "@/lib/optimization/server/service";
 import { getOptimizationRepository } from "@/lib/optimization/server/repository";
 import { demoDataEnabled } from "@/lib/runtime-mode";
+import { denyWithoutSession } from "@/lib/auth/session";
 
 // Optimization runs: list saved runs (GET) and start a new run on request (POST). A run never starts on a page load.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = denyWithoutSession(request);
+  if (denied) return denied;
+
   try {
     const runs = await getOptimizationRepository().listRuns(20);
     return NextResponse.json({ runs, storage: demoDataEnabled() ? "memory" : "database" });
@@ -22,6 +26,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = denyWithoutSession(request);
+  if (denied) return denied;
+
   let body: unknown;
   try {
     body = await request.json();

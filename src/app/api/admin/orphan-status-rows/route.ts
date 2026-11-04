@@ -1,5 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { sessionStateOf } from "@/lib/auth/session";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { LandingLeadsDatabaseError } from "@/lib/landing-leads/db";
@@ -25,6 +27,8 @@ function timingSafeStringEqual(a: string, b: string): boolean {
 
 /** Returns a response when the request must be refused, or null when it may proceed. */
 function refuseUnlessAuthorized(request: NextRequest): NextResponse | null {
+  // A signed-in person may use this from the dashboard. A script may instead send the admin Bearer secret.
+  if (sessionStateOf(request) === "ok") return null;
   const configuredSecret = process.env.LEAD_STATUS_ADMIN_SECRET?.trim();
   if (!configuredSecret) {
     return NextResponse.json({ error: { message: "נקודת הקצה אינה מוגדרת (LEAD_STATUS_ADMIN_SECRET חסר בצד השרת)." } }, { status: 503 });

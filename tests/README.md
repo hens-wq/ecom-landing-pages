@@ -40,10 +40,22 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
 - `optimization.cjs`: the optimization centre (demo data): the sidebar item, the four tabs, the shared date range, no
   analysis on load, a tab switch or a reload (only the button starts one), the Sonil comparison (upload, mapping by ID,
   check, save; the saved run is unchanged and no analysis starts), saved action statuses, the phone layout.
+- `security.cjs`: the team sign-in, against the demo server and the live server. Without a session every private page
+  goes to the sign-in page and every private API answers 401 with no data. With the session the data routes answer. Sign-out
+  closes the pages again. The public routes stay open as designed: the sign-in page, the creative page, Make's webhook and
+  the landing leads POST, each with its own Bearer check. Run it with `DASHBOARD_PASSWORD` set to the server's password.
 - `live-mode.cjs`: with no demo flag and no Meta settings, every Meta-backed route returns an explicit error, the
   export refuses to run, and no demo numbers appear.
 - `optimization-live.cjs`: the optimization centre without demo mode or Meta/database settings: every route refuses with
   an explicit message, and the page shows it without demo data.
+
+`tests/unit/sonil-xlsx-safety.test.ts` builds each dangerous XLSX in memory (`zip-fixtures.ts`) and checks it is refused:
+macro projects, macro-enabled workbooks, XML entity declarations, and a deflate bomb that declares a small size. It also
+checks that formulas keep their stored values and are never evaluated.
+
+`tests/unit/auth-token.test.ts` and `tests/unit/auth-limiter.test.ts` cover the session rules: signed tokens and their
+expiry, constant-time password checks, the minimum lengths of the password and the secret, the sign-in redirect, the public
+allowlist, and the failed-sign-in brake.
 
 The optimization unit tests (`tests/unit/optimization-*.test.ts`) cover the spec's ten mandatory checks (section 18),
 the period rules (no overlap, partial today), every threshold band, the level and conflict rules, and the guards: no AI

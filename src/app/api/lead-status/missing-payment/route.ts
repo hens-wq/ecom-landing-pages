@@ -7,6 +7,7 @@ import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
 import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { normalizeIsraeliPhone } from "@/lib/phone";
+import { denyWithoutSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +20,10 @@ export const runtime = "nodejs";
  * A status row whose ID doesn't match any lead the dashboard knows is still
  * listed (found: false). Hiding it would hide a real unpaid enrollment.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = denyWithoutSession(request);
+  if (denied) return denied;
+
   try {
     const [records, index] = await Promise.all([getLeadStatusRepository().listEnrolledMissingPayment(), loadDashboardLeadIndex()]);
 

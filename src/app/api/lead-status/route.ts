@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { checkStatusRequest, resolveStatusUpdate } from "@/lib/lead-status/validation";
+import { denyWithoutSession } from "@/lib/auth/session";
 
 // Never statically cached (this is live, frequently-changing business data),
 // Node runtime only - consistent with every other route in this app that
@@ -29,6 +30,9 @@ function parseOptionalAmount(value: unknown): AmountParseResult {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = denyWithoutSession(request);
+  if (denied) return denied;
+
   let body: UpsertBody;
   try {
     body = (await request.json()) as UpsertBody;

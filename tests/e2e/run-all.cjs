@@ -3,7 +3,7 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
-const demoSuites = ["dashboard.cjs", "leads.cjs", "leads-extra.cjs", "period-spend.cjs", "exports.cjs", "optimization.cjs"];
+const demoSuites = ["dashboard.cjs", "leads.cjs", "leads-extra.cjs", "period-spend.cjs", "exports.cjs", "optimization.cjs", "security.cjs"];
 let failed = 0;
 
 for (const file of demoSuites) {
@@ -16,6 +16,12 @@ if (process.env.LIVE_BASE_URL) {
   if (result.status !== 0) failed += 1;
   const optimizationLive = spawnSync(process.execPath, [path.join(__dirname, "optimization-live.cjs")], { stdio: "inherit", env: process.env });
   if (optimizationLive.status !== 0) failed += 1;
+  // The access checks also run against the live server, with its own base.
+  const securityLive = spawnSync(process.execPath, [path.join(__dirname, "security.cjs")], {
+    stdio: "inherit",
+    env: { ...process.env, SECURITY_BASE: process.env.LIVE_BASE_URL },
+  });
+  if (securityLive.status !== 0) failed += 1;
 } else {
   console.log("LIVE_BASE_URL is not set: skipping live-mode.cjs (it needs a server started without ECOM_DEMO_DATA).");
 }

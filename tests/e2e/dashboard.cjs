@@ -2,6 +2,7 @@ require("node:fs").mkdirSync(process.env.OUTPUT_DIR || __dirname + "/output", { 
 // Browser checks for the upgraded dashboard (scratch test, not part of the repo).
 // The lead facts come from route mocks shaped like /api/lead-facts, keyed to the mock campaign tree.
 const { chromium } = require("playwright");
+const { newAuthedContext } = require("./fixtures.cjs");
 const path = require("node:path");
 
 const SCR = process.env.OUTPUT_DIR || __dirname + "/output";
@@ -123,7 +124,7 @@ async function allRowCount(page) {
   {
     const facts = buildFacts();
     const expected = expectedFigures(facts);
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const page = await context.newPage();
     const consoleErrors = [];
     page.on("console", (msg) => {
@@ -202,7 +203,7 @@ async function allRowCount(page) {
   // ---------- Scenario B: landing source down
   {
     const facts = buildFacts({ landingDown: true });
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const page = await context.newPage();
     await context.route("**/api/lead-facts**", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(facts) })
@@ -221,7 +222,7 @@ async function allRowCount(page) {
   // ---------- Scenario C: statuses partially loaded
   {
     const facts = buildFacts({ statusesPartial: true });
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const page = await context.newPage();
     await context.route("**/api/lead-facts**", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(facts) })
@@ -236,7 +237,7 @@ async function allRowCount(page) {
 
   // ---------- Scenario D: mock server, no route mocks (real server path)
   {
-    const context = await browser.newContext({ viewport: MOBILE, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: MOBILE, locale: "he-IL" });
     const page = await context.newPage();
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.waitForFunction(
@@ -258,7 +259,7 @@ async function allRowCount(page) {
 
   // ---------- Column order: a fresh layout starts with status, spend, leads, CPL, sales and cost per registration
   {
-    const colCtx = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const colCtx = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const colPage = await colCtx.newPage();
     await colPage.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await colPage.waitForSelector('tr[data-level="campaign"]', { timeout: 20000 });
@@ -270,7 +271,7 @@ async function allRowCount(page) {
 
   // ---------- A layout the user already saved keeps its own order
   {
-    const savedCtx = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const savedCtx = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const savedOrder = ["spend", "impressions", "reach", "frequency", "linkClicks", "ctr", "cpc", "cpm", "leads", "cpl", "sales", "closeRate", "costPerSale", "revenue", "roas"];
     await savedCtx.addInitScript((order) => {
       window.localStorage.setItem("ecom:dashboard:columns:v1", JSON.stringify({ order, visibleKeys: order }));

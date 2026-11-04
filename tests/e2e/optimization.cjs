@@ -2,7 +2,7 @@
 // range, that no analysis starts on load, a tab switch or a reload (only the button starts one), the Sonil comparison (upload,
 // mapping by ID, check, save), saved action statuses, and the phone layout. Demo data is synthetic; nothing here touches Meta or the database.
 const { chromium } = require("playwright");
-const { BASE, DESKTOP } = require("./fixtures.cjs");
+const { BASE, DESKTOP, authedFetch, newAuthedContext } = require("./fixtures.cjs");
 
 const MOBILE = { width: 390, height: 844 };
 const TAB_NAMES = ["חשיפה ותנועה", "לידים ומכירות", "אופטימיזציית סוניל", "סיכום אופטימיזציה"];
@@ -16,7 +16,7 @@ function check(name, ok, detail = "") {
 (async () => {
   const browser = await chromium.launch();
   try {
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
+    const context = await newAuthedContext(browser, { viewport: DESKTOP, locale: "he-IL" });
     const page = await context.newPage();
     const consoleErrors = [];
     let runPosts = 0;
@@ -61,9 +61,9 @@ function check(name, ok, detail = "") {
     check("tab switches and a reload start no analysis", runPosts === 1, `POST count=${runPosts}`);
 
     // Sonil tab: a comparison only. A file is mapped by ID, checked, corrected and saved. Our saved run never changes.
-    const runsList = await (await fetch(`${BASE}/api/optimization/runs`)).json();
+    const runsList = await (await authedFetch(`${BASE}/api/optimization/runs`)).json();
     const runId = runsList.runs[0].runId;
-    const before = await (await fetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
+    const before = await (await authedFetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
     const adRow = before.run.metricsSnapshot.entities.find((entity) => entity.level === "ad" && entity.selected.spend > 0);
     check("the saved run has an ad with spend to compare", Boolean(adRow));
     await page.getByRole("tab", { name: "אופטימיזציית סוניל" }).click();
@@ -91,7 +91,7 @@ function check(name, ok, detail = "") {
     await page.waitForSelector("text=השוואה שנשמרה", { timeout: 20000 });
     const sonilRows = await page.locator('[role="tabpanel"] tbody tr').count();
     check("the saved comparison lists the matched ad", sonilRows >= 1, `rows=${sonilRows}`);
-    const after = await (await fetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
+    const after = await (await authedFetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
     check("saving a Sonil file leaves our saved run exactly as it was", JSON.stringify(after.run) === JSON.stringify(before.run));
     check("saving a Sonil file starts no analysis", runPosts === 1, `POST count=${runPosts}`);
     await page.reload({ waitUntil: "networkidle" });
