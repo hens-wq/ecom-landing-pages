@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 
+import { appSignInRequired } from "@/lib/auth/mode";
 import { authConfigProblem, isSessionValid, SESSION_COOKIE } from "@/lib/auth/token";
 
 /**
@@ -40,6 +41,8 @@ export function sessionStateOf(request: Request): SessionState {
 
 /** For a route handler: null when the request may continue, or the refusal to return. Never reveals data either way. */
 export function denyWithoutSession(request: Request): NextResponse | null {
+  // Vercel Preview: Deployment Protection is the gate there, so no app session is needed (see lib/auth/mode.ts).
+  if (!appSignInRequired(process.env.VERCEL_ENV)) return null;
   const state = sessionStateOf(request);
   if (state === "ok") return null;
   if (state === "not_configured") {
@@ -48,8 +51,12 @@ export function denyWithoutSession(request: Request): NextResponse | null {
   return NextResponse.json({ error: { code: "unauthenticated", message: "נדרשת התחברות." } }, { status: 401 });
 }
 
-/** True when the current request carries a valid session. For server components that choose what to render. */
+/**
+ * True when the current request carries a valid session. For server components that choose what to render. On a Vercel
+ * Preview it is true for every request, so the dashboard layout opens and the sign-in page sends the visitor on.
+ */
 export async function hasValidSession(): Promise<boolean> {
+  if (!appSignInRequired(process.env.VERCEL_ENV)) return true;
   const store = await cookies();
   const cookieHeader = `${SESSION_COOKIE}=${encodeURIComponent(store.get(SESSION_COOKIE)?.value ?? "")}`;
   return sessionStateFromCookieHeader(cookieHeader) === "ok";

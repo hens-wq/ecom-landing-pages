@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isApiPath, isPublicRequest } from "@/lib/auth/access";
+import { appSignInRequired } from "@/lib/auth/mode";
 import { authConfigProblem, isSessionValid, SESSION_COOKIE } from "@/lib/auth/token";
 
 /**
@@ -8,6 +9,8 @@ import { authConfigProblem, isSessionValid, SESSION_COOKIE } from "@/lib/auth/to
  * only reads the signed cookie. The data routes check the same session again themselves (see lib/auth/session.ts).
  */
 export function proxy(request: NextRequest) {
+  // Vercel Preview: Deployment Protection is the gate there, so the app's own sign-in is off (see lib/auth/mode.ts).
+  if (!appSignInRequired(process.env.VERCEL_ENV)) return NextResponse.next();
   const { pathname, search } = request.nextUrl;
   if (isPublicRequest(pathname, request.method)) return NextResponse.next();
 
