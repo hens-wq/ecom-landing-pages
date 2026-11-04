@@ -1,6 +1,6 @@
 // Browser checks for the optimization centre, on demo data only. Covers: the sidebar item, the four tabs, the shared date
-// range, that no analysis starts on load, a tab switch or a reload (only the button starts one), saved action statuses,
-// and the phone layout. Demo data is synthetic; nothing here touches Meta or the database.
+// range, that no analysis starts on load, a tab switch or a reload (only the button starts one), the Sonil comparison (upload,
+// mapping by ID, check, save), saved action statuses, and the phone layout. Demo data is synthetic; nothing here touches Meta or the database.
 const { chromium } = require("playwright");
 const { BASE, DESKTOP } = require("./fixtures.cjs");
 
@@ -24,7 +24,8 @@ function check(name, ok, detail = "") {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
     page.on("request", (request) => {
-      if (request.method() === "POST" && request.url().includes("/api/optimization/runs")) runPosts += 1;
+      // Only the analysis endpoint counts. A Sonil upload posts to its own path under the run and starts no analysis.
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/optimization/runs") runPosts += 1;
     });
 
     // Navigation: the item is on the right-hand sidebar, next to the other dashboard pages.
@@ -59,14 +60,46 @@ function check(name, ok, detail = "") {
     await page.waitForSelector('[role="tab"]', { timeout: 20000 });
     check("tab switches and a reload start no analysis", runPosts === 1, `POST count=${runPosts}`);
 
-    // Sonil queue: every card carries the full format.
+    // Sonil tab: a comparison only. A file is mapped by ID, checked, corrected and saved. Our saved run never changes.
+    const runsList = await (await fetch(`${BASE}/api/optimization/runs`)).json();
+    const runId = runsList.runs[0].runId;
+    const before = await (await fetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
+    const adRow = before.run.metricsSnapshot.entities.find((entity) => entity.level === "ad" && entity.selected.spend > 0);
+    check("the saved run has an ad with spend to compare", Boolean(adRow));
     await page.getByRole("tab", { name: "אופטימיזציית סוניל" }).click();
-    const cards = await page.locator('[role="tabpanel"] article').count();
-    check("the Sonil queue shows each recommendation as a card", cards >= 1, `cards=${cards}`);
-    const cardText = cards > 0 ? await page.locator('[role="tabpanel"] article').first().innerText() : "";
-    for (const label of ["הכלל שהופעל", "הסיבה", "רמת ביטחון", "נתונים חסרים", "הבדיקה הבאה"]) {
-      check(`a card shows "${label}"`, cardText.includes(label));
+    const sonilIntro = await page.locator('[role="tabpanel"]').innerText();
+    check("the Sonil tab says it is a comparison only", sonilIntro.includes("לשונית השוואה בלבד"));
+    const csvText = [
+      "ad_id,adset_id,campaign_id,date,spend,leads,recommendation",
+      `${adRow.id},${adRow.parentId},${adRow.campaignId},${before.run.selected.since},${adRow.selected.spend},${adRow.selected.leads},לשמור`,
+    ].join("\n");
+    await page.locator('input[type="file"][aria-label="קובץ דוח סוניל"]').setInputFiles({
+      name: "sonil-test.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(csvText, "utf8"),
+    });
+    await page.waitForSelector("text=מה יש בה (לפי התוכן)", { timeout: 20000 });
+    for (const [role, column] of [["adId", "0"], ["adSetId", "1"], ["campaignId", "2"], ["date", "3"], ["spend", "4"], ["leads", "5"], ["recommendation", "6"]]) {
+      await page.locator(`#sonil-role-${role}`).selectOption(column);
     }
+    await page.getByRole("button", { name: "בדיקה והשוואה (לא נשמר)" }).click();
+    await page.waitForSelector('select[id^="sonil-value-"]', { timeout: 20000 });
+    await page.locator('select[id^="sonil-value-"]').first().selectOption("KEEP");
+    await page.getByRole("button", { name: "בדיקה והשוואה (לא נשמר)" }).click();
+    await page.waitForSelector("text=השוואה לפני שמירה", { timeout: 20000 });
+    await page.getByRole("button", { name: "שמירה והשוואה" }).click();
+    await page.waitForSelector("text=השוואה שנשמרה", { timeout: 20000 });
+    const sonilRows = await page.locator('[role="tabpanel"] tbody tr').count();
+    check("the saved comparison lists the matched ad", sonilRows >= 1, `rows=${sonilRows}`);
+    const after = await (await fetch(`${BASE}/api/optimization/runs/${encodeURIComponent(runId)}`)).json();
+    check("saving a Sonil file leaves our saved run exactly as it was", JSON.stringify(after.run) === JSON.stringify(before.run));
+    check("saving a Sonil file starts no analysis", runPosts === 1, `POST count=${runPosts}`);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForSelector('[role="tab"]', { timeout: 20000 });
+    await page.getByRole("tab", { name: "אופטימיזציית סוניל" }).click();
+    // The saved import is read when the tab opens, so the test waits for it rather than counting at once.
+    await page.waitForSelector("text=השוואה שנשמרה", { timeout: 20000 });
+    check("the saved Sonil comparison survives a reload", true);
 
     // Summary: a status is saved, kept after a reload, and documented only.
     await page.getByRole("tab", { name: "סיכום אופטימיזציה" }).click();

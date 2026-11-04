@@ -4,9 +4,13 @@ import { NextResponse } from "next/server";
 
 import { AdvertisingApiError, httpStatusForErrorCode } from "@/lib/advertising/types";
 import { OptimizationDatabaseError } from "@/lib/optimization/server/db";
+import { SonilFileError } from "@/lib/optimization/sonil/parse";
 
 /** Turns any failure of an optimization route into a JSON error with a Hebrew, user-safe message. */
 export function optimizationErrorResponse(error: unknown): NextResponse {
+  if (error instanceof SonilFileError) {
+    return NextResponse.json({ error: { code: "bad_request", message: error.message } }, { status: 400 });
+  }
   if (error instanceof AdvertisingApiError) {
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status: httpStatusForErrorCode(error.code) });
   }

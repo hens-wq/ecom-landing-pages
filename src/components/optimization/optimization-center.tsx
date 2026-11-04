@@ -285,7 +285,7 @@ export function OptimizationCenter() {
         ) : null}
         {record && tab === "exposure" ? <ExposureTab record={record} /> : null}
         {record && tab === "leads" ? <LeadsTab record={record} /> : null}
-        {record && tab === "sonil" ? <SonilTab record={record} /> : null}
+        {record && tab === "sonil" ? <SonilTab runId={record.runId} selected={record.selected} /> : null}
         {record && tab === "summary" ? (
           <SummaryTab record={record} statuses={statuses} onStatus={setActionStatus} />
         ) : null}

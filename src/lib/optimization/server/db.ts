@@ -3,7 +3,7 @@ import "server-only";
 import { getSqlClient, isDatabaseConfigured } from "@/lib/lead-status/db";
 
 /**
- * Storage for optimization runs. Uses the app's existing Neon database and adds two tables to it. Nothing is dropped,
+ * Storage for optimization runs. Uses the app's existing Neon database and adds three tables to it. Nothing is dropped,
  * and existing tables are never touched: every statement is CREATE ... IF NOT EXISTS.
  */
 
@@ -53,6 +53,16 @@ export function ensureOptimizationSchema(): Promise<void> {
           PRIMARY KEY (run_id, recommendation_id)
         )
       `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS optimization_sonil_imports (
+          import_id text PRIMARY KEY,
+          run_id text NOT NULL,
+          created_at timestamptz NOT NULL,
+          summary jsonb NOT NULL,
+          record jsonb NOT NULL
+        )
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS optimization_sonil_imports_run_idx ON optimization_sonil_imports (run_id, created_at DESC)`;
     })().catch((error: unknown) => {
       schemaReady = null;
       throw wrapOptimizationError(error, "שגיאה באתחול טבלאות האופטימיזציה במסד הנתונים.");
