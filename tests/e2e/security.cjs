@@ -1,21 +1,18 @@
-// Access checks for the team sign-in, against one server (SECURITY_BASE, or BASE_URL). Without a session every private page
-// redirects to the sign-in page and every private API answers 401 with no data. The public routes stay open as designed: the
-// sign-in page, the creative page, and the two routes that check their own Bearer secret (Make's webhook and the landing
-// leads POST). A signed-in browser gets its data, and sign-out ends the session on that browser.
-const { chromium } = require("playwright");
-const { DESKTOP, authedFetch, signInCookie } = require("./fixtures.cjs");
+// Access-rule checks against two servers that the README starts. There is no sign-in any more: the rule is the deployment's.
+//  - PUBLIC_BASE_URL (default http://localhost:3300): a CLOSED deployment, with no ECOM_ADMIN_ACCESS. Every private page and
+//    API answers 404 with no data. The public routes keep working by their own rules: the creative page, Make's webhook and
+//    the landing leads POST, each with its own Bearer check.
+//  - BASE_URL (default http://localhost:3100): an OPEN deployment (ECOM_ADMIN_ACCESS=vercel-protected, demo data). The
+//    dashboard and the data routes answer, and no sign-in page exists anywhere.
+// Only GET requests reach the open server, so these checks never start an analysis or change data.
 
-const BASE_URL = process.env.SECURITY_BASE || process.env.BASE_URL || "http://localhost:3100";
-const PASSWORD = process.env.DASHBOARD_PASSWORD || "";
-const results = [];
-const failures = [];
-function check(name, ok, detail = "") {
-  results.push(`${ok ? "PASS" : "FAIL"} ${name}${detail ? ` - ${detail}` : ""}`);
-  if (!ok) failures.push(name);
-}
-
+const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3300";
+const OPEN_BASE = process.env.BASE_URL || "http://localhost:3100";
 const RANGE = "since=2026-11-03&until=2026-11-03";
-const PRIVATE_PAGES = ["/", "/leads", "/optimization", "/integrations", "/sales-matching"];
+/** The exact body of the access gate's 404 for a page. A route that answers by its own rules never sends it. */
+const GATE_PAGE_BODY = "לא נמצא.";
+
+const PRIVATE_PAGES = ["/", "/leads", "/optimization", "/integrations", "/sales-matching", "/login"];
 const PRIVATE_APIS = [
   ["GET", `/api/leads?${RANGE}`],
   ["GET", `/api/leads/export-xlsx?${RANGE}`],
@@ -36,10 +33,18 @@ const PRIVATE_APIS = [
   ["GET", "/api/optimization/runs/no-such-run/sonil"],
   ["POST", "/api/optimization/runs/no-such-run/sonil"],
   ["POST", "/api/optimization/runs/no-such-run/sonil/preview"],
+  ["GET", "/api/optimization/diagnostics/landing"],
 ];
 
-async function refused(method, path, extra = {}) {
-  const response = await fetch(`${BASE_URL}${path}`, { method, redirect: "manual", headers: { "Content-Type": "application/json" }, ...extra });
+const results = [];
+const failures = [];
+function check(name, ok, detail = "") {
+  results.push(`${ok ? "PASS" : "FAIL"} ${name}${detail ? ` - ${detail}` : ""}`);
+  if (!ok) failures.push(name);
+}
+
+async function call(base, method, path, extra = {}) {
+  const response = await fetch(`${base}${path}`, { method, redirect: "manual", headers: { "Content-Type": "application/json" }, ...extra });
   const text = await response.text();
   let body = null;
   try {
@@ -47,82 +52,61 @@ async function refused(method, path, extra = {}) {
   } catch {
     body = null;
   }
-  return { status: response.status, body, text };
+  return { status: response.status, location: response.headers.get("location"), body, text };
+}
+
+/** Words that appear only in a lead record. A refusal must carry none of them. */
+function carriesLeadData(text) {
+  return /phone|email|normalizedPhone|"name"/i.test(text);
+}
+
+async function closedDeployment() {
+  for (const path of PRIVATE_PAGES) {
+    const response = await call(PUBLIC_BASE, "GET", path);
+    check(`closed: ${path} does not exist (404), and nothing sends the visitor to a sign-in page`, response.status === 404 && !response.location, `status=${response.status}`);
+  }
+
+  for (const [method, path] of PRIVATE_APIS) {
+    const response = await call(PUBLIC_BASE, method, path, method === "GET" ? {} : { body: "{}" });
+    check(`closed: ${method} ${path.split("?")[0]} does not exist (404), with no data`, response.status === 404 && !carriesLeadData(response.text), `status=${response.status}`);
+  }
+
+  // The public routes keep working by their own rules, never by the gate's.
+  const creative = await call(PUBLIC_BASE, "GET", "/creative/ad-security-check");
+  check("closed: the creative page is reached (the gate does not answer it)", creative.status !== 302 && creative.text !== GATE_PAGE_BODY, `status=${creative.status}`);
+
+  const webhook = await call(PUBLIC_BASE, "POST", "/api/webhooks/lead-status", { body: "{}" });
+  check("closed: Make's webhook answers with its own Bearer check (not the gate)", webhook.status !== 404 && webhook.body?.error?.code !== "not_found", `status=${webhook.status}`);
+
+  const landing = await call(PUBLIC_BASE, "POST", "/api/landing-leads", { body: "{}" });
+  check("closed: the landing leads POST answers with its own Bearer check (not the gate)", landing.status !== 404 && landing.body?.error?.code !== "not_found", `status=${landing.status}`);
+}
+
+async function openDeployment() {
+  const login = await call(OPEN_BASE, "GET", "/login");
+  check("open: there is no sign-in page at all", login.status === 404, `status=${login.status}`);
+
+  for (const path of ["/", "/leads", "/optimization", "/integrations", "/sales-matching"]) {
+    const response = await call(OPEN_BASE, "GET", path);
+    check(`open: ${path} opens without a sign-in`, response.status === 200 && !(response.location ?? "").includes("/login"), `status=${response.status}`);
+  }
+
+  const leads = await call(OPEN_BASE, "GET", `/api/leads?${RANGE}`);
+  check("open: the leads route answers with its own result", leads.status === 200, `status=${leads.status}`);
+
+  const advertising = await call(OPEN_BASE, "GET", `/api/advertising?${RANGE}`);
+  check("open: the advertising route answers with its own result", advertising.status === 200, `status=${advertising.status}`);
 }
 
 (async () => {
-  // 1. Without a session: private APIs answer 401 and carry no data.
-  for (const [method, path] of PRIVATE_APIS) {
-    const response = await refused(method, path, method === "GET" ? {} : { body: "{}" });
-    const code = response.body?.error?.code;
-    check(`no session: ${method} ${path.split("?")[0]} is refused`, response.status === 401 && code === "unauthenticated", `status=${response.status} code=${code}`);
-  }
-
-  // 2. Without a session: private pages go to the sign-in page, with the page they asked for kept.
-  const browser = await chromium.launch();
   try {
-    const context = await browser.newContext({ viewport: DESKTOP, locale: "he-IL" });
-    const page = await context.newPage();
-    for (const path of PRIVATE_PAGES) {
-      await page.goto(`${BASE_URL}${path}`, { waitUntil: "networkidle" });
-      const url = new URL(page.url());
-      check(`no session: ${path} shows the sign-in page`, url.pathname === "/login", `landed on ${url.pathname}`);
-    }
-    await page.goto(`${BASE_URL}/leads`, { waitUntil: "networkidle" });
-    check("sign-in keeps the page that was asked for", new URL(page.url()).searchParams.get("next") === "/leads");
-    check("the sign-in page shows the password form", (await page.locator('input[name="password"]').count()) === 1);
-
-    // 3. Sign in through the page, then the dashboard opens.
-    await page.locator('input[name="password"]').fill("definitely-not-the-password");
-    await page.getByRole("button", { name: "כניסה", exact: true }).click();
-    await page.waitForSelector('p[role="alert"]', { timeout: 15000 });
-    check("a wrong password is refused on the page", (await page.locator('p[role="alert"]').innerText()).includes("הסיסמה שגויה"));
-    await page.locator('input[name="password"]').fill(PASSWORD);
-    await page.getByRole("button", { name: "כניסה", exact: true }).click();
-    await page.waitForURL((url) => url.pathname === "/leads", { timeout: 20000 });
-    check("after signing in the page asked for opens", new URL(page.url()).pathname === "/leads");
-
-    // 4. Sign out from the sidebar: the browser is sent back to the sign-in page, and the private pages close again.
-    await page.getByRole("button", { name: "יציאה מהמערכת" }).click();
-    await page.waitForURL((url) => url.pathname === "/login", { timeout: 15000 });
-    await page.goto(`${BASE_URL}/leads`, { waitUntil: "networkidle" });
-    check("after sign-out the leads page is closed again", new URL(page.url()).pathname === "/login");
-    await context.close();
-  } finally {
-    await browser.close();
+    await closedDeployment();
+    await openDeployment();
+  } catch (error) {
+    console.error(`Could not reach the servers (${error.message}). Start them as tests/README.md describes, then run again.`);
+    process.exit(1);
   }
-
-  // 5. The sign-in endpoint: a wrong password gives no cookie; the right one gives a protected cookie.
-  const wrong = await refused("POST", "/api/auth/login", { body: JSON.stringify({ password: "wrong-password-value" }) });
-  check("API: a wrong password gives 401 and no cookie", wrong.status === 401 && wrong.body?.error?.code === "invalid_password");
-  const right = await fetch(`${BASE_URL}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: PASSWORD }) });
-  const setCookie = right.headers.getSetCookie().find((line) => line.startsWith("ecom_session="));
-  check("API: the right password sets the session cookie", right.status === 200 && Boolean(setCookie));
-  check("the cookie is HttpOnly, Secure, SameSite=Lax and limited to the site", /HttpOnly/i.test(setCookie) && /Secure/i.test(setCookie) && /SameSite=Lax/i.test(setCookie) && /Path=\//.test(setCookie) && /Max-Age=\d+/.test(setCookie), setCookie?.split(";").slice(1).join(";"));
-
-  // 6. With the session: the data routes answer (their own results, not a refusal), and the session status says so.
-  const cookie = await signInCookie(BASE_URL);
-  const session = await (await authedFetch(`${BASE_URL}/api/auth/session`)).json();
-  check("with the session: the session status reports signed in", session.authenticated === true);
-  const leads = await authedFetch(`${BASE_URL}/api/leads?${RANGE}`);
-  check("with the session: the leads route answers with its own result", leads.status !== 401, `status=${leads.status}`);
-  const bothSaveCookie = cookie.startsWith("ecom_session=");
-  check("the session cookie used in these checks is the one the server issued", bothSaveCookie);
-
-  // 7. Public routes stay public, and answer by their own rules rather than the sign-in page.
-  const login = await fetch(`${BASE_URL}/login`, { redirect: "manual" });
-  check("public: the sign-in page loads without a session", login.status === 200);
-  const creative = await fetch(`${BASE_URL}/creative/ad-security-check`, { redirect: "manual" });
-  check("public: the creative page is not sent to the sign-in page", creative.status !== 307 && creative.status !== 302, `status=${creative.status}`);
-  const webhookNoSecret = await refused("POST", "/api/webhooks/lead-status", { body: "{}" });
-  check("public: Make's webhook refuses a request without its Bearer secret (its own check, not the sign-in gate)", webhookNoSecret.status !== 302 && webhookNoSecret.body?.error?.code !== "unauthenticated", `status=${webhookNoSecret.status}`);
-  const landingNoSecret = await refused("POST", "/api/landing-leads", { body: "{}" });
-  check("public: the landing leads POST refuses without its Bearer secret (its own check)", landingNoSecret.status !== 302 && landingNoSecret.body?.error?.code !== "unauthenticated", `status=${landingNoSecret.status}`);
-
   console.log(results.join("\n"));
   console.log(failures.length ? `\n${failures.length} FAILED` : "\nALL CHECKS PASSED");
   process.exit(failures.length ? 1 : 0);
-})().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+})();

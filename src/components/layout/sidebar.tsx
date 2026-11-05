@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-import { LogoutButton } from "@/components/auth/logout-button";
 import { usePathname } from "next/navigation";
 import { BarChart3, Link2, Plug, Target, TrendingUp, UserRound } from "lucide-react";
 
@@ -53,10 +52,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="border-t border-sidebar-border py-2">
-        <LogoutButton />
-      </div>
 
       <div className="border-t border-sidebar-border px-5 py-3 text-[11px] text-sidebar-muted">
         Phase 1 · נתוני דמו בלבד

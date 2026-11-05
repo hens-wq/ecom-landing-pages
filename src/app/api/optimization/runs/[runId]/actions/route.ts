@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { parseActionStatus } from "@/lib/optimization/labels";
 import { badRequest, optimizationErrorResponse } from "@/lib/optimization/server/http";
 import { getOptimizationRepository } from "@/lib/optimization/server/repository";
-import { denyWithoutSession } from "@/lib/auth/session";
+import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Records what a person did about one recommendation: ממתין, בוצע or לא מבצע. It is documentation only. It never
 // sends anything to Meta, and it never starts an analysis.
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = denyWithoutSession(request);
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   const { runId } = await params;

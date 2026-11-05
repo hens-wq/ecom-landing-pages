@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
-import { denyWithoutSession } from "@/lib/auth/session";
+import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  * since the ID list can be large enough to risk a URL length limit.
  */
 export async function POST(request: NextRequest) {
-  const denied = denyWithoutSession(request);
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   let body: { leadIds?: unknown };

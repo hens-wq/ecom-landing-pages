@@ -2,14 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { optimizationErrorResponse } from "@/lib/optimization/server/http";
 import { latestSonil, saveSonil } from "@/lib/optimization/server/sonil";
-import { denyWithoutSession } from "@/lib/auth/session";
+import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // The saved Sonil report for one run, compared with our recommendations. Reading it never starts an analysis.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = denyWithoutSession(_request);
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   const { runId } = await params;
@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 // Saves a Sonil report against one run, after the person has checked the preview and the mapping. Our analysis is not changed.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = denyWithoutSession(request);
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   const { runId } = await params;

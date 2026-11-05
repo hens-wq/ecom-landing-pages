@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { optimizationErrorResponse } from "@/lib/optimization/server/http";
 import { previewSonil } from "@/lib/optimization/server/sonil";
-import { denyWithoutSession } from "@/lib/auth/session";
+import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Reads a Sonil file before it is saved: its columns and first rows, and, when a mapping is sent, the checks and the
 // comparison. Nothing is stored.
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = denyWithoutSession(request);
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   const { runId } = await params;

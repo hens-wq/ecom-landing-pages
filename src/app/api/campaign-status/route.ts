@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 
 import { AdvertisingApiError, httpStatusForErrorCode } from "@/lib/advertising";
 import { getCampaignStatuses } from "@/lib/campaign-status";
-import { denyWithoutSession } from "@/lib/auth/session";
+import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
-  const denied = denyWithoutSession(request);
+export async function GET() {
+  const denied = denyUnlessPrivateAreaOpen();
   if (denied) return denied;
 
   try {

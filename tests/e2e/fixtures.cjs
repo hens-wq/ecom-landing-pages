@@ -138,46 +138,17 @@ async function fetchDemoSpend() {
 }
 
 
-// --- Sign-in for the team dashboard. The servers under test must run with the same DASHBOARD_PASSWORD given to these tests.
-const PASSWORD = process.env.DASHBOARD_PASSWORD || "";
-const sessionCookies = new Map();
+// --- Access. The app has no sign-in of its own. The suites that use the private area run against an open deployment
+// (ECOM_ADMIN_ACCESS=vercel-protected, or a Vercel Preview). security.cjs runs against a closed one. See tests/README.md.
 
-async function signInCookie(origin) {
-  if (sessionCookies.has(origin)) return sessionCookies.get(origin);
-  if (!PASSWORD) throw new Error("DASHBOARD_PASSWORD must be set for the browser tests: the same value the server under test uses.");
-  const response = await fetch(`${origin}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: PASSWORD }),
-  });
-  if (!response.ok) throw new Error(`sign-in to ${origin} failed: HTTP ${response.status}`);
-  const cookie = response.headers
-    .getSetCookie()
-    .map((line) => line.split(";")[0])
-    .find((pair) => pair.startsWith("ecom_session="));
-  if (!cookie) throw new Error(`no session cookie came back from ${origin}`);
-  sessionCookies.set(origin, cookie);
-  return cookie;
-}
-
-/** fetch() for the app's own APIs, with the team session. The same arguments and result as fetch(). */
+/** fetch() for the app's own APIs. The private area of an open deployment needs no session, so this is a plain fetch. */
 async function authedFetch(url, init = {}) {
-  const cookie = await signInCookie(new URL(url).origin);
-  const headers = new Headers(init.headers || {});
-  headers.set("cookie", cookie);
-  return fetch(url, { ...init, headers });
+  return fetch(url, init);
 }
 
-/** A browser context that has signed in through the real sign-in page, so every page the suite opens is authorised. */
-async function newAuthedContext(browser, options = {}, base = BASE) {
-  const context = await browser.newContext(options);
-  const page = await context.newPage();
-  await page.goto(`${base}/login`, { waitUntil: "networkidle" });
-  await page.locator('input[name="password"]').fill(PASSWORD);
-  await page.getByRole("button", { name: "כניסה", exact: true }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20000 });
-  await page.close();
-  return context;
+/** A browser context for the suites. On an open deployment every page is reachable, so no sign-in happens. */
+async function newAuthedContext(browser, options = {}) {
+  return browser.newContext(options);
 }
 
-module.exports = { installLeadRoutes, installDashboardRoutes, json, numberFrom, kpiValues, fetchDemoSpend, BASE, DESKTOP, DAY, EXPECTED, authedFetch, newAuthedContext, signInCookie };
+module.exports = { installLeadRoutes, installDashboardRoutes, json, numberFrom, kpiValues, fetchDemoSpend, BASE, DESKTOP, DAY, EXPECTED, authedFetch, newAuthedContext };

@@ -7,6 +7,8 @@ const { chromium } = require("playwright");
 const { BASE, DESKTOP, authedFetch, newAuthedContext } = require("./fixtures.cjs");
 
 const MOBILE = { width: 390, height: 844 };
+/** The closed deployment (no ECOM_ADMIN_ACCESS): the private routes do not exist there. See tests/README.md. */
+const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3300";
 /** English name first, the Hebrew translation small underneath (components/optimization/shared.tsx, Bilingual). */
 const TAB_HEADINGS = [
   ["Exposure & Traffic", "חשיפה ותנועה"],
@@ -230,8 +232,9 @@ function dmy(iso) {
     check("the capture diagnostic says that demo mode reads no real leads", (await page.locator("text=מצב הדגמה").count()) >= 1);
     check("the capture diagnostic starts no analysis", runPosts === expectedPosts, `POST count=${runPosts}`);
     const rangeQuery = `since=${reportingDay(-6)}&until=${reportingDay(0)}`;
-    const anonymousDiagnostic = await fetch(`${BASE}/api/optimization/diagnostics/landing?${rangeQuery}`);
-    check("the capture diagnostic refuses a request without a session", anonymousDiagnostic.status === 401, `status=${anonymousDiagnostic.status}`);
+    // On a closed deployment the diagnostic does not exist, so an anonymous visitor gets a 404 and no data.
+    const closedDiagnostic = await fetch(`${PUBLIC_BASE}/api/optimization/diagnostics/landing?${rangeQuery}`);
+    check("the capture diagnostic does not exist on a closed deployment (404)", closedDiagnostic.status === 404, `status=${closedDiagnostic.status}`);
     const badCampaign = await authedFetch(`${BASE}/api/optimization/diagnostics/landing?${rangeQuery}&campaignId=abc`);
     check("the capture diagnostic rejects a campaign ID that is not a Meta ID", badCampaign.status === 400, `status=${badCampaign.status}`);
 
