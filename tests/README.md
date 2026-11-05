@@ -42,7 +42,10 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
   state (a changed picker says to run again, and an older report is never shown for another range), the Campaign Status
   scope (Active Only hides the paused demo campaign, All shows it with its spend), the synced scrollbars of the exposure and
   leads tables, the Attribution Missing notice (on a run given attribution gaps), the Sonil comparison (upload, mapping by ID,
-  check, save; the saved run is unchanged and no analysis starts), saved action statuses, the phone layout.
+  check, save; the saved run is unchanged and no analysis starts), saved action statuses, the phone layout, the Summary order
+  (the Campaign Decisions table first, one row per campaign, each row with one of the seven decisions), and the landing capture
+  diagnostic (read-only: demo mode says it reads no real leads, a request without a session gets 401, a campaign ID that is not
+  a Meta ID gets 400, and the diagnostic starts no analysis).
 - `optimization-screenshots.cjs`: not part of `run-all`. It runs Today and the last 7 days at 1366 px, saves one screenshot
   of each to the folder given on the command line, and checks that the bottom scrollbar moves the table. Demo data only.
 - `security.cjs`: the team sign-in, against the demo server and the live server. Without a session every private page

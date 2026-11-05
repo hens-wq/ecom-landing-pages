@@ -176,9 +176,42 @@ function dmy(iso) {
     await page.waitForSelector("text=השוואה שנשמרה", { timeout: 20000 });
     check("the saved Sonil comparison survives a reload", true);
 
-    // Summary: a status is saved, kept after a reload, and documented only.
+    // Summary: the campaign decisions come first, one row per campaign, then the high-priority actions.
     await page.getByRole("tab", { name: /Optimization Summary/ }).click();
-    await page.getByRole("button", { name: "בוצע", exact: true }).first().click();
+    await page.waitForSelector("#campaign-decisions-heading", { timeout: 15000 });
+    const headingsInOrder = await page.evaluate(() => {
+      const decisions = document.getElementById("campaign-decisions-heading");
+      const high = document.getElementById("high-priority-heading");
+      return Boolean(decisions && high && decisions.compareDocumentPosition(high) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    check("the summary opens with the campaign decisions, before the high-priority actions", headingsInOrder);
+
+    const decisionTable = page.locator('section[aria-labelledby="campaign-decisions-heading"]');
+    const decisionHeader = await decisionTable.locator("thead").innerText();
+    const expectedColumns = ["Campaign", "Decision", "Why", "Next Action", "Confidence"];
+    check("the decisions table has its five columns", expectedColumns.every((name) => decisionHeader.includes(name)), decisionHeader.replace(/\n/g, " | "));
+    const decisionLabels = ["KEEP", "WATCH", "INVESTIGATE", "PAUSE CANDIDATE", "SCALE CANDIDATE", "DATA CHECK", "INSUFFICIENT DATA"];
+    const decisionRows = decisionTable.locator("tbody tr");
+    const rowCount = await decisionRows.count();
+    const decisionCells = await decisionRows.evaluateAll((rows) => rows.map((row) => row.querySelectorAll("td")[1]?.innerText.trim() ?? ""));
+    const campaignIds = await decisionRows.evaluateAll((rows) => rows.map((row) => row.querySelector('td span[dir="ltr"]')?.innerText.trim() ?? ""));
+    check("every campaign in scope has exactly one decision row", rowCount >= 1 && new Set(campaignIds).size === rowCount, `rows=${rowCount}`);
+    check(
+      "every row carries one of the seven decisions",
+      decisionCells.length > 0 && decisionCells.every((text) => decisionLabels.some((label) => text.includes(label))),
+      JSON.stringify(decisionCells)
+    );
+
+    // Status: a status is saved on an action, kept after a reload, and documented only. The per-unit detail is collapsed by
+    // default, so it is opened first when no action of the high-priority list shows a status button.
+    const firstStatusButton = async () => {
+      const button = page.getByRole("button", { name: "בוצע", exact: true }).first();
+      if (!(await button.isVisible().catch(() => false))) {
+        await page.locator("summary", { hasText: "פירוט לפי קמפיין" }).click();
+      }
+      return page.getByRole("button", { name: "בוצע", exact: true }).first();
+    };
+    await (await firstStatusButton()).click();
     await page.waitForFunction(() => {
       const pressed = [...document.querySelectorAll('button[aria-pressed="true"]')];
       return pressed.some((button) => button.textContent.trim() === "בוצע");
@@ -186,9 +219,21 @@ function dmy(iso) {
     await page.reload({ waitUntil: "networkidle" });
     await page.waitForSelector('[role="tab"]', { timeout: 20000 });
     await page.getByRole("tab", { name: /Optimization Summary/ }).click();
-    const donePressed = await page.getByRole("button", { name: "בוצע", exact: true }).first().getAttribute("aria-pressed");
+    const donePressed = await (await firstStatusButton()).getAttribute("aria-pressed");
     check("a recorded action status survives a reload", donePressed === "true", `aria-pressed=${donePressed}`);
     check("a status change still starts no analysis", runPosts === expectedPosts, `POST count=${runPosts}`);
+
+    // Technical section: the landing capture diagnostic is read-only. In demo mode it says plainly that no real leads are read.
+    await page.locator("summary", { hasText: "Technical diagnostics" }).click();
+    await page.getByRole("button", { name: "הרץ אבחון קליטה (קריאה בלבד)" }).click();
+    await page.waitForSelector("text=מצב הדגמה", { timeout: 20000 });
+    check("the capture diagnostic says that demo mode reads no real leads", (await page.locator("text=מצב הדגמה").count()) >= 1);
+    check("the capture diagnostic starts no analysis", runPosts === expectedPosts, `POST count=${runPosts}`);
+    const rangeQuery = `since=${reportingDay(-6)}&until=${reportingDay(0)}`;
+    const anonymousDiagnostic = await fetch(`${BASE}/api/optimization/diagnostics/landing?${rangeQuery}`);
+    check("the capture diagnostic refuses a request without a session", anonymousDiagnostic.status === 401, `status=${anonymousDiagnostic.status}`);
+    const badCampaign = await authedFetch(`${BASE}/api/optimization/diagnostics/landing?${rangeQuery}&campaignId=abc`);
+    check("the capture diagnostic rejects a campaign ID that is not a Meta ID", badCampaign.status === 400, `status=${badCampaign.status}`);
 
     // Leads tab: the same synced scrollbars as the exposure tab. RTL: scrollLeft runs from 0 down to a negative value.
     await page.reload({ waitUntil: "networkidle" });

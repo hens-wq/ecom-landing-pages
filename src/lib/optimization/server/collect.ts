@@ -120,6 +120,16 @@ async function fetchDailyAdSpend(
   }
 }
 
+/**
+ * The campaign listing of one window, read the way a run reads it (same mode, same provider, same errors). Read-only: it
+ * only calls Meta's GET endpoints. Throws when Meta is not configured or the listing fails; the caller reports that.
+ */
+export async function readCampaignListing(range: DateRange): Promise<AdvertisingSnapshot> {
+  const notes: string[] = [];
+  const { snapshot } = await fetchWindow(resolveMode(), range, notes);
+  return snapshot;
+}
+
 export interface CollectedRun {
   dataFetchedAt: string;
   dataSource: DataSource;

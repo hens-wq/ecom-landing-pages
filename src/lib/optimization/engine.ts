@@ -106,6 +106,7 @@ function businessHealth(sel: Derived, findings: Finding[]): { tone: Tone; label:
   ) {
     return { tone: "problem", label: "עסקי: בעיה" };
   }
+  if (lead.some((finding) => finding.action === "CHECK_DATA")) return { tone: "info", label: "עסקי: בדיקת נתונים" };
   if (lead.some((finding) => finding.action === "WATCH")) return { tone: "watch", label: "עסקי: מעקב" };
   if (sel.unknownStatusLeads > 0) return { tone: "insufficient", label: "עסקי: סטטוסים חלקיים" };
   const cplOk = sel.cpl !== null && sel.cpl <= CPL_TARGET_MAX;

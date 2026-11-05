@@ -1,8 +1,8 @@
 "use client";
 
-import { ACTION_STATUS_LABELS, ACTION_STATUS_VALUES, CONFIDENCE_LABELS, type ActionStatus } from "@/lib/optimization/labels";
+import { CONFIDENCE_LABELS, type ActionStatus } from "@/lib/optimization/labels";
 import type { Recommendation } from "@/lib/optimization/model";
-import { cn } from "@/lib/utils";
+import { ActionStatusControl } from "@/components/optimization/action-status";
 import { LEVEL_NAMES, ToneBadge } from "@/components/optimization/shared";
 
 interface RecommendationCardProps {
@@ -73,7 +73,7 @@ export function RecommendationCard({ recommendation: r, status, onStatus }: Reco
                 ))}
               </ul>
             ) : (
-              "אין"
+              r.action === "CHECK_DATA" ? "מקור הפער טרם אומת — נדרשת בדיקה" : "אין"
             )}
           </dd>
         </div>
@@ -91,25 +91,7 @@ export function RecommendationCard({ recommendation: r, status, onStatus }: Reco
         </ul>
       ) : null}
 
-      {onStatus && status ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <span className="text-xs text-slate-500">סטטוס הפעולה (תיעוד בלבד, לא נשלח למטא):</span>
-          {ACTION_STATUS_VALUES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={status === value}
-              onClick={() => onStatus(value)}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors",
-                status === value ? "bg-slate-800 text-white ring-slate-800" : "bg-white text-slate-700 ring-slate-300 hover:bg-slate-50"
-              )}
-            >
-              {ACTION_STATUS_LABELS[value]}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {onStatus && status ? <ActionStatusControl status={status} onStatus={onStatus} /> : null}
     </article>
   );
 }

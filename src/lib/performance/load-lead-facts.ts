@@ -29,7 +29,7 @@ function describeFailure(error: unknown, fallback: string): string {
 }
 
 /** An empty string when the timestamp is unusable. Such a lead is still counted, just without a date. */
-function reportingDate(isoTimestamp: string): string {
+export function reportingDate(isoTimestamp: string): string {
   const parsed = new Date(isoTimestamp);
   return Number.isNaN(parsed.getTime()) ? "" : isoDateInTimezone(parsed);
 }

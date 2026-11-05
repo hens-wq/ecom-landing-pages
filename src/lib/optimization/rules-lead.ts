@@ -17,6 +17,7 @@ import {
   ZERO_LEADS_MIN_SPEND,
 } from "@/lib/optimization/thresholds";
 import type { ActionCode } from "@/lib/optimization/labels";
+import { gapAffects } from "@/lib/optimization/lead-data-state";
 
 /**
  * Tracking (priority 1). Meta and the dashboard must agree that a unit has leads before any verdict is made on it.
@@ -29,7 +30,7 @@ export function trackingFindings(ctx: RuleContext): Finding[] {
   if (!s.leadsKnown) return [];
 
   const gaps = ctx.gaps;
-  if (gaps && gaps.unassigned > 0 && s.metaLeads > s.leads) {
+  if (gaps && s.metaLeads > s.leads && gapAffects(s, gaps)) {
     return [
       makeFinding({
         ruleCode: "TRK_ATTRIBUTION_MISSING",
@@ -41,7 +42,7 @@ export function trackingFindings(ctx: RuleContext): Finding[] {
           `לידים משויכים ליחידה בדשבורד: ${formatCount(s.leads)}`,
           `לידים בטווח בלי שיוך מלא: ${formatCount(gaps.unassigned)} (בלי מזהה: ${formatCount(gaps.noIds)}, מזהה שלא ברשימה: ${formatCount(gaps.idNotListed)}, מדפי נחיתה: ${formatCount(gaps.landing)})`,
         ],
-        reason: "החסר הוא בשיוך הלידים, לא בביצועים של היחידה. מהפער הזה אי אפשר להסיק שהיחידה לא מניבה לידים.",
+        reason: "ייתכן שחלק מהפער נובע מלידים בטווח שלא שויכו ליחידה. זו השערה לבדיקה, לא עובדה. עד לבדיקה אי אפשר להסיק מהפער על ביצועי היחידה.",
         confidence: "medium",
         missingData: [
           gaps.noIds > 0
@@ -94,8 +95,8 @@ export function trackingFindings(ctx: RuleContext): Finding[] {
 export function zeroLeadsFindings(ctx: RuleContext): Finding[] {
   const s = ctx.sel;
   if (!s.leadsKnown || ctx.entity.status !== "active") return [];
-  // A lead with no ID could belong to this unit, so a zero is not confirmed while one exists in the window.
-  if ((ctx.gaps?.noIds ?? 0) > 0) return [];
+  // A zero is not confirmed while a lead with no ID exists in the window: it could belong to this unit (see gapAffects).
+  if (gapAffects(s, ctx.gaps)) return [];
   if (s.spend <= ZERO_LEADS_MIN_SPEND || s.leads !== 0 || s.metaLeads !== 0) return [];
   if (s.impressions === 0) return [];
 
