@@ -1,6 +1,5 @@
-// Runs every browser suite. The demo suites need an OPEN server (ECOM_ADMIN_ACCESS=vercel-protected) started with
-// ECOM_DEMO_DATA=1 at BASE_URL (default http://localhost:3100). security.cjs also needs a CLOSED server (no ECOM_ADMIN_ACCESS)
-// at PUBLIC_BASE_URL (default http://localhost:3300). The live-mode suites need an OPEN server with NO demo flag at LIVE_BASE_URL.
+// Runs every browser suite. The demo suites need a server started with ECOM_DEMO_DATA=1 at BASE_URL (default
+// http://localhost:3100). The live-mode suites need a second server with NO demo flag at LIVE_BASE_URL. The app has no sign-in.
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 

@@ -13,7 +13,6 @@ import { demoDataEnabled } from "@/lib/runtime-mode";
 import { buildLeadExportXlsxBuffer, buildLeadExportXlsxFilename } from "@/lib/leads/export-xlsx";
 import { toLeadExportRow } from "@/lib/leads/export";
 import { courseLeads } from "@/lib/leads/course-scope";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Never statically cached, Node runtime only (write-excel-file + Buffer
 // output, same as every other data route in this app).
@@ -33,8 +32,6 @@ export const runtime = "nodejs";
  * 7-day export's own unfiltered-by-other-filters behavior.
  */
 export async function GET(request: NextRequest) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   // Demo leads are not real leads, so they are never exported as if they were.
   if (demoDataEnabled()) {

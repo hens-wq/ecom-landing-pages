@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isValidDateRange } from "@/lib/advertising/date-range";
 import { AdvertisingApiError, getAdvertisingData, httpStatusForErrorCode } from "@/lib/advertising";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Always dynamic: this reads query params and hits a live API (or mock data
 // that depends on the requested range) on every call - it must never be
@@ -14,8 +13,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { isValidDateRange } from "@/lib/advertising/date-range";
 import type { DateRange } from "@/lib/advertising/types";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 import { metaIdOrNull } from "@/lib/landing-leads/validation";
 import { runRangeError } from "@/lib/optimization/run";
 import { badRequest, optimizationErrorResponse } from "@/lib/optimization/server/http";
@@ -14,8 +13,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   const url = new URL(request.url);
   const range: DateRange = {

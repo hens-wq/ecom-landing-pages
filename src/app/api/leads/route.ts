@@ -5,7 +5,6 @@ import { AdvertisingApiError, httpStatusForErrorCode } from "@/lib/advertising";
 import { isValidDateRange } from "@/lib/advertising/date-range";
 import { getLeadsData } from "@/lib/leads";
 import { LEADS_CACHE_TAG } from "@/lib/leads/meta/cache";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Same guarantees as /api/advertising: never statically cached, Node runtime
 // only (never Edge) so the Meta access token's request path never touches
@@ -14,8 +13,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";

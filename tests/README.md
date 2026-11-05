@@ -17,18 +17,15 @@ Runs the Node test runner through `tsx` (`tests/unit/*.test.ts`), then the pure-
 Start the app in two modes, then run the suites:
 
 ```bash
-# Open private area (an admin deployment in tests) with demo data, for the dashboard and Leads checks
-ECOM_DEMO_DATA=1 ECOM_ADMIN_ACCESS=vercel-protected npm run start -- -p 3100
+# Demo data, for the dashboard, Leads and optimization checks (explicit test mode only)
+ECOM_DEMO_DATA=1 VERCEL_ENV=production npm run start -- -p 3100
 
-# Open private area without Meta settings, for the "no demo data in live mode" checks
-ECOM_ADMIN_ACCESS=vercel-protected npm run start -- -p 3200
-
-# Closed private area, as on the public deployment: no ECOM_ADMIN_ACCESS, so private pages and APIs answer 404
-VERCEL_ENV=production npm run start -- -p 3300
+# Live mode without Meta settings, for the "no demo data in live mode" checks
+VERCEL_ENV=production npm run start -- -p 3200
 
 # In another shell
 npm run build                       # once, before starting the servers
-BASE_URL=http://localhost:3100 LIVE_BASE_URL=http://localhost:3200 PUBLIC_BASE_URL=http://localhost:3300 npm run test:e2e
+BASE_URL=http://localhost:3100 LIVE_BASE_URL=http://localhost:3200 npm run test:e2e
 ```
 
 The suites use Playwright's `playwright` package and a Chromium it can launch. Screenshots go to
@@ -51,10 +48,10 @@ The suites use Playwright's `playwright` package and a Chromium it can launch. S
   a Meta ID gets 400, and the diagnostic starts no analysis).
 - `optimization-screenshots.cjs`: not part of `run-all`. It runs Today and the last 7 days at 1366 px, saves one screenshot
   of each to the folder given on the command line, and checks that the bottom scrollbar moves the table. Demo data only.
-- `security.cjs`: the access rule, against two servers. On the closed deployment (`PUBLIC_BASE_URL`, no `ECOM_ADMIN_ACCESS`)
-  every private page and API answers 404 with no data, and the public routes stay open as designed: the creative page, Make's
-  webhook and the landing leads POST, each with its own Bearer check. On the open demo server (`BASE_URL`) the dashboard and
-  the data routes answer, and no sign-in page exists anywhere. The app has no sign-in of its own (see `docs/dashboard-access.md`).
+- `security.cjs`: the integration contract, against the demo server (`BASE_URL`). Make's webhook, the landing leads POST and the
+  admin route refuse a request without their Bearer secret, the creative page stays reachable, the dashboard opens without a
+  login, and no sign-in page exists. The data routes answer without a login, so access is whatever the project's existing
+  Vercel settings allow.
 - `live-mode.cjs`: with no demo flag and no Meta settings, every Meta-backed route returns an explicit error, the
   export refuses to run, and no demo numbers appear.
 - `optimization-live.cjs`: the optimization centre without demo mode or Meta/database settings: every route refuses with

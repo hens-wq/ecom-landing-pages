@@ -7,7 +7,6 @@ import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
 import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { normalizeIsraeliPhone } from "@/lib/phone";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,8 +20,6 @@ export const runtime = "nodejs";
  * listed (found: false). Hiding it would hide a real unpaid enrollment.
  */
 export async function GET() {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   try {
     const [records, index] = await Promise.all([getLeadStatusRepository().listEnrolledMissingPayment(), loadDashboardLeadIndex()]);

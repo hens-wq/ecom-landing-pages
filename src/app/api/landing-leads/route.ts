@@ -8,7 +8,6 @@ import { getLandingLeadsInRange, insertLandingLead } from "@/lib/landing-leads/r
 import { parseLandingLeadBody, validateLandingLeadInput } from "@/lib/landing-leads/validation";
 import { buildLeadEvent } from "@/lib/meta-capi/build-event";
 import { sendLeadEvent } from "@/lib/meta-capi/send-event";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Never statically cached (live, frequently-changing business data), Node
 // runtime only - consistent with every other data route in this app.
@@ -99,8 +98,6 @@ export async function POST(request: NextRequest) {
  * /api/advertising, ...), none of which sit behind auth today either.
  */
 export async function GET(request: NextRequest) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";

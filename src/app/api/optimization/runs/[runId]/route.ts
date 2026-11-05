@@ -2,15 +2,12 @@ import { NextResponse } from "next/server";
 
 import { getOptimizationRepository } from "@/lib/optimization/server/repository";
 import { optimizationErrorResponse } from "@/lib/optimization/server/http";
-import { denyUnlessPrivateAreaOpen } from "@/lib/auth/guards";
 
 // Reads one saved run and its action statuses. Opening a saved report never starts a new analysis.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = denyUnlessPrivateAreaOpen();
-  if (denied) return denied;
 
   const { runId } = await params;
   try {

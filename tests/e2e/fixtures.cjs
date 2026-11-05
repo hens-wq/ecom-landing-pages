@@ -138,15 +138,14 @@ async function fetchDemoSpend() {
 }
 
 
-// --- Access. The app has no sign-in of its own. The suites that use the private area run against an open deployment
-// (ECOM_ADMIN_ACCESS=vercel-protected, or a Vercel Preview). security.cjs runs against a closed one. See tests/README.md.
+// --- Access. The app has no sign-in: the suites call the server directly. See tests/README.md for the servers.
 
-/** fetch() for the app's own APIs. The private area of an open deployment needs no session, so this is a plain fetch. */
+/** fetch() for the app's own APIs. There is no sign-in, so this is a plain fetch. */
 async function authedFetch(url, init = {}) {
   return fetch(url, init);
 }
 
-/** A browser context for the suites. On an open deployment every page is reachable, so no sign-in happens. */
+/** A browser context for the suites. There is no sign-in, so the context starts empty. */
 async function newAuthedContext(browser, options = {}) {
   return browser.newContext(options);
 }
