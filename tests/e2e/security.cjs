@@ -44,6 +44,9 @@ function carriesLeadData(text) {
     const orphans = await call("GET", "/api/admin/orphan-status-rows");
     check("the admin route refuses a request without its Bearer secret", orphans.status >= 400 && !carriesLeadData(orphans.text), `status=${orphans.status}`);
 
+    const crmFlush = await call("POST", "/api/admin/crm-capi/flush", { body: "{}" });
+    check("the CRM flush route refuses a request without its Bearer secret", crmFlush.status >= 400 && !carriesLeadData(crmFlush.text), `status=${crmFlush.status}`);
+
     // The creative page stays reachable for reps, and nothing sends the visitor to a sign-in page.
     const creative = await call("GET", "/creative/ad-security-check");
     check("the creative page is reachable and not sent to a sign-in page", creative.status !== 302 && creative.status !== 307 && !creative.location, `status=${creative.status}`);

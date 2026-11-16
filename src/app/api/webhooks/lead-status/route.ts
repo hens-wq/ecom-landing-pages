@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
 import { LandingLeadsDatabaseError } from "@/lib/landing-leads/db";
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
@@ -8,6 +8,7 @@ import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
 import { syncCrmStatus } from "@/lib/lead-status/crm-sync";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { checkStatusRequest } from "@/lib/lead-status/validation";
+import { flushCrmEventsSafely, recordCrmChangeSafely } from "@/lib/crm-capi/service";
 
 // Never statically cached, Node runtime only - consistent with every other
 // data route in this app.
@@ -34,7 +35,9 @@ export const runtime = "nodejs";
  *     "mainStatus": "נרשם",
  *     "secondaryStatus": "",              // see below
  *     "fullPaymentAmount": 1500,          // optional - a positive amount only
- *     "partialPaymentAmount": 500         // optional - a positive amount only
+ *     "partialPaymentAmount": 500,        // optional - a positive amount only
+ *     "studentRating": 4,                 // optional - CRM "דירוג תלמיד": a whole number 1-5, or null to clear
+ *     "statusChangedAt": "2026-11-16T09:30:00+02:00"  // optional - when the CRM changed the status
  *   }
  *
  * Send at least one of leadId or phone.
@@ -103,6 +106,13 @@ export const runtime = "nodejs";
  *         database error (never the raw driver error)
  *
  * Safe to retry: the same request twice leaves the same record.
+ *
+ * Meta CRM feedback
+ * -----------------
+ *   A status change may queue Meta lead-quality events (lib/crm-capi). They are
+ *   queued after the status is saved and sent after this reply. Nothing is
+ *   queued while META_CAPI_CRM_SEND_ENABLED is not "true", and a Meta failure
+ *   never changes this reply or the saved status.
  */
 
 function timingSafeStringEqual(a: string, b: string): boolean {
@@ -113,6 +123,23 @@ function timingSafeStringEqual(a: string, b: string): boolean {
 }
 
 type AmountParseResult = { ok: true; value: number | null | undefined } | { ok: false };
+
+type RatingParseResult = { ok: true; value: number | null | undefined } | { ok: false };
+
+/** CRM "דירוג תלמיד": a whole number of flames, 1 to 5, or null to clear. Anything else is refused, so a wrong rating is never stored. */
+function parseOptionalRating(value: unknown): RatingParseResult {
+  if (value === undefined) return { ok: true, value: undefined };
+  if (value === null) return { ok: true, value: null };
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5) return { ok: true, value };
+  return { ok: false };
+}
+
+/** The CRM's own time for the status change. An unreadable value is ignored, never refused: it must not block the status update. */
+function parseStatusChangedAt(value: unknown): Date | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  const parsed = new Date(value.trim());
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 function parseOptionalAmount(value: unknown): AmountParseResult {
   if (value === undefined) return { ok: true, value: undefined };
@@ -159,6 +186,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, { status: 400 });
   }
 
+  const ratingParsed = parseOptionalRating(body.studentRating);
+  if (!ratingParsed.ok) {
+    return NextResponse.json({ error: { message: "דירוג תלמיד חייב להיות מספר שלם בין 1 ל-5, או null." } }, { status: 400 });
+  }
+  const statusChangedAt = parseStatusChangedAt(body.statusChangedAt);
+
   const syncInput = {
     leadId,
     phone,
@@ -166,6 +199,7 @@ export async function POST(request: NextRequest) {
     secondaryStatus: typeof body.secondaryStatus === "string" ? body.secondaryStatus : "",
     fullPaymentAmount: fullPaymentParsed.value,
     partialPaymentAmount: partialPaymentParsed.value,
+    studentRating: ratingParsed.value,
   };
 
   const requestCheck = checkStatusRequest(syncInput);
@@ -180,6 +214,17 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ error: { message: result.message } }, { status: result.status });
     }
+    // Meta CRM events: queued after the status is saved (a failure is logged by name and never reaches this
+    // reply), and sent after the reply. Nothing here can change the status or the reply.
+    await recordCrmChangeSafely({
+      leadKey: result.leadId,
+      previous: result.previous,
+      next: result.record,
+      statusChangedAt,
+      now: new Date(),
+    });
+    after(() => flushCrmEventsSafely(10));
+
     return NextResponse.json({ ok: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record });
   } catch (error) {
     // Never log the request body - it carries phone numbers and payment

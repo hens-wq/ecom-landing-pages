@@ -14,6 +14,7 @@ import { ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/
  *     secondary_status       text NOT NULL,
  *     full_payment_amount    numeric,
  *     partial_payment_amount numeric,
+ *     student_rating         smallint,           -- CRM "דירוג תלמיד" 1-5; null = none
  *     created_at             timestamptz NOT NULL DEFAULT now(),
  *     updated_at             timestamptz NOT NULL DEFAULT now()
  *   );
@@ -29,6 +30,8 @@ export interface LeadStatusUpsertPatch {
   normalizedPhone?: string | null;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
+  /** Undefined = keep the stored rating; null = clear it. Only the webhook's optional studentRating sets it. */
+  studentRating?: number | null;
 }
 
 export interface LeadStatusRepository {
@@ -53,6 +56,7 @@ interface LeadStatusRow {
   secondary_status: string;
   full_payment_amount: string | number | null;
   partial_payment_amount: string | number | null;
+  student_rating: number | string | null;
   updated_at: string;
 }
 
@@ -63,6 +67,13 @@ function parseAmount(value: string | number | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/** The CHECK constraint keeps stored ratings to 1-5. Anything else reads as "no rating". */
+function parseRating(value: number | string | null): number | null {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
+}
+
 function mapRow(row: LeadStatusRow): LeadStatusRecord {
   return {
     leadId: row.meta_lead_id,
@@ -71,20 +82,21 @@ function mapRow(row: LeadStatusRow): LeadStatusRecord {
     secondaryStatus: row.secondary_status,
     fullPaymentAmount: parseAmount(row.full_payment_amount),
     partialPaymentAmount: parseAmount(row.partial_payment_amount),
-    studentRating: null,
+    studentRating: parseRating(row.student_rating),
     updatedAt: row.updated_at,
   };
 }
 
 const UPSERT_SQL = `
-  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, created_at, updated_at)
-  VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, student_rating, created_at, updated_at)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
   ON CONFLICT (meta_lead_id) DO UPDATE SET
     normalized_phone = EXCLUDED.normalized_phone,
     main_status = EXCLUDED.main_status,
     secondary_status = EXCLUDED.secondary_status,
     full_payment_amount = EXCLUDED.full_payment_amount,
     partial_payment_amount = EXCLUDED.partial_payment_amount,
+    student_rating = EXCLUDED.student_rating,
     updated_at = now()
   RETURNING *
 `;
@@ -195,6 +207,7 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
         patch.fullPaymentAmount !== undefined ? patch.fullPaymentAmount : (existing?.fullPaymentAmount ?? null);
       const partialPaymentAmount =
         patch.partialPaymentAmount !== undefined ? patch.partialPaymentAmount : (existing?.partialPaymentAmount ?? null);
+      const studentRating = patch.studentRating !== undefined ? patch.studentRating : (existing?.studentRating ?? null);
 
       const rows = (await sql.query(UPSERT_SQL, [
         leadId,
@@ -203,6 +216,7 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
         patch.secondaryStatus,
         fullPaymentAmount,
         partialPaymentAmount,
+        studentRating,
       ])) as LeadStatusRow[];
 
       return mapRow(rows[0]);

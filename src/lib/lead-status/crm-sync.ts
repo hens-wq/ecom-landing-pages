@@ -38,6 +38,7 @@ export interface CrmStatusStore {
       normalizedPhone?: string | null;
       fullPaymentAmount?: number | null;
       partialPaymentAmount?: number | null;
+      studentRating?: number | null;
     }
   ): Promise<LeadStatusRecord>;
 }
@@ -49,6 +50,8 @@ export interface CrmSyncInput {
   secondaryStatus: string;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
+  /** Undefined = keep the stored rating. null = clear it. */
+  studentRating?: number | null;
 }
 
 export type CrmLeadMatch =
@@ -56,7 +59,7 @@ export type CrmLeadMatch =
   | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous"; message: string };
 
 export type CrmSyncResult =
-  | { ok: true; leadId: string; matchedBy: "lead_id" | "phone"; record: LeadStatusRecord }
+  | { ok: true; leadId: string; matchedBy: "lead_id" | "phone"; record: LeadStatusRecord; previous: LeadStatusRecord | undefined }
   | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous"; message: string };
 
 function canonicalPhone(value: string | number | null | undefined): string {
@@ -161,7 +164,8 @@ export async function syncCrmStatus(input: CrmSyncInput, index: DashboardLeadInd
     normalizedPhone: match.normalizedPhone ?? undefined,
     fullPaymentAmount: resolved.value.fullPaymentAmount,
     partialPaymentAmount: resolved.value.partialPaymentAmount,
+    studentRating: input.studentRating,
   });
 
-  return { ok: true, leadId: match.leadId, matchedBy: match.matchedBy, record };
+  return { ok: true, leadId: match.leadId, matchedBy: match.matchedBy, record, previous: existing };
 }

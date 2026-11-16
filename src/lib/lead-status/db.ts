@@ -45,7 +45,7 @@ function getSql(): ReturnType<typeof neon> {
 let schemaReadyPromise: Promise<void> | null = null;
 
 /**
- * Idempotent: CREATE TABLE/INDEX IF NOT EXISTS only - never drops, never
+ * Idempotent: CREATE TABLE/INDEX and ADD COLUMN IF NOT EXISTS only - never drops, never
  * recreates, never touches existing rows. Memoized per warm server instance
  * so it only actually runs once per process, not once per request; a
  * failure clears the memo so the next call retries instead of caching a
@@ -68,6 +68,29 @@ export function ensureSchema(): Promise<void> {
         )
       `;
       await sql`CREATE INDEX IF NOT EXISTS lead_status_normalized_phone_idx ON lead_status (normalized_phone)`;
+      // CRM "דירוג תלמיד" (1-5 flames). Nullable, so existing rows are untouched.
+      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating smallint CHECK (student_rating BETWEEN 1 AND 5)`;
+      // Meta CRM feedback outbox: one row per lead and event type (see lib/crm-capi/outbox.ts).
+      await sql`
+        CREATE TABLE IF NOT EXISTS crm_capi_events (
+          id bigserial PRIMARY KEY,
+          lead_key text NOT NULL,
+          event_type text NOT NULL CHECK (event_type IN ('qualified', 'registered')),
+          event_id text NOT NULL,
+          event_time timestamptz NOT NULL,
+          status text NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending', 'sending', 'retry', 'sent', 'failed', 'skipped')),
+          attempts integer NOT NULL DEFAULT 0,
+          next_attempt_at timestamptz NOT NULL DEFAULT now(),
+          claimed_until timestamptz,
+          last_error text,
+          sent_at timestamptz,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          CONSTRAINT crm_capi_events_lead_event_key UNIQUE (lead_key, event_type)
+        )
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS crm_capi_events_due_idx ON crm_capi_events (status, next_attempt_at)`;
     })().catch((error) => {
       schemaReadyPromise = null;
       throw wrapDatabaseError(error, "שגיאה באתחול טבלת הסטטוסים במסד הנתונים.");
