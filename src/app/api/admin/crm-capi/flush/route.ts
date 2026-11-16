@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const summary = await flushCrmEvents({ limit: 25, now: new Date(), fetchImpl: fetch });
+    const summary = await flushCrmEvents({ limit: 25, now: new Date() });
     return NextResponse.json({ ok: true, summary });
   } catch (error) {
     if (error instanceof LeadStatusDatabaseError) {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ClaimedCrmEvent, CrmEventOutcome, NewCrmEvent } from "@/lib/crm-capi/pipeline";
 import type { CrmEventType } from "@/lib/crm-capi/rules";
 import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
 
@@ -12,29 +13,6 @@ import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status
  *
  * Only short codes go into last_error: never Meta's message, a URL or a token.
  */
-
-export interface NewCrmEvent {
-  leadKey: string;
-  eventType: CrmEventType;
-  eventId: string;
-  eventTime: Date;
-}
-
-export interface ClaimedCrmEvent {
-  id: number;
-  leadKey: string;
-  eventType: CrmEventType;
-  eventId: string;
-  eventTime: Date;
-  /** Attempts made so far, including the one this claim starts. */
-  attempts: number;
-}
-
-export type CrmEventOutcome =
-  | { status: "sent" }
-  | { status: "retry"; code: string; nextAttemptAt: Date }
-  | { status: "failed"; code: string }
-  | { status: "skipped"; code: string };
 
 interface ClaimedRow {
   id: string | number;

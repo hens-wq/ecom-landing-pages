@@ -6,7 +6,7 @@ import { test } from "node:test";
 // Static guards: these read the source, so they hold even where no database or Meta call can run.
 const read = (...parts: string[]) => readFileSync(path.join(process.cwd(), ...parts), "utf8");
 
-const PURE_MODULES = ["rules.ts", "policy.ts", "config.ts", "event.ts", "send.ts"];
+const PURE_MODULES = ["rules.ts", "policy.ts", "config.ts", "event.ts", "send.ts", "pipeline.ts"];
 
 test("the pure CRM modules never import server-only code or the database driver", () => {
   for (const file of PURE_MODULES) {
@@ -62,8 +62,13 @@ test("the flush route is Bearer-protected and fails closed without its secret", 
   assert.match(route, /status: 401/);
 });
 
-test("the service queues nothing and sends nothing while the flag is off", () => {
-  const service = read("src", "lib", "crm-capi", "service.ts");
-  assert.match(service, /if \(!readCrmCapiConfig\(\)\.sendEnabled\) return 0;/);
-  assert.match(service, /if \(!config\.sendEnabled\) return \{ \.\.\.summary, state: "disabled" \};/);
+test("the pipeline queues nothing and sends nothing while the flag is off", () => {
+  const pipeline = read("src", "lib", "crm-capi", "pipeline.ts");
+  assert.match(pipeline, /if \(!deps\.sendEnabled\) return 0;/);
+  assert.match(pipeline, /if \(!deps\.config\.sendEnabled\) return \{ \.\.\.summary, state: "disabled" \};/);
+});
+
+test("the webhook passes the lead's creation date, so Meta never receives an event stamped before the lead existed", () => {
+  const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
+  assert.match(route, /leadCreatedDate: index\.byId\.get\(result\.leadId\)\?\.createdDate/);
 });

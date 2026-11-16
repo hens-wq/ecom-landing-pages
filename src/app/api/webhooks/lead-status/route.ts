@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
       previous: result.previous,
       next: result.record,
       statusChangedAt,
+      leadCreatedDate: index.byId.get(result.leadId)?.createdDate,
       now: new Date(),
     });
     after(() => flushCrmEventsSafely(10));
