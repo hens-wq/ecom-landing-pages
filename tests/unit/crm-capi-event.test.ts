@@ -61,12 +61,3 @@ test("no personal data and no test code inside the event", () => {
   assert.equal("test_event_code" in built.event, false);
   assert.doesNotMatch(JSON.stringify(built.event), /"(em|ph|email|phone|fn|ln|external_id)"/);
 });
-
-test("the raw lead is the first CRM stage: its own name, the same identifiers and a stable event id", () => {
-  const built = buildCrmEvent({ eventType: "raw", metaLeadId: LEAD, eventTime: NOW, now: NOW });
-  if (!built.ok) return assert.fail("expected a built event");
-  assert.equal(built.event.event_name, "RawLead");
-  assert.equal(built.event.event_id, `crm:raw:${LEAD}`);
-  assert.equal(built.event.action_source, "system_generated");
-  assert.deepEqual(built.event.custom_data, { event_source: "crm", lead_event_source: "Fireberry" });
-});

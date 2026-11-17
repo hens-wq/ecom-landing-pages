@@ -59,8 +59,7 @@ function memoryStore(): CrmStatusStore {
         updatedAt: new Date(0).toISOString(),
       };
       rows.set(leadId, record);
-      // As the Postgres repository returns it: undefined when no row was stored before this write.
-      return { ...record, previousStudentRating: existing ? (existing.studentRating as StudentRating | null) : undefined };
+      return record;
     },
     async upsert(leadId, patch) {
       const existing = rows.get(leadId);
@@ -211,23 +210,6 @@ function harness(statusFor?: (eventName: string, attempt: number) => number) {
     );
   }
 
-  /** The webhook's rating-only path: a rating with no status in the request. */
-  async function rate(studentRating: StudentRating, statusChangedAt: Date | undefined, now: Date): Promise<number> {
-    const result = await syncCrmStatus({ leadId: LEAD, phone: null, studentRating }, INDEX, store);
-    if (!result.ok) throw new Error(`rating refused: ${result.message}`);
-    return recordCrmChange(
-      {
-        leadKey: result.leadId,
-        previous: result.previous,
-        next: result.record,
-        statusChangedAt,
-        leadCreatedDate: INDEX.byId.get(result.leadId)?.createdDate,
-        now,
-      },
-      { sendEnabled, outbox }
-    );
-  }
-
   async function flush(now: Date, limit = 50) {
     return flushCrmEvents({ limit, now }, { config: { ...CONFIG, sendEnabled }, outbox, fetchImpl: meta.fetchImpl });
   }
@@ -236,7 +218,6 @@ function harness(statusFor?: (eventName: string, attempt: number) => number) {
     outbox,
     meta,
     webhook,
-    rate,
     flush,
     setSending(value: boolean) {
       sendEnabled = value;
@@ -244,10 +225,9 @@ function harness(statusFor?: (eventName: string, attempt: number) => number) {
   };
 }
 
-test("a lead that reaches בתהליך, is rated 5, then reaches נרשם gets one raw, one qualified and one registration event", async () => {
+test("a lead that reaches בתהליך, is rated 5, then reaches נרשם gets one qualified and one registration event", async () => {
   const h = harness();
-  // The first sighting of a recent lead queues its raw lead. A repeat of חדש changes nothing.
-  assert.equal(await h.webhook({ mainStatus: "חדש", secondaryStatus: "חדש" }, undefined, at("2026-11-16T08:00:00Z")), 1);
+  assert.equal(await h.webhook({ mainStatus: "חדש", secondaryStatus: "חדש" }, undefined, at("2026-11-16T08:00:00Z")), 0);
   assert.equal(await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 1);
   assert.equal(
     await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך", studentRating: 5 }, at("2026-11-16T10:00:00Z"), at("2026-11-16T10:00:00Z")),
@@ -260,16 +240,16 @@ test("a lead that reaches בתהליך, is rated 5, then reaches נרשם gets o
   );
 
   const summary = await h.flush(at("2026-11-16T12:00:00Z"));
-  assert.deepEqual(summary, { state: "ran", claimed: 3, sent: 3, retried: 0, failed: 0, skipped: 0, deferred: 0 });
+  assert.deepEqual(summary, { state: "ran", claimed: 2, sent: 2, retried: 0, failed: 0, skipped: 0, deferred: 0 });
   assert.deepEqual(
     h.meta.sent.map((item) => item.event.event_name),
-    ["RawLead", "QualifiedLead", "RegisteredLead"]
+    ["QualifiedLead", "RegisteredLead"]
   );
   assert.deepEqual(
     h.meta.sent.map((item) => item.event.event_time),
-    [seconds(at("2026-11-16T08:00:00Z")), seconds(at("2026-11-16T09:00:00Z")), seconds(at("2026-11-16T11:00:00Z"))]
+    [seconds(at("2026-11-16T09:00:00Z")), seconds(at("2026-11-16T11:00:00Z"))]
   );
-  assert.deepEqual(h.meta.sent.map((item) => item.event.event_id), [crmEventId("raw", LEAD), crmEventId("qualified", LEAD), crmEventId("registered", LEAD)]);
+  assert.deepEqual(h.meta.sent.map((item) => item.event.event_id), [crmEventId("qualified", LEAD), crmEventId("registered", LEAD)]);
   for (const { event } of h.meta.sent) {
     assert.equal(event.user_data.lead_id, LEAD);
     assert.equal(event.action_source, "system_generated");
@@ -279,18 +259,18 @@ test("a lead that reaches בתהליך, is rated 5, then reaches נרשם gets o
   // The same status arriving again changes nothing.
   assert.equal(await h.webhook({ mainStatus: "נרשם", secondaryStatus: "נרשם" }, at("2026-11-16T13:00:00Z"), at("2026-11-16T13:00:00Z")), 0);
   assert.deepEqual(await h.flush(at("2026-11-16T13:05:00Z")), { state: "ran", claimed: 0, sent: 0, retried: 0, failed: 0, skipped: 0, deferred: 0 });
-  assert.equal(h.outbox.rows.length, 3);
+  assert.equal(h.outbox.rows.length, 2);
   assert.deepEqual(
     h.outbox.rows.map((row) => row.status),
-    ["sent", "sent", "sent"]
+    ["sent", "sent"]
   );
 });
 
-test("a lead rated 4 before any status change gets its raw lead, its qualified event once, then its registration", async () => {
+test("a lead rated 4 before any status change gets its qualified event once, then its registration", async () => {
   const h = harness();
   assert.equal(
     await h.webhook({ mainStatus: "חדש", secondaryStatus: "חדש", studentRating: 4 }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")),
-    2
+    1
   );
   assert.equal(
     await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך", studentRating: 4 }, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")),
@@ -303,20 +283,20 @@ test("a lead rated 4 before any status change gets its raw lead, its qualified e
   await h.flush(at("2026-11-16T11:00:00Z"));
   assert.deepEqual(
     h.meta.sent.map((item) => item.event.event_name),
-    ["RawLead", "QualifiedLead", "RegisteredLead"]
+    ["QualifiedLead", "RegisteredLead"]
   );
 });
 
 test("a lead that goes back to לא מעוניין and forward to בתהליך again still produces one qualified event", async () => {
   const h = harness();
-  assert.equal(await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 2);
+  assert.equal(await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 1);
   assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - מחיר יקר' }, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")), 0);
   assert.equal(await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T10:00:00Z"), at("2026-11-16T10:00:00Z")), 0);
   assert.equal(await h.webhook({ mainStatus: "נרשם", secondaryStatus: "נרשם" }, at("2026-11-16T11:00:00Z"), at("2026-11-16T11:00:00Z")), 1);
   await h.flush(at("2026-11-16T12:00:00Z"));
   assert.deepEqual(
     h.meta.sent.map((item) => item.event.event_name),
-    ["RawLead", "QualifiedLead", "RegisteredLead"]
+    ["QualifiedLead", "RegisteredLead"]
   );
 });
 
@@ -334,60 +314,17 @@ test("while sending is off nothing is queued, and switching it on later does not
   assert.equal(h.meta.sent.length, 0);
 });
 
-test("a lead first seen through its rating alone gets its raw lead and its qualified event, once", async () => {
-  const h = harness();
-  assert.equal(await h.rate(4, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 2);
-  assert.equal(await h.rate(5, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")), 0);
-  await h.flush(at("2026-11-16T10:00:00Z"));
-  assert.deepEqual(
-    h.meta.sent.map((item) => item.event.event_name),
-    ["RawLead", "QualifiedLead"]
-  );
-});
-
-test("an old lead seen for the first time queues nothing, and a later change to it queues only that change", async () => {
-  const h = harness();
-  const now = at("2026-11-16T09:00:00Z");
-  const first = await recordCrmChange(
-    {
-      leadKey: LEAD,
-      previous: undefined,
-      next: { mainStatus: "בתהליך", studentRating: null },
-      statusChangedAt: undefined,
-      leadCreatedDate: "2026-10-01",
-      now,
-    },
-    { sendEnabled: true, outbox: h.outbox }
-  );
-  assert.equal(first, 0);
-  assert.equal(h.outbox.rows.length, 0);
-
-  const later = await recordCrmChange(
-    {
-      leadKey: LEAD,
-      previous: { mainStatus: "בתהליך", studentRating: null },
-      next: { mainStatus: "נרשם", studentRating: null },
-      statusChangedAt: at("2026-11-16T08:30:00Z"),
-      leadCreatedDate: "2026-10-01",
-      now,
-    },
-    { sendEnabled: true, outbox: h.outbox }
-  );
-  assert.equal(later, 1);
-  assert.equal(h.outbox.rows[0].eventType, "registered");
-});
-
-test("a Meta refusal of the qualified event does not block the others, and the retry sends the qualified event once", async () => {
+test("a Meta refusal of the qualified event does not block the registration, and the retry sends the qualified event once", async () => {
   const h = harness((name, attempt) => (name === "QualifiedLead" && attempt === 1 ? 500 : 200));
   await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z"));
   await h.webhook({ mainStatus: "נרשם", secondaryStatus: "נרשם" }, at("2026-11-16T10:00:00Z"), at("2026-11-16T10:00:00Z"));
 
-  assert.deepEqual(await h.flush(at("2026-11-16T10:30:00Z")), { state: "ran", claimed: 3, sent: 2, retried: 1, failed: 0, skipped: 0, deferred: 0 });
+  assert.deepEqual(await h.flush(at("2026-11-16T10:30:00Z")), { state: "ran", claimed: 2, sent: 1, retried: 1, failed: 0, skipped: 0, deferred: 0 });
   assert.deepEqual(await h.flush(at("2026-11-16T10:31:01Z")), { state: "ran", claimed: 1, sent: 1, retried: 0, failed: 0, skipped: 0, deferred: 0 });
   assert.deepEqual(await h.flush(at("2026-11-16T12:00:00Z")), { state: "ran", claimed: 0, sent: 0, retried: 0, failed: 0, skipped: 0, deferred: 0 });
 
   const accepted = h.meta.sent.filter((item) => item.status === 200).map((item) => item.event.event_name);
-  assert.deepEqual(accepted.sort(), ["QualifiedLead", "RawLead", "RegisteredLead"]);
+  assert.deepEqual(accepted.sort(), ["QualifiedLead", "RegisteredLead"]);
 });
 
 test("a lead without a Meta Lead ID is recorded and skipped, never sent", async () => {
@@ -398,15 +335,14 @@ test("a lead without a Meta Lead ID is recorded and skipped, never sent", async 
       previous: undefined,
       next: { mainStatus: "בתהליך", studentRating: null },
       statusChangedAt: undefined,
-      leadCreatedDate: CREATED,
       now: at("2026-11-16T09:00:00Z"),
     },
     { sendEnabled: true, outbox: h.outbox }
   );
-  assert.equal(queued, 2);
-  assert.deepEqual(await h.flush(at("2026-11-16T09:01:00Z")), { state: "ran", claimed: 2, sent: 0, retried: 0, failed: 0, skipped: 2, deferred: 0 });
+  assert.equal(queued, 1);
+  assert.deepEqual(await h.flush(at("2026-11-16T09:01:00Z")), { state: "ran", claimed: 1, sent: 0, retried: 0, failed: 0, skipped: 1, deferred: 0 });
   assert.equal(h.meta.sent.length, 0);
-  assert.ok(h.outbox.rows.every((row) => row.lastError === "invalid_meta_lead_id"));
+  assert.equal(h.outbox.rows[0].lastError, "invalid_meta_lead_id");
 });
 
 test("a CRM timestamp from before the lead existed is replaced by the arrival time", async () => {
@@ -414,33 +350,24 @@ test("a CRM timestamp from before the lead existed is replaced by the arrival ti
   const arrival = at("2026-11-16T09:00:00Z");
   await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-01T10:00:00Z"), arrival);
   await h.flush(at("2026-11-16T09:01:00Z"));
-  assert.equal(h.meta.sent.length, 2);
-  assert.deepEqual(
-    h.meta.sent.map((item) => item.event.event_name),
-    ["RawLead", "QualifiedLead"]
-  );
-  assert.deepEqual(
-    h.meta.sent.map((item) => item.event.event_time),
-    [seconds(arrival), seconds(arrival)]
-  );
+  assert.equal(h.meta.sent.length, 1);
+  assert.equal(h.meta.sent[0].event.event_time, seconds(arrival));
 });
 
 test("a CRM timestamp older than seven days is skipped, never sent", async () => {
   const h = harness();
-  // Recorded with a creation date the day before, so the lead is recent when the change is
-  // recorded, and the timestamp is kept as the CRM sent it.
+  // Recorded directly with no creation date, so the timestamp is kept as the CRM sent it.
   await recordCrmChange(
     {
       leadKey: LEAD,
       previous: undefined,
       next: { mainStatus: "נרשם", studentRating: null },
       statusChangedAt: at("2026-11-01T10:00:00Z"),
-      leadCreatedDate: "2026-11-01",
       now: at("2026-11-02T10:00:00Z"),
     },
     { sendEnabled: true, outbox: h.outbox }
   );
-  assert.deepEqual(await h.flush(at("2026-11-16T09:00:00Z")), { state: "ran", claimed: 3, sent: 0, retried: 0, failed: 0, skipped: 3, deferred: 0 });
+  assert.deepEqual(await h.flush(at("2026-11-16T09:00:00Z")), { state: "ran", claimed: 2, sent: 0, retried: 0, failed: 0, skipped: 2, deferred: 0 });
   assert.equal(h.meta.sent.length, 0);
   assert.ok(h.outbox.rows.every((row) => row.lastError === "event_too_old"));
 });
@@ -461,10 +388,10 @@ test("a row whose database update fails after Meta accepted it is deferred, then
     },
   };
   const first = await flushCrmEvents({ limit: 50, now: at("2026-11-16T11:00:00Z") }, { config: CONFIG, outbox: flakyOutbox, fetchImpl: h.meta.fetchImpl });
-  assert.deepEqual(first, { state: "ran", claimed: 3, sent: 2, retried: 0, failed: 0, skipped: 0, deferred: 1 });
+  assert.deepEqual(first, { state: "ran", claimed: 2, sent: 1, retried: 0, failed: 0, skipped: 0, deferred: 1 });
 
-  // The deferred row (the raw lead, first in line) has its five-minute lease expire, and is then sent again.
+  // The deferred row's five-minute lease expires, and then it is claimed and sent again.
   const later = await h.flush(at("2026-11-16T11:06:00Z"));
   assert.equal(later.sent, 1);
-  assert.equal(h.meta.sent.filter((item) => item.event.event_name === "RawLead").length, 2);
+  assert.equal(h.meta.sent.filter((item) => item.event.event_name === "QualifiedLead").length, 2);
 });

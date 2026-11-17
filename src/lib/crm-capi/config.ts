@@ -8,17 +8,12 @@
  */
 
 /**
- * lead_event_source sent with each event: the name of the CRM the leads come
- * from. Meta's Conversion Leads payload specification describes it as that name
- * and mentions no setup step for it.
+ * lead_event_source sent with each event. It must match the CRM name configured
+ * in Meta, so confirm it before going live.
  */
 export const CRM_LEAD_EVENT_SOURCE = "Fireberry";
 
-/**
- * CRM stage names. Meta's specification makes them free text, so they only have
- * to be the same for every lead. The raw lead is the first stage of every lead.
- */
-export const RAW_EVENT_NAME = "RawLead";
+/** Custom conversion names in the CRM dataset. Create them in Meta before going live. */
 export const QUALIFIED_EVENT_NAME = "QualifiedLead";
 export const REGISTERED_EVENT_NAME = "RegisteredLead";
 

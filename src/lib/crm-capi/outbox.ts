@@ -74,7 +74,7 @@ export async function claimDueCrmEvents(limit: number, now: Date, leaseUntil: Da
     return rows.map((row) => ({
       id: Number(row.id),
       leadKey: row.lead_key,
-      // The CHECK constraint on event_type allows only the three stages.
+      // The CHECK constraint on event_type guarantees these two values.
       eventType: row.event_type as CrmEventType,
       eventId: row.event_id,
       eventTime: new Date(row.event_time),
