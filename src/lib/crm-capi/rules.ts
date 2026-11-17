@@ -2,9 +2,10 @@
  * CRM lead-quality rules for the Meta CRM feedback. Pure: no I/O and no
  * server-only imports, so the rules are tested without a database.
  *
- * QUALIFIED: CRM main status "בתהליך" or "נרשם", OR a student rating
+ * QUALIFIED: CRM main status "בתהליך", "נרשם" or "ברח במעמד התשלום", OR a student rating
  * (דירוג תלמיד) of 4 or 5 flames.
- * REGISTERED: CRM main status "נרשם".
+ * REGISTERED: CRM main status "נרשם" only. A lead that fled at the payment stage is
+ * qualified, but never registered by that status.
  *
  * An event fires on the change from "not yet" to "yes", never on a repeat.
  * Transitions are computed from the stored state BEFORE the change, so a lead
@@ -12,7 +13,7 @@
  * enforces one row per lead and event type.
  */
 
-export const QUALIFIED_MAIN_STATUSES: readonly string[] = ["בתהליך", "נרשם"];
+export const QUALIFIED_MAIN_STATUSES: readonly string[] = ["בתהליך", "נרשם", "ברח במעמד התשלום"];
 export const REGISTERED_MAIN_STATUS = "נרשם";
 export const QUALIFYING_RATING_MIN = 4;
 export const QUALIFYING_RATING_MAX = 5;
