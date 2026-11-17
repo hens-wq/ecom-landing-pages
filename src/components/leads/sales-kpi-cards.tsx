@@ -179,7 +179,7 @@ export function SalesKpiCards({
               <div className="flex items-start justify-between gap-2">
                 <span className="flex flex-col text-xs leading-snug text-muted-foreground">
                   <span>{card.labelHe}</span>
-                  <span className="text-muted-foreground/70">({card.labelEn})</span>
+                  <span className="text-muted-foreground">({card.labelEn})</span>
                 </span>
                 <KpiIcon icon={card.icon} tone={card.tone} />
               </div>

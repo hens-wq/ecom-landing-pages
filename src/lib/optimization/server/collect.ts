@@ -1,6 +1,6 @@
 import "server-only";
 
-import { EXCLUDED_CAMPAIGNS, isExcludedCampaignId } from "@/lib/campaign-scope";
+import { EXCLUDED_CAMPAIGNS, createCampaignScope, type ExcludedCampaign } from "@/lib/campaign-scope";
 import { checkMetaConfig, type MetaConfig } from "@/lib/advertising/meta/config";
 import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
@@ -99,7 +99,8 @@ async function fetchDailyAdSpend(
   mode: Mode,
   plan: PeriodPlan,
   campaigns: Campaign[],
-  notes: string[]
+  notes: string[],
+  excludedCampaigns: readonly ExcludedCampaign[],
 ): Promise<DailyAdSpendRow[] | null> {
   const dates = plan.completeDates;
   if (dates.length === 0) return [];
@@ -111,8 +112,9 @@ async function fetchDailyAdSpend(
       until: dates[dates.length - 1],
     });
     const completeSet = new Set(dates);
+    const scope = createCampaignScope(excludedCampaigns);
     return rows
-      .filter((row) => completeSet.has(row.date_start) && !isExcludedCampaignId(row.campaign_id))
+      .filter((row) => completeSet.has(row.date_start) && !scope.isExcluded(row.campaign_id))
       .map((row) => ({ adId: row.ad_id, campaignId: row.campaign_id, date: row.date_start, spend: Number(row.spend ?? 0) }));
   } catch {
     notes.push("ההוצאה היומית לא נטענה מ-Meta: ריכוז התקציב לא נבדק בטווח הזה.");
@@ -159,6 +161,8 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
     loadLeadFacts(span, liveLeadFactsSources),
   ]);
   const windows = new Map(windowResults);
+  const exclusions = [...new Map([...EXCLUDED_CAMPAIGNS, ...windowResults.flatMap(([, data]) => data.snapshot.excludedCampaigns)].map((campaign) => [campaign.id, { id: campaign.id, name: campaign.name }])).values()];
+  const courseScope = createCampaignScope(exclusions);
   const dataFor = (range: DateRange): WindowData => {
     const data = windows.get(rangeKey(range));
     if (!data) throw new Error("optimization: a window was not fetched");
@@ -177,7 +181,7 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
 
   // Lead figures are trusted only when both lead sources loaded in full. Otherwise every lead figure is unknown.
   const leadFactsFor = (range: DateRange): LeadFact[] | null =>
-    leadsKnown ? leadResult.leads.filter((lead) => dateInRange(lead.leadDate, range)) : null;
+    leadsKnown ? leadResult.leads.filter((lead) => dateInRange(lead.leadDate, range) && !courseScope.isExcluded(lead.campaignId)) : null;
 
   const selectedData = dataFor(plan.selected);
   // Leads of the selected window that no unit carries. Counted once, here, so the rules and the saved report agree.
@@ -213,7 +217,7 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
     current: currentEntities,
     previous: previousEntities,
   });
-  const dailyAdSpend = await fetchDailyAdSpend(mode, plan, selectedData.snapshot.campaigns, notes);
+  const dailyAdSpend = await fetchDailyAdSpend(mode, plan, selectedData.snapshot.campaigns, notes, exclusions);
 
   const engineInput: EngineInput = {
     rangeDays: plan.selectedDays,
@@ -227,10 +231,10 @@ export async function collectOptimizationRun(selected: DateRange, now: Date): Pr
   };
 
   const scope: RunScope = {
-    exclusions: EXCLUDED_CAMPAIGNS.map((campaign) => ({ id: campaign.id, name: campaign.name })),
+    exclusions,
     excludedSpend: selectedData.snapshot.excludedSpend,
     unlistedSpend: selectedData.snapshot.unlisted ? selectedData.snapshot.unlisted.spend : null,
-    note: "ההחרגה לפי Campaign ID בלבד. נתוני הקמפיין המוחרג נשארים ב-Meta ובמסד הנתונים.",
+    note: "קמפייני גיוס מוחרגים לפי מזהים מאומתים וסמני גיוס מפורשים בשם הקמפיין. הנתונים נשארים ב-Meta ובמסד הנתונים.",
   };
 
   return {

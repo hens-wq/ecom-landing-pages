@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const allLeads = courseLeads([
       ...leadsResult.leads,
       ...landingLeads.map((record) => landingLeadToMetaFormLead(record, nameLookup)),
-    ]);
+    ], advertisingResult.excludedCampaigns);
 
     const repository = getLeadStatusRepository();
     const statusesByLeadId = await repository.getMany(allLeads.map((lead) => lead.id));

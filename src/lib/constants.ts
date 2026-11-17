@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { href: "/leads", label: "לידים", labelEn: "Leads" },
   { href: "/sales-matching", label: "מכירות והתאמות", labelEn: "Sales & Matching" },
   { href: "/optimization", label: "המלצות אופטימיזציה", labelEn: "Optimization" },
+  { href: "/lead-quality", label: "איכות לידים", labelEn: "Lead Quality" },
   { href: "/integrations", label: "חיבורים", labelEn: "Integrations" },
 ] as const;
 

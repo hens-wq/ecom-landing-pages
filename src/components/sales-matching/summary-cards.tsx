@@ -16,7 +16,7 @@ export function SalesMatchingSummaryCards({ stats }: SummaryCardsProps) {
           <div className="flex items-start justify-between gap-2">
             <span className="flex flex-col text-xs leading-snug text-muted-foreground">
               <span>סה״כ מכירות</span>
-              <span className="text-muted-foreground/70">(Total Sales)</span>
+              <span className="text-muted-foreground">(Total Sales)</span>
             </span>
             <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
           </div>
@@ -29,7 +29,7 @@ export function SalesMatchingSummaryCards({ stats }: SummaryCardsProps) {
           <div className="flex items-start justify-between gap-2">
             <span className="flex flex-col text-xs leading-snug text-muted-foreground">
               <span>מכירות שהותאמו</span>
-              <span className="text-muted-foreground/70">(Matched)</span>
+              <span className="text-muted-foreground">(Matched)</span>
             </span>
             <CheckCircle2 className="size-3.5 shrink-0 text-success" />
           </div>
@@ -42,7 +42,7 @@ export function SalesMatchingSummaryCards({ stats }: SummaryCardsProps) {
           <div className="flex items-start justify-between gap-2">
             <span className="flex flex-col text-xs leading-snug text-muted-foreground">
               <span>מכירות ללא שיוך</span>
-              <span className="text-muted-foreground/70">(Unmatched)</span>
+              <span className="text-muted-foreground">(Unmatched)</span>
             </span>
             <XCircle className="size-3.5 shrink-0 text-destructive" />
           </div>
@@ -55,7 +55,7 @@ export function SalesMatchingSummaryCards({ stats }: SummaryCardsProps) {
           <div className="flex items-start justify-between gap-2">
             <span className="flex flex-col text-xs leading-snug text-muted-foreground">
               <span>אחוז התאמה</span>
-              <span className="text-muted-foreground/70">(Match Rate)</span>
+              <span className="text-muted-foreground">(Match Rate)</span>
             </span>
             <PieChart className="size-3.5 shrink-0 text-muted-foreground" />
           </div>

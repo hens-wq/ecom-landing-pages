@@ -33,6 +33,9 @@ export interface MetaCampaignNode {
   name: string;
   status?: string;
   effective_status?: string;
+  /** Amounts in the account currency's minor units (agorot for this ILS account). */
+  daily_budget?: string | number | null;
+  lifetime_budget?: string | number | null;
 }
 
 export interface MetaAdSetNode {
@@ -41,6 +44,9 @@ export interface MetaAdSetNode {
   campaign_id: string;
   status?: string;
   effective_status?: string;
+  /** Current configured budgets, not Insights spend for a selected period. */
+  daily_budget?: string | number | null;
+  lifetime_budget?: string | number | null;
 }
 
 export interface MetaAdNode {

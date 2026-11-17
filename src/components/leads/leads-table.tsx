@@ -26,8 +26,8 @@ interface LeadsTableProps {
   onSort: (key: LeadColumnKey) => void;
 }
 
-/** Shared sticky classes (lg+ only - see lead-columns.ts) so header and body cells line up exactly. */
-const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card";
+/** Freeze the complete cluster on wide screens, leaving narrow screens free to scroll. */
+const STICKY_CELL_CLASS = "2xl:sticky 2xl:z-10 2xl:bg-card";
 /** Headers wrap to 2 lines instead of forcing the column wider than its data needs (see lead-columns.ts doc comment on why column width must stay authoritative under table-fixed). */
 const HEADER_TEXT_CLASS = "relative whitespace-normal py-2 leading-tight";
 
@@ -76,7 +76,8 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
       <Table ref={tableContainerRef} className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {head("leadDate", "border-l border-transparent lg:border-border")}
+            {head("leadDate", "border-l border-transparent 2xl:border-border")}
+            {head("studentRating")}
             {head("name")}
             {head("phone")}
             {head("mainStatus")}
@@ -84,7 +85,7 @@ export function LeadsTable({ leads, statusesByLeadId, onSaveStatus, onStatusSave
             {head("fullPayment")}
             {head("partialPayment")}
             {visibleColumnOrder
-              .filter((key) => key !== "leadDate" && key !== "name" && key !== "phone" && key !== "mainStatus" && key !== "secondaryStatus" && key !== "fullPayment" && key !== "partialPayment")
+              .filter((key) => key !== "studentRating" && key !== "leadDate" && key !== "name" && key !== "phone" && key !== "mainStatus" && key !== "secondaryStatus" && key !== "fullPayment" && key !== "partialPayment")
               .map((key) => head(key, isTechnicalIdColumn(key) || key === "leadId" ? "text-left font-mono text-[11px]" : undefined))}
           </TableRow>
         </TableHeader>

@@ -18,6 +18,7 @@ import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID } from "@/lib/constant
 import { spendNotices } from "@/lib/performance/spend-notices";
 import { dailyTrend } from "@/lib/mock-data";
 import { attributeLeadFacts } from "@/lib/performance/attribution";
+import { courseLeads } from "@/lib/leads/course-scope";
 import { expandableRowIds } from "@/lib/performance/expansion";
 import { filterVisibleCampaignRows } from "@/lib/performance/visible-rows";
 import { sortCampaignRows, type SortKey, type SortState } from "@/lib/performance/sort";
@@ -179,7 +180,7 @@ export default function DashboardPage() {
     const { advertising, leadFacts } = state.data;
     const facts = leadFacts.phase === "ok" ? leadFacts.facts : null;
     const leadsComplete = facts !== null && facts.sources.meta.state === "ok" && facts.sources.landing.state === "ok";
-    const attribution = leadsComplete && facts ? attributeLeadFacts(advertising.campaigns, facts.leads) : undefined;
+    const attribution = leadsComplete && facts ? attributeLeadFacts(advertising.campaigns, courseLeads(facts.leads, advertising.excludedCampaigns)) : undefined;
     return buildPerformanceTree(advertising.campaigns, attribution, advertising.unlisted, advertising.levelReach);
   }, [state]);
 

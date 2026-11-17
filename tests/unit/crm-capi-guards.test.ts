@@ -43,7 +43,7 @@ test("the webhook queues CRM events after a successful status update, replies, a
   const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
   const syncAt = route.indexOf("if (!result.ok)");
   const queueAt = route.indexOf("recordCrmChangeSafely({");
-  const replyAt = route.indexOf("return NextResponse.json({ ok: true");
+  const replyAt = route.indexOf("return webhookResponse({ ok: true");
   assert.ok(syncAt > 0 && queueAt > syncAt && replyAt > queueAt, "order must be: sync, then queue, then reply");
   assert.match(route, /after\(\(\) => flushCrmEventsSafely\(/);
   assert.doesNotMatch(route, /sendCrmEvent|graph\.facebook/);
@@ -51,7 +51,7 @@ test("the webhook queues CRM events after a successful status update, replies, a
 
 test("the webhook refuses a wrong rating but ignores an unreadable CRM timestamp", () => {
   const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
-  assert.match(route, /Number\.isInteger\(value\) && value >= 1 && value <= 5/);
+  assert.match(route, /parseStudentRatingUpdate\(body\)/);
   assert.match(route, /if \(Number\.isNaN\(parsed\.getTime\(\)\)\) return undefined|Number\.isNaN\(parsed\.getTime\(\)\) \? undefined/);
 });
 

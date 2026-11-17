@@ -136,7 +136,7 @@ test("the Meta reach reads ask for the same range at each level, and the course 
   assert.equal(course.level, "account");
   assert.equal(course.fields, "reach");
   assert.deepEqual(JSON.parse(course.time_range), RANGE);
-  assert.deepEqual(JSON.parse(course.filtering), [{ field: "campaign.id", operator: "NOT_IN", value: ["120248773681350125"] }]);
+  assert.deepEqual(JSON.parse(course.filtering), [{ field: "campaign.id", operator: "NOT_IN", value: ["120248773681350125", "120249086146440125", "120249068790360125"] }]);
 
   assert.equal(courseReachParams(RANGE, []).filtering, undefined, "with nothing excluded, nothing is filtered");
 });

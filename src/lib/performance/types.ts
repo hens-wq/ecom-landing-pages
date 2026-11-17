@@ -19,6 +19,8 @@ export interface LeadFact {
   secondaryStatus: string | null;
   fullPaymentAmount: number | null;
   partialPaymentAmount: number | null;
+  /** Raw CRM flame rating (1–5); null remains raw missing. Reporting applies the ordinary-2 baseline after a successful status read. */
+  studentRating?: number | null;
 }
 
 export type SourceState = "ok" | "partial" | "unavailable";

@@ -1,14 +1,17 @@
-import { isExcludedCampaignId } from "@/lib/campaign-scope";
+import { EXCLUDED_CAMPAIGNS, createCampaignScope, isExcludedCampaign, type ExcludedCampaign } from "@/lib/campaign-scope";
 
-/**
- * The course-campaign rule for every export that analyses course campaigns: the 7-day agent export, the selected-range
- * XLSX, and any export added later for the course analysis. A lead whose campaign is excluded (see lib/campaign-scope)
- * never reaches those files. The lead itself is not deleted: it stays in Meta and in the database.
- */
-export function isCourseLead(lead: { campaignId: string | null | undefined }): boolean {
-  return !isExcludedCampaignId(lead.campaignId);
+interface CourseLeadScope {
+  campaignId: string | null | undefined;
+  campaignName?: string | null;
 }
 
-export function courseLeads<T extends { campaignId: string | null | undefined }>(leads: readonly T[]): T[] {
-  return leads.filter((lead) => isCourseLead(lead));
+/** Recruitment records stay in their sources but never enter course-analysis views or exports. */
+export function isCourseLead(lead: CourseLeadScope): boolean {
+  return !isExcludedCampaign(lead.campaignId, lead.campaignName);
+}
+
+/** A live snapshot also identifies newly named recruiters whose landing leads carry only a campaign ID. */
+export function courseLeads<T extends CourseLeadScope>(leads: readonly T[], snapshotExclusions: readonly ExcludedCampaign[] = []): T[] {
+  const scope = createCampaignScope([...EXCLUDED_CAMPAIGNS, ...snapshotExclusions]);
+  return leads.filter((lead) => !scope.isExcluded(lead.campaignId, lead.campaignName));
 }

@@ -67,9 +67,10 @@ export function ensureSchema(): Promise<void> {
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `;
+      // Additive/idempotent: historical rows remain unrated (NULL), never backfilled with an invented score.
+      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating smallint CHECK (student_rating BETWEEN 1 AND 5)`;
       await sql`CREATE INDEX IF NOT EXISTS lead_status_normalized_phone_idx ON lead_status (normalized_phone)`;
       // CRM "דירוג תלמיד" (1-5 flames). Nullable, so existing rows are untouched.
-      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating smallint CHECK (student_rating BETWEEN 1 AND 5)`;
       // Meta CRM feedback outbox: one row per lead and event type (see lib/crm-capi/outbox.ts).
       await sql`
         CREATE TABLE IF NOT EXISTS crm_capi_events (

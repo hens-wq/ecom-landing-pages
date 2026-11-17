@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
-import { BarChart3, Link2, Plug, Target, TrendingUp, UserRound } from "lucide-react";
+import { BarChart3, Flame, Link2, Plug, Target, TrendingUp, UserRound } from "lucide-react";
 
 import { NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const NAV_ICONS = {
   "/leads": UserRound,
   "/sales-matching": Link2,
   "/optimization": Target,
+  "/lead-quality": Flame,
   "/integrations": Plug,
 } satisfies Record<string, React.ComponentType<{ className?: string }>>;
 

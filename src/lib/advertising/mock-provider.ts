@@ -2,7 +2,7 @@ import { campaigns as mockCampaigns } from "@/lib/mock-data/campaigns";
 import { scaleRawMetrics } from "@/lib/calculations";
 import { dateRangeDayCount } from "@/lib/advertising/date-range";
 import type { AdvertisingAccountInfo, AdvertisingDataProvider, AdvertisingSnapshot, DateRange } from "@/lib/advertising/types";
-import { isExcludedCampaignId } from "@/lib/campaign-scope";
+import { isExcludedCampaign } from "@/lib/campaign-scope";
 import type { Campaign, LevelReach } from "@/lib/types";
 
 const BASELINE_DAYS = 30;
@@ -51,8 +51,8 @@ export class MockAdvertisingProvider implements AdvertisingDataProvider {
       })),
     }));
 
-    const campaigns = all.filter((campaign) => !isExcludedCampaignId(campaign.id));
-    const excludedCampaigns = all.filter((campaign) => isExcludedCampaignId(campaign.id));
+    const campaigns = all.filter((campaign) => !isExcludedCampaign(campaign.id, campaign.name));
+    const excludedCampaigns = all.filter((campaign) => isExcludedCampaign(campaign.id, campaign.name));
     const excludedSpend = excludedCampaigns.reduce(
       (total, campaign) => total + campaign.adSets.reduce((adSetTotal, adSet) => adSetTotal + adSet.ads.reduce((adTotal, ad) => adTotal + ad.metrics.spend, 0), 0),
       0

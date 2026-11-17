@@ -15,6 +15,7 @@ import type { CrmEventType } from "@/lib/crm-capi/rules";
 import type { FetchLike } from "@/lib/crm-capi/send";
 import { syncCrmStatus, type CrmStatusStore, type DashboardLeadIndex } from "@/lib/lead-status/crm-sync";
 import type { LeadStatusRecord, MainStatus } from "@/lib/lead-status/types";
+import type { StudentRating } from "@/lib/lead-status/student-rating";
 
 // End to end, in memory: the webhook's status update (the real syncCrmStatus), the
 // queueing of CRM events, the outbox rules and the Meta payloads. No database, no network.
@@ -44,6 +45,21 @@ function memoryStore(): CrmStatusStore {
     },
     async findLeadIdsByNormalizedPhone() {
       return [];
+    },
+    async upsertStudentRating(leadId, studentRating, normalizedPhone) {
+      const existing = rows.get(leadId);
+      const record: LeadStatusRecord = {
+        leadId,
+        normalizedPhone: normalizedPhone ?? existing?.normalizedPhone ?? null,
+        mainStatus: existing?.mainStatus ?? ("חדש" as MainStatus),
+        secondaryStatus: existing?.secondaryStatus ?? "חדש",
+        fullPaymentAmount: existing?.fullPaymentAmount ?? null,
+        partialPaymentAmount: existing?.partialPaymentAmount ?? null,
+        studentRating,
+        updatedAt: new Date(0).toISOString(),
+      };
+      rows.set(leadId, record);
+      return record;
     },
     async upsert(leadId, patch) {
       const existing = rows.get(leadId);
@@ -175,7 +191,7 @@ function harness(statusFor?: (eventName: string, attempt: number) => number) {
 
   /** The webhook's path: save the status, then queue the CRM events for the change, as the route does. */
   async function webhook(
-    update: { mainStatus: string; secondaryStatus: string; studentRating?: number | null; fullPaymentAmount?: number | null },
+    update: { mainStatus: string; secondaryStatus: string; studentRating?: StudentRating | null; fullPaymentAmount?: number | null },
     statusChangedAt: Date | undefined,
     now: Date
   ): Promise<number> {

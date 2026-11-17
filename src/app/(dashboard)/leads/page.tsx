@@ -14,6 +14,7 @@ import { compareLeadSortValues, getLeadSortValue } from "@/components/leads/lead
 import { LeadsTable } from "@/components/leads/leads-table";
 import { MissingPaymentBanner } from "@/components/leads/missing-payment-banner";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
+import { StudentRatingSummary } from "@/components/lead-quality/student-rating-summary";
 import { useLeadColumnLayout } from "@/components/leads/use-lead-column-layout";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
@@ -23,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
 import { sumScopedSpend } from "@/lib/performance/scope-spend";
 import { spendNotices } from "@/lib/performance/spend-notices";
-import { isExcludedCampaignId } from "@/lib/campaign-scope";
 import { CUSTOM_DATE_RANGE_PRESET_ID, presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
@@ -33,12 +33,15 @@ import { isoDateInTimezone } from "@/lib/advertising/timezone";
 import { computeLeadKpis, type LeadKpis } from "@/lib/performance/lead-metrics";
 import type { LeadFact } from "@/lib/performance/types";
 import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
+import { mergeStatusRecords } from "@/lib/lead-status/merge-status-records";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { buildLeadExportCsv, toLeadExportRow } from "@/lib/leads/export";
 import { leadMatchesSearch } from "@/lib/leads/search";
-import { courseLeads } from "@/lib/leads/course-scope";
+import { courseLeads, isCourseLead } from "@/lib/leads/course-scope";
+import { matchesStudentRatingFilter, type StudentRatingFilter } from "@/lib/leads/student-rating-filter";
+import { summarizeStudentRatings } from "@/lib/lead-quality/student-rating";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
 
@@ -86,6 +89,7 @@ function toLeadFact(lead: MetaFormLead, record: LeadStatusRecord): LeadFact {
     secondaryStatus: record.secondaryStatus,
     fullPaymentAmount: record.fullPaymentAmount,
     partialPaymentAmount: record.partialPaymentAmount,
+    studentRating: record.studentRating,
   };
 }
 
@@ -176,7 +180,7 @@ async function fetchCombinedLeads(
   const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) => landingLeadToMetaFormLead(record, nameLookup));
   const leadsResult: LeadsResult = {
     ...(leadsJson as LeadsResult),
-    leads: [...(leadsJson as LeadsResult).leads, ...landingLeads].sort(
+    leads: courseLeads([...(leadsJson as LeadsResult).leads, ...landingLeads], advertising.excludedCampaigns).sort(
       (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
     ),
   };
@@ -251,6 +255,7 @@ export default function LeadsPage() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | "inactive" | null>(null);
   const [mainStatusFilter, setMainStatusFilter] = useState<MainStatus | null>(null);
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState<string | null>(null);
+  const [studentRatingFilter, setStudentRatingFilter] = useState<StudentRatingFilter | null>(null);
   /** Toggled only via the "סה"כ מכירות" KPI card - every enrolled lead ("נרשם"), paid or not. A separate flag since a sale isn't one single-value status the dropdowns can express. */
   const [salesOnlyFilter, setSalesOnlyFilter] = useState(false);
   /** Toggled via the missing-payment alert - enrolled leads with no payment amount entered. */
@@ -289,7 +294,7 @@ export default function LeadsPage() {
             leadsResult: {
               ...result.leadsResult,
               // Leads from excluded (non-course) campaigns stay out of this page. The export files are unchanged.
-              leads: result.leadsResult.leads.filter((lead) => !isExcludedCampaignId(lead.campaignId)),
+              leads: result.leadsResult.leads.filter(isCourseLead),
             },
             campaignRows: result.campaignRows,
             statusesByLeadId: result.statusesByLeadId,
@@ -366,12 +371,10 @@ export default function LeadsPage() {
   const campaignRows = useMemo(() => (state.phase === "ready" ? state.data.campaignRows : []), [state]);
 
   const [statusOverrides, setStatusOverrides] = useState<Map<string, LeadStatusRecord>>(new Map());
-  const effectiveStatusesByLeadId = useMemo(() => {
-    if (statusOverrides.size === 0) return statusesByLeadId;
-    const merged = new Map(statusesByLeadId);
-    for (const [leadId, record] of statusOverrides) merged.set(leadId, record);
-    return merged;
-  }, [statusesByLeadId, statusOverrides]);
+  const effectiveStatusesByLeadId = useMemo(
+    () => statusOverrides.size === 0 ? statusesByLeadId : mergeStatusRecords(statusesByLeadId, statusOverrides),
+    [statusesByLeadId, statusOverrides],
+  );
 
   function getStatus(leadId: string, normalizedPhone: string | null): LeadStatusRecord {
     return effectiveStatusesByLeadId.get(leadId) ?? defaultLeadStatusRecord(leadId, normalizedPhone);
@@ -528,12 +531,13 @@ export default function LeadsPage() {
       const record = getStatus(lead.id, lead.normalizedPhone);
       if (mainStatusFilter && record.mainStatus !== mainStatusFilter) return false;
       if (secondaryStatusFilter && record.secondaryStatus !== secondaryStatusFilter) return false;
+      if (!matchesStudentRatingFilter(record.studentRating, studentRatingFilter)) return false;
       if (salesOnlyFilter && !isSaleRecord(record)) return false;
       if (missingPaymentOnly && !isEnrolledMissingPayment(record)) return false;
       return leadMatchesSearch(lead, searchQuery);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, salesOnlyFilter, missingPaymentOnly, searchQuery, effectiveStatusesByLeadId]);
+  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, studentRatingFilter, salesOnlyFilter, missingPaymentOnly, searchQuery, effectiveStatusesByLeadId]);
 
   // Independent of every filter above (never reset by a filter change, and
   // never resets a filter itself) - sorts whatever's already been fetched
@@ -604,6 +608,14 @@ export default function LeadsPage() {
     [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter]
   );
   const costNote = sourceFilter === null ? null : 'בחרו "הכול" במקור ליד כדי לחשב עלויות - ההוצאה לא מפוצלת לפי מקור ליד.';
+  const studentRatingSummary = useMemo(
+    () => summarizeStudentRatings(
+      scopedLeads.map((lead) => toLeadFact(lead, effectiveStatusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone))),
+      sourceFilter === null ? scopedSpend : null,
+      true,
+    ),
+    [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter],
+  );
   const spendCheck = state.phase === "ready" ? (state.data.spendCheck.reconciliation?.status ?? "none") : "none";
   const pageNotices =
     state.phase === "ready"
@@ -626,6 +638,7 @@ export default function LeadsPage() {
       campaignStatusFilter ||
       mainStatusFilter ||
       secondaryStatusFilter ||
+      studentRatingFilter ||
       salesOnlyFilter ||
       missingPaymentOnly ||
       searchQuery.trim()
@@ -640,6 +653,7 @@ export default function LeadsPage() {
     setCampaignStatusFilter(null);
     setMainStatusFilter(null);
     setSecondaryStatusFilter(null);
+    setStudentRatingFilter(null);
     setSalesOnlyFilter(false);
     setMissingPaymentOnly(false);
   }
@@ -787,6 +801,7 @@ export default function LeadsPage() {
             onTotalSalesClick={handleTotalSalesClick}
             isSalesFilterActive={salesOnlyFilter}
           />
+          <StudentRatingSummary summary={studentRatingSummary} totalLeads={scopedLeads.length} leadsKnown={true} />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -851,6 +866,16 @@ export default function LeadsPage() {
               options={secondaryStatusOptions}
               selectedId={secondaryStatusFilter}
               onChange={setSecondaryStatusFilter}
+            />
+            <FilterDropdown
+              label="דירוג ליד"
+              options={[
+                { id: "ordinary", label: "רגילים, 2–3 להבות" },
+                { id: "excellent", label: "מצוינים, 4–5 להבות" },
+                { id: "unrated", label: "נתונים לא זמינים" },
+              ]}
+              selectedId={studentRatingFilter}
+              onChange={(id) => setStudentRatingFilter(id as StudentRatingFilter | null)}
             />
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={resetAllFilters}>

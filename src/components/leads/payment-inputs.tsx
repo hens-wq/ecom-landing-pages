@@ -60,7 +60,7 @@ function AmountField({ value, editable, emphasized, disabled, onCommit }: Amount
         placeholder={editable ? "סכום" : "-"}
         className={cn("h-8 w-28 text-xs tabular-nums-he", emphasized && "border-primary/50 ring-1 ring-primary/20")}
       />
-      {!emphasized && value !== null && <span className="text-[10px] text-muted-foreground/70">לא נספר</span>}
+      {!emphasized && value !== null && <span className="text-[10px] text-muted-foreground">לא נספר</span>}
     </div>
   );
 }

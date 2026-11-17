@@ -94,11 +94,19 @@ export interface Ad {
   metrics: RawMetrics;
 }
 
+/** Current configured budgets in ILS, read from Meta rather than derived from delivery spend. */
+export interface BudgetInfo {
+  daily: number | null;
+  lifetime: number | null;
+}
+
 export interface AdSet {
   id: string;
   name: string;
   campaignId: string;
   status: EntityStatus;
+  /** Optional for legacy/demo data; null amounts mean Meta did not supply a valid budget. */
+  budget?: BudgetInfo;
   ads: Ad[];
 }
 
@@ -107,6 +115,8 @@ export interface Campaign {
   name: string;
   objective: string;
   status: EntityStatus;
+  /** Campaign budgets belong to the campaign, not to each of its ad sets. */
+  budget?: BudgetInfo;
   adSets: AdSet[];
 }
 

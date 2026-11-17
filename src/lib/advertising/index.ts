@@ -5,7 +5,7 @@ import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
 import { buildSpendReconciliation, type AccountSpendResult } from "@/lib/advertising/reconciliation";
 import { AdvertisingApiError, type AdvertisingAccountInfo, type AdvertisingResult, type DateRange } from "@/lib/advertising/types";
-import { EXCLUDED_CAMPAIGNS } from "@/lib/campaign-scope";
+import { excludedCampaignIdsFrom } from "@/lib/campaign-scope";
 import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
 import type { LevelReach } from "@/lib/types";
 
@@ -65,9 +65,10 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
   }
 
   const provider = new MetaAdvertisingProvider(check.config);
+  const snapshotRequest = provider.getCampaigns(range);
   // Each reach request is separate. If one fails, only that reach is shown as unknown; the campaign data still loads.
   const [snapshot, account, accountSpend, levelReach, courseReach] = await Promise.all([
-    provider.getCampaigns(range),
+    snapshotRequest,
     provider.getAccountInfo(),
     provider.getAccountSpend(range).then(
       (spend): AccountSpendResult => ({ ok: true, spend }),
@@ -80,7 +81,7 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
       (levels): LevelReach => levels,
       (error: unknown): null => logReachFailure("campaign and ad set", error)
     ),
-    provider.getCourseReach(range, EXCLUDED_CAMPAIGNS.map((campaign) => campaign.id)).then(
+    snapshotRequest.then((snapshot) => provider.getCourseReach(range, excludedCampaignIdsFrom(snapshot.excludedCampaigns))).then(
       (reach): number => reach,
       (error: unknown): null => logReachFailure("course total", error)
     ),

@@ -1,5 +1,5 @@
 import { isoDateInTimezone } from "@/lib/advertising/timezone";
-import { isExcludedCampaignId } from "@/lib/campaign-scope";
+import { isExcludedCampaign } from "@/lib/campaign-scope";
 import type { DateRange } from "@/lib/advertising/types";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { metaIdOrNull } from "@/lib/landing-leads/validation";
@@ -56,6 +56,7 @@ function metaFact(lead: MetaFormLead): LeadFact {
     secondaryStatus: null,
     fullPaymentAmount: null,
     partialPaymentAmount: null,
+    studentRating: null,
   };
 }
 
@@ -72,6 +73,7 @@ function landingFact(record: LandingLeadRecord): LeadFact {
     secondaryStatus: null,
     fullPaymentAmount: null,
     partialPaymentAmount: null,
+    studentRating: null,
   };
 }
 
@@ -91,7 +93,7 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
   if (metaOutcome.status === "fulfilled") {
     // Leads from excluded (non-course) campaigns are left out of every figure. Their records are not touched.
     for (const lead of metaOutcome.value) {
-      if (!isExcludedCampaignId(lead.campaignId)) facts.set(lead.id, metaFact(lead));
+      if (!isExcludedCampaign(lead.campaignId, lead.campaignName)) facts.set(lead.id, metaFact(lead));
     }
   } else {
     meta.state = "unavailable";
@@ -101,7 +103,7 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
   const landing: LeadFactsResult["sources"]["landing"] = { state: "ok", message: null };
   if (landingOutcome.status === "fulfilled") {
     for (const record of landingOutcome.value) {
-      if (!isExcludedCampaignId(landingCampaignId(record))) facts.set(record.internalLeadId, landingFact(record));
+      if (!isExcludedCampaign(landingCampaignId(record), record.utmCampaign)) facts.set(record.internalLeadId, landingFact(record));
     }
   } else {
     landing.state = "unavailable";
@@ -136,6 +138,7 @@ export async function loadLeadFacts(range: DateRange, sources: LeadFactsSources)
       secondaryStatus: record.secondaryStatus,
       fullPaymentAmount: record.fullPaymentAmount,
       partialPaymentAmount: record.partialPaymentAmount,
+      studentRating: record.studentRating,
     };
   });
 
