@@ -15,7 +15,7 @@ const LIST_PAGE_LIMIT = "200";
 
 export function fetchCampaignNodes(config: MetaConfig): Promise<MetaCampaignNode[]> {
   const url = buildGraphUrl(config, `${config.adAccountId}/campaigns`, {
-    fields: "id,name,status,effective_status",
+    fields: "id,name,status,effective_status,daily_budget,lifetime_budget",
     limit: LIST_PAGE_LIMIT,
   });
   return fetchAllPages<MetaCampaignNode>(url);
@@ -23,7 +23,7 @@ export function fetchCampaignNodes(config: MetaConfig): Promise<MetaCampaignNode
 
 export function fetchAdSetNodes(config: MetaConfig): Promise<MetaAdSetNode[]> {
   const url = buildGraphUrl(config, `${config.adAccountId}/adsets`, {
-    fields: "id,name,campaign_id,status,effective_status",
+    fields: "id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget",
     limit: LIST_PAGE_LIMIT,
   });
   return fetchAllPages<MetaAdSetNode>(url);

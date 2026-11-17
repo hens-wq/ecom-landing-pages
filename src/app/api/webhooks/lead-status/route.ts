@@ -1,13 +1,13 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
 import { LandingLeadsDatabaseError } from "@/lib/landing-leads/db";
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
-import { syncCrmStatus } from "@/lib/lead-status/crm-sync";
+import { checkCrmSyncRequest, syncCrmStatus } from "@/lib/lead-status/crm-sync";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
-import { checkStatusRequest } from "@/lib/lead-status/validation";
+import { parseStudentRatingUpdate } from "@/lib/lead-status/student-rating";
+import { authorizeLeadStatusWebhook, hasLeadStatusWebhookSecret, isRatingOnlyWebhookPayload } from "@/lib/lead-status/webhook-auth";
+import { formatLeadWebhookDiagnostic, type LeadWebhookDiagnostic, type LeadWebhookHttpStatus, type LeadWebhookReason } from "@/lib/lead-status/webhook-diagnostic";
 
 // Never statically cached, Node runtime only - consistent with every other
 // data route in this app.
@@ -27,6 +27,8 @@ export const runtime = "nodejs";
  *   POST https://<your-dashboard-domain>/api/webhooks/lead-status
  *   Authorization: Bearer <LEAD_STATUS_WEBHOOK_SECRET>
  *   Content-Type: application/json
+ *   A separate LEAD_RATING_WEBHOOK_SECRET can authorize rating-only requests.
+ *   That restricted credential rejects any status or payment fields with 403.
  *
  *   {
  *     "leadId": "120210000000001111",     // optional - the Meta Lead ID, as a STRING
@@ -34,10 +36,26 @@ export const runtime = "nodejs";
  *     "mainStatus": "נרשם",
  *     "secondaryStatus": "",              // see below
  *     "fullPaymentAmount": 1500,          // optional - a positive amount only
- *     "partialPaymentAmount": 500         // optional - a positive amount only
+ *     "partialPaymentAmount": 500,        // optional - a positive amount only
+ *     "pcfsystemfield350": 9              // optional Fireberry raw Picklist code: 9 = four flames
  *   }
  *
- * Send at least one of leadId or phone.
+ * Send at least one of leadId or phone. Do not send a Fireberry contact ID as leadId.
+ *
+ * Rating-only example (leaves status and all payment fields untouched atomically):
+ *   { "leadId": "known-dashboard-lead-id", "pcfsystemfield350": 9 }
+ *
+ * Student rating
+ * --------------
+ *   Fireberry raw pcfsystemfield350: 6->1, 7->2, 8->3, 9->4, 10->5 flames.
+ *   Alternatively send canonical studentRating: 1..5. If both are sent they must agree.
+ *   Numbers or exact digit strings are supported. Omitted preserves the stored rating;
+ *   explicit null clears it. Empty strings, 0, fractions and unknown codes are rejected.
+ *   A rating-only update does not require mainStatus/secondaryStatus. A first status row
+ *   keeps the dashboard's existing implicit default of חדש/חדש; existing status/payment
+ *   fields are never replaced by those defaults. Ordinary status updates preserve rating.
+ *   No default 2 is invented. One flame remains valid legacy data, 2/3 are ordinary, 4/5 excellent.
+ *   Source event ordering is not available: updatedAt is receipt time, not Fireberry's edit time.
  *
  * How the lead is found
  * ---------------------
@@ -94,9 +112,10 @@ export const runtime = "nodejs";
  * ---------
  *   200 { "ok": true, "matchedBy": "lead_id" | "phone", "leadId": "...",
  *         "record": { leadId, normalizedPhone, mainStatus, secondaryStatus,
- *         fullPaymentAmount, partialPaymentAmount, updatedAt } }
+ *         fullPaymentAmount, partialPaymentAmount, studentRating, updatedAt } }
  *   400 { "error": { "message": "..." } }  - bad, missing or invalid field
  *   401 { "error": { "message": "אימות נכשל." } }  - wrong or missing token
+ *   403 { "error": { "message": "..." } }  - rating-only credential sent status/payment fields
  *   404 { "error": { "message": "..." } }  - no lead matches; nothing updated
  *   409 { "error": { "message": "..." } }  - phone matches several leads; nothing updated
  *   503 { "error": { "message": "..." } }  - endpoint not configured, or a
@@ -104,13 +123,6 @@ export const runtime = "nodejs";
  *
  * Safe to retry: the same request twice leaves the same record.
  */
-
-function timingSafeStringEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
 
 type AmountParseResult = { ok: true; value: number | null | undefined } | { ok: false };
 
@@ -121,26 +133,40 @@ function parseOptionalAmount(value: unknown): AmountParseResult {
   return { ok: false };
 }
 
+function webhookResponse<T>(body: T, status: LeadWebhookHttpStatus, reason: LeadWebhookReason, details: Pick<LeadWebhookDiagnostic, "operation" | "matchedBy"> = {}) {
+  // One event for each outcome, with no request/response payload or personal data.
+  console.info(formatLeadWebhookDiagnostic({ status, reason, operation: details.operation, matchedBy: details.matchedBy }));
+  return NextResponse.json(body, { status });
+}
+
 export async function POST(request: NextRequest) {
-  const configuredSecret = process.env.LEAD_STATUS_WEBHOOK_SECRET?.trim();
-  if (!configuredSecret) {
-    return NextResponse.json(
-      { error: { message: "נקודת הקצה אינה מוגדרת (LEAD_STATUS_WEBHOOK_SECRET חסר בצד השרת)." } },
-      { status: 503 }
+  const secrets = {
+    statusSecret: process.env.LEAD_STATUS_WEBHOOK_SECRET,
+    ratingSecret: process.env.LEAD_RATING_WEBHOOK_SECRET,
+  };
+  if (!hasLeadStatusWebhookSecret(secrets)) {
+    return webhookResponse(
+      { error: { message: "נקודת הקצה אינה מוגדרת (מפתח webhook חסר בצד השרת)." } },
+      503, "not_configured"
     );
   }
 
-  const authHeader = request.headers.get("authorization") ?? "";
-  const providedSecret = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
-  if (!providedSecret || !timingSafeStringEqual(providedSecret, configuredSecret)) {
-    return NextResponse.json({ error: { message: "אימות נכשל." } }, { status: 401 });
+  const scope = authorizeLeadStatusWebhook(request.headers.get("authorization"), secrets);
+  if (!scope) {
+    return webhookResponse({ error: { message: "אימות נכשל." } }, 401, "unauthorized");
   }
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    const parsed: unknown = await request.json();
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new TypeError("Expected JSON object");
+    body = parsed as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: { message: "גוף הבקשה אינו JSON תקין." } }, { status: 400 });
+    return webhookResponse({ error: { message: "גוף הבקשה אינו JSON תקין." } }, 400, "invalid_json");
+  }
+
+  if (scope === "rating" && !isRatingOnlyWebhookPayload(body)) {
+    return webhookResponse({ error: { message: "מפתח זה מורשה לעדכון דירוג בלבד, ללא שדות סטטוס או תשלום." } }, 403, "rating_scope_violation", { operation: "rating" });
   }
 
   // A numeric leadId has already lost digits in JSON; only a string is trusted.
@@ -150,44 +176,52 @@ export async function POST(request: NextRequest) {
       ? (body.phone as string | number)
       : null;
   if (!leadId && phone === null) {
-    return NextResponse.json({ error: { message: "נדרש leadId (כמחרוזת) או phone לזיהוי הליד." } }, { status: 400 });
+    return webhookResponse({ error: { message: "נדרש leadId (כמחרוזת) או phone לזיהוי הליד." } }, 400, "missing_identity");
   }
+
+  if ((body.mainStatus !== undefined && typeof body.mainStatus !== "string") || (body.secondaryStatus !== undefined && typeof body.secondaryStatus !== "string")) {
+    return webhookResponse({ error: { message: "סטטוס ראשי ומשני חייבים להיות טקסט כאשר הם נשלחים." } }, 400, "invalid_status_type");
+  }
+  const rating = parseStudentRatingUpdate(body);
+  if (!rating.ok) return webhookResponse({ error: { message: rating.error } }, 400, "invalid_rating");
 
   const fullPaymentParsed = parseOptionalAmount(body.fullPaymentAmount);
   const partialPaymentParsed = parseOptionalAmount(body.partialPaymentAmount);
   if (!fullPaymentParsed.ok || !partialPaymentParsed.ok) {
-    return NextResponse.json({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, { status: 400 });
+    return webhookResponse({ error: { message: "סכום תשלום אינו תקין - יש להזין מספר חיובי." } }, 400, "invalid_amount");
   }
 
   const syncInput = {
     leadId,
     phone,
-    mainStatus: typeof body.mainStatus === "string" ? body.mainStatus : "",
-    secondaryStatus: typeof body.secondaryStatus === "string" ? body.secondaryStatus : "",
+    mainStatus: typeof body.mainStatus === "string" ? body.mainStatus : undefined,
+    secondaryStatus: typeof body.secondaryStatus === "string" ? body.secondaryStatus : undefined,
     fullPaymentAmount: fullPaymentParsed.value,
     partialPaymentAmount: partialPaymentParsed.value,
+    studentRating: rating.value,
   };
 
-  const requestCheck = checkStatusRequest(syncInput);
+  const requestCheck = checkCrmSyncRequest(syncInput);
   if (!requestCheck.ok) {
-    return NextResponse.json({ error: { message: requestCheck.error } }, { status: 400 });
+    return webhookResponse({ error: { message: requestCheck.error } }, 400, "invalid_request");
   }
 
+  const operation = requestCheck.statusRequest === null ? "rating" : "status";
   try {
     const index = await loadDashboardLeadIndex();
     const result = await syncCrmStatus(syncInput, index, getLeadStatusRepository());
 
     if (!result.ok) {
-      return NextResponse.json({ error: { message: result.message } }, { status: result.status });
+      return webhookResponse({ error: { message: result.message } }, result.status, result.code, { operation });
     }
-    return NextResponse.json({ ok: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record });
+    return webhookResponse({ ok: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record }, 200, "success", { operation, matchedBy: result.matchedBy });
   } catch (error) {
     // Never log the request body - it carries phone numbers and payment
     // amounts. The database errors' own messages are always safe, hand-written
     // Hebrew strings (see db.ts), never the raw driver error.
     if (error instanceof LeadStatusDatabaseError || error instanceof LandingLeadsDatabaseError) {
-      return NextResponse.json({ error: { message: error.message } }, { status: 503 });
+      return webhookResponse({ error: { message: error.message } }, 503, "database_error", { operation });
     }
-    return NextResponse.json({ error: { message: "שגיאה לא צפויה בעדכון הסטטוס מה-CRM." } }, { status: 500 });
+    return webhookResponse({ error: { message: "שגיאה לא צפויה בעדכון הסטטוס מה-CRM." } }, 500, "unexpected_error", { operation });
   }
 }

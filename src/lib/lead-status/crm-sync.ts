@@ -1,5 +1,6 @@
 import type { LeadStatusRecord } from "@/lib/lead-status/types";
-import { checkStatusRequest, resolveStatusUpdate } from "@/lib/lead-status/validation";
+import { checkStatusRequest, resolveStatusUpdate, type StatusUpdateRequest } from "@/lib/lead-status/validation";
+import { parseStudentRatingUpdate, type StudentRating } from "@/lib/lead-status/student-rating";
 import { isValidIsraeliPhone, normalizeIsraeliPhone } from "@/lib/phone";
 
 /**
@@ -38,17 +39,21 @@ export interface CrmStatusStore {
       normalizedPhone?: string | null;
       fullPaymentAmount?: number | null;
       partialPaymentAmount?: number | null;
+      studentRating?: StudentRating | null;
     }
   ): Promise<LeadStatusRecord>;
+  /** Atomic rating-only write: existing statuses and payment amounts must remain untouched. */
+  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord>;
 }
 
 export interface CrmSyncInput {
   leadId?: string | null;
   phone?: string | number | null;
-  mainStatus: string;
-  secondaryStatus: string;
+  mainStatus?: string;
+  secondaryStatus?: string;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
+  studentRating?: StudentRating | null;
 }
 
 export type CrmLeadMatch =
@@ -134,34 +139,53 @@ export async function matchCrmLead(
  * ID only - never under an ID the sender supplied without verifying it. That's
  * what keeps a single lead to a single status row.
  */
-export async function syncCrmStatus(input: CrmSyncInput, index: DashboardLeadIndex, store: CrmStatusStore): Promise<CrmSyncResult> {
-  const request = {
-    mainStatus: input.mainStatus,
-    secondaryStatus: input.secondaryStatus,
+export type CrmSyncRequestCheck =
+  | { ok: true; statusRequest: StatusUpdateRequest | null; studentRating: StudentRating | null | undefined }
+  | { ok: false; error: string };
+
+/** Shared by the authenticated webhook and the pure sync function; validates before any lead or database read. */
+export function checkCrmSyncRequest(input: CrmSyncInput): CrmSyncRequestCheck {
+  const rating = parseStudentRatingUpdate({ studentRating: input.studentRating });
+  if (!rating.ok) return rating;
+  const hasStatus = input.mainStatus !== undefined || input.secondaryStatus !== undefined;
+  if (!hasStatus) {
+    if (!rating.provided) return { ok: false, error: "יש לשלוח עדכון סטטוס או דירוג תלמיד. לא בוצע עדכון." };
+    if (input.fullPaymentAmount !== undefined || input.partialPaymentAmount !== undefined) {
+      return { ok: false, error: "עדכון תשלום דורש גם סטטוס ראשי ומשני; עדכון דירוג בלבד אינו משנה תשלומים." };
+    }
+    return { ok: true, statusRequest: null, studentRating: rating.value };
+  }
+  const statusRequest: StatusUpdateRequest = {
+    mainStatus: input.mainStatus ?? "",
+    secondaryStatus: input.secondaryStatus ?? "",
     fullPaymentAmount: input.fullPaymentAmount,
     partialPaymentAmount: input.partialPaymentAmount,
   };
-  const requestCheck = checkStatusRequest(request);
-  if (!requestCheck.ok) {
-    return { ok: false, status: 400, code: "invalid_request", message: requestCheck.error };
-  }
+  const checked = checkStatusRequest(statusRequest);
+  return checked.ok ? { ok: true, statusRequest, studentRating: rating.value } : checked;
+}
 
+export async function syncCrmStatus(input: CrmSyncInput, index: DashboardLeadIndex, store: CrmStatusStore): Promise<CrmSyncResult> {
+  const requestCheck = checkCrmSyncRequest(input);
+  if (!requestCheck.ok) return { ok: false, status: 400, code: "invalid_request", message: requestCheck.error };
   const match = await matchCrmLead(input, index, store);
   if (!match.ok) return match;
 
-  const existing = await store.get(match.leadId);
-  const resolved = resolveStatusUpdate(request, existing);
-  if (!resolved.ok) {
-    return { ok: false, status: 400, code: "invalid_request", message: resolved.error };
+  if (requestCheck.statusRequest === null) {
+    // Do not read/resolve/write the whole existing record: the database updates this field atomically.
+    const record = await store.upsertStudentRating(match.leadId, requestCheck.studentRating!, match.normalizedPhone ?? undefined);
+    return { ok: true, leadId: match.leadId, matchedBy: match.matchedBy, record };
   }
-
+  const existing = await store.get(match.leadId);
+  const resolved = resolveStatusUpdate(requestCheck.statusRequest, existing);
+  if (!resolved.ok) return { ok: false, status: 400, code: "invalid_request", message: resolved.error };
   const record = await store.upsert(match.leadId, {
     mainStatus: resolved.value.mainStatus,
     secondaryStatus: resolved.value.secondaryStatus,
     normalizedPhone: match.normalizedPhone ?? undefined,
     fullPaymentAmount: resolved.value.fullPaymentAmount,
     partialPaymentAmount: resolved.value.partialPaymentAmount,
+    studentRating: requestCheck.studentRating,
   });
-
   return { ok: true, leadId: match.leadId, matchedBy: match.matchedBy, record };
 }

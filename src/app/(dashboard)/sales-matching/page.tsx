@@ -4,8 +4,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SalesMatchesTable } from "@/components/sales-matching/matches-table";
 import { SalesMatchingSummaryCards } from "@/components/sales-matching/summary-cards";
 import { salesMatches, salesMatchStats } from "@/lib/mock-data";
+import { demoDataEnabled } from "@/lib/runtime-mode";
+
+// Read on each request, so the demo flag is never frozen into a prerendered page.
+export const dynamic = "force-dynamic";
 
 export default function SalesMatchingPage() {
+  if (!demoDataEnabled()) {
+    return (
+      <Card className="border-primary/25 bg-primary/[0.035]">
+        <CardContent className="flex gap-3 px-5 py-4 text-sm leading-relaxed">
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-muted-foreground">
+            מסך התאמת המכירות עדיין לא מחובר לנתוני מכירות אמיתיים, ולכן לא מוצגים כאן מספרים. נתוני הדמו זמינים רק במצב
+            בדיקה מבודד.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const sortedMatches = [...salesMatches].sort(
     (a, b) => new Date(b.sale.saleDate).getTime() - new Date(a.sale.saleDate).getTime()
   );

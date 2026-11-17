@@ -9,8 +9,10 @@ import { getLandingLeadsInRange } from "@/lib/landing-leads/repository";
 import { LeadStatusDatabaseError } from "@/lib/lead-status/db";
 import { getLeadStatusRepository } from "@/lib/lead-status/repository";
 import { getLeadsData } from "@/lib/leads";
+import { demoDataEnabled } from "@/lib/runtime-mode";
 import { buildLeadExportXlsxBuffer, buildLeadExportXlsxFilename } from "@/lib/leads/export-xlsx";
 import { toLeadExportRow } from "@/lib/leads/export";
+import { courseLeads } from "@/lib/leads/course-scope";
 
 // Never statically cached, Node runtime only (write-excel-file + Buffer
 // output, same as every other data route in this app).
@@ -30,6 +32,15 @@ export const runtime = "nodejs";
  * 7-day export's own unfiltered-by-other-filters behavior.
  */
 export async function GET(request: NextRequest) {
+
+  // Demo leads are not real leads, so they are never exported as if they were.
+  if (demoDataEnabled()) {
+    return NextResponse.json(
+      { error: { code: "demo_mode", message: "ייצוא אינו זמין במצב דמו: נתוני הדמו אינם לידים אמיתיים." } },
+      { status: 409 }
+    );
+  }
+
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";
 
@@ -49,10 +60,11 @@ export async function GET(request: NextRequest) {
 
     const campaignRows = buildPerformanceTree((advertisingResult as AdvertisingResult).campaigns);
     const nameLookup = buildNameLookup(campaignRows);
-    const allLeads = [
+    // Course analysis only: leads of excluded campaigns (see lib/campaign-scope) never reach the file.
+    const allLeads = courseLeads([
       ...leadsResult.leads,
       ...landingLeads.map((record) => landingLeadToMetaFormLead(record, nameLookup)),
-    ];
+    ], advertisingResult.excludedCampaigns);
 
     const repository = getLeadStatusRepository();
     const statusesByLeadId = await repository.getMany(allLeads.map((lead) => lead.id));

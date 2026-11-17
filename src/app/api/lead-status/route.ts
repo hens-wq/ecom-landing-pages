@@ -29,6 +29,7 @@ function parseOptionalAmount(value: unknown): AmountParseResult {
 }
 
 export async function POST(request: NextRequest) {
+
   let body: UpsertBody;
   try {
     body = (await request.json()) as UpsertBody;

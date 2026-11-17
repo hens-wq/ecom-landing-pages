@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+
   try {
     const statuses = await getCampaignStatuses();
     return NextResponse.json({ statuses });

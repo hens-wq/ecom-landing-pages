@@ -1,7 +1,8 @@
 import "server-only";
 
 import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
-import { ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { DEFAULT_MAIN_STATUS, DEFAULT_SECONDARY_STATUS, ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
+import { isStudentRating, storedStudentRating, type StudentRating } from "@/lib/lead-status/student-rating";
 
 /**
  * Backed by Neon Postgres (see db.ts) - a `lead_status` table, one row per
@@ -18,8 +19,8 @@ import { ENROLLED_MAIN_STATUS, type LeadStatusRecord, type MainStatus } from "@/
  *     updated_at             timestamptz NOT NULL DEFAULT now()
  *   );
  *
- * Created idempotently by ensureSchema() (db.ts) - IF NOT EXISTS only, never
- * dropped/recreated, existing rows are never touched by migration.
+ * Created/migrated idempotently by ensureSchema() (db.ts). The nullable rating column is additive;
+ * existing rows are never assigned a fabricated rating.
  */
 
 export interface LeadStatusUpsertPatch {
@@ -29,6 +30,8 @@ export interface LeadStatusUpsertPatch {
   normalizedPhone?: string | null;
   fullPaymentAmount?: number | null;
   partialPaymentAmount?: number | null;
+  /** Undefined preserves the stored rating atomically; null explicitly clears it. */
+  studentRating?: StudentRating | null;
 }
 
 export interface LeadStatusRepository {
@@ -44,6 +47,8 @@ export interface LeadStatusRepository {
   /** Deletes the given rows, but only those with no payment amount. Returns the IDs actually deleted. */
   deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
+  /** Does not read/overwrite existing status or payment fields, even when another update is concurrent. */
+  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord>;
 }
 
 interface LeadStatusRow {
@@ -53,6 +58,7 @@ interface LeadStatusRow {
   secondary_status: string;
   full_payment_amount: string | number | null;
   partial_payment_amount: string | number | null;
+  student_rating: string | number | null;
   updated_at: string;
 }
 
@@ -71,20 +77,32 @@ function mapRow(row: LeadStatusRow): LeadStatusRecord {
     secondaryStatus: row.secondary_status,
     fullPaymentAmount: parseAmount(row.full_payment_amount),
     partialPaymentAmount: parseAmount(row.partial_payment_amount),
-    studentRating: null,
+    studentRating: storedStudentRating(row.student_rating),
     updatedAt: row.updated_at,
   };
 }
 
 const UPSERT_SQL = `
-  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, created_at, updated_at)
-  VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, student_rating, created_at, updated_at)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
   ON CONFLICT (meta_lead_id) DO UPDATE SET
     normalized_phone = EXCLUDED.normalized_phone,
     main_status = EXCLUDED.main_status,
     secondary_status = EXCLUDED.secondary_status,
     full_payment_amount = EXCLUDED.full_payment_amount,
     partial_payment_amount = EXCLUDED.partial_payment_amount,
+    student_rating = CASE WHEN $8::boolean THEN EXCLUDED.student_rating ELSE lead_status.student_rating END,
+    updated_at = now()
+  RETURNING *
+`;
+
+/** Rating-only UPSERT deliberately does not assign main_status, secondary_status, or either payment column on conflict. */
+const RATING_ONLY_SQL = `
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, student_rating, created_at, updated_at)
+  VALUES ($1, $2, $3, $4, $5, now(), now())
+  ON CONFLICT (meta_lead_id) DO UPDATE SET
+    student_rating = EXCLUDED.student_rating,
+    normalized_phone = CASE WHEN $6::boolean THEN EXCLUDED.normalized_phone ELSE lead_status.normalized_phone END,
     updated_at = now()
   RETURNING *
 `;
@@ -175,14 +193,21 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
     }
   }
 
-  /**
-   * Reads the existing row first so undefined patch fields keep their
-   * stored value (see LeadStatusUpsertPatch), then writes the fully
-   * resolved record. Not atomic against a concurrent edit of the SAME lead
-   * by two people at the exact same instant - an accepted tradeoff for a
-   * small internal tool where that's extremely unlikely, not engineered
-   * around with optimistic locking here.
-   */
+  async upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord> {
+    try {
+      if (studentRating !== null && !isStudentRating(studentRating)) throw new TypeError("Invalid student rating");
+      await ensureSchema();
+      const sql = getSqlClient();
+      const rows = (await sql.query(RATING_ONLY_SQL, [
+        leadId, normalizedPhone ?? null, DEFAULT_MAIN_STATUS, DEFAULT_SECONDARY_STATUS, studentRating, normalizedPhone !== undefined,
+      ])) as LeadStatusRow[];
+      return mapRow(rows[0]);
+    } catch (error) {
+      throw wrapDatabaseError(error, "שגיאה בשמירת דירוג התלמיד. הנתונים לא נשמרו.");
+    }
+  }
+
+  /** Existing status/payment merge behavior is preserved; omitted ratings are kept by SQL against concurrent writes. */
   async upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord> {
     try {
       await ensureSchema();
@@ -196,6 +221,9 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       const partialPaymentAmount =
         patch.partialPaymentAmount !== undefined ? patch.partialPaymentAmount : (existing?.partialPaymentAmount ?? null);
 
+      if (patch.studentRating !== undefined && patch.studentRating !== null && !isStudentRating(patch.studentRating)) {
+        throw new TypeError("Invalid student rating");
+      }
       const rows = (await sql.query(UPSERT_SQL, [
         leadId,
         normalizedPhone,
@@ -203,6 +231,8 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
         patch.secondaryStatus,
         fullPaymentAmount,
         partialPaymentAmount,
+        patch.studentRating ?? null,
+        patch.studentRating !== undefined,
       ])) as LeadStatusRow[];
 
       return mapRow(rows[0]);

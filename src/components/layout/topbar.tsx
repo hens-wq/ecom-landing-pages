@@ -11,6 +11,7 @@ const PAGE_TITLES: Record<string, { he: string; en: string }> = {
   "/": { he: "דשבורד", en: "Dashboard" },
   "/leads": { he: "לידים", en: "Leads" },
   "/sales-matching": { he: "מכירות והתאמות", en: "Sales & Matching" },
+  "/optimization": { he: "ניתוח קמפיינים", en: "Campaign Analysis" },
   "/integrations": { he: "חיבורים", en: "Integrations" },
 };
 
@@ -28,7 +29,7 @@ export function Topbar() {
           <span className="text-sm font-bold">Ecom</span>
         </div>
         <div className="hidden flex-col lg:flex">
-          <h1 className="text-sm font-semibold text-foreground">
+          <h1 className="text-base font-bold text-heading">
             {title.he} <span className="text-xs font-normal text-muted-foreground">({title.en})</span>
           </h1>
         </div>

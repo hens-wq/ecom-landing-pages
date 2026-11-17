@@ -1,6 +1,7 @@
 import type { LeadColumnKey } from "@/components/leads/lead-columns";
 import type { MetaFormLead } from "@/lib/leads";
 import type { LeadStatusRecord } from "@/lib/lead-status/types";
+import { effectiveStudentRating } from "@/lib/lead-status/student-rating";
 
 export type LeadSortValue = string | number;
 
@@ -32,7 +33,7 @@ export function getLeadSortValue(key: LeadColumnKey, lead: MetaFormLead, status:
     case "partialPayment":
       return status.partialPaymentAmount ?? -Infinity;
     case "studentRating":
-      return status.studentRating ?? -Infinity;
+      return effectiveStudentRating(status.studentRating);
     case "campaign":
       return lead.campaignName || lead.campaignId || "";
     case "adSet":

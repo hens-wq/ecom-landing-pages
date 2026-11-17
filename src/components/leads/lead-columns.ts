@@ -8,6 +8,7 @@ import type { CSSProperties } from "react";
  */
 export const ANCHORED_LEAD_COLUMN_KEYS = [
   "leadDate",
+  "studentRating",
   "name",
   "phone",
   "mainStatus",
@@ -24,7 +25,6 @@ export const ANCHORED_LEAD_COLUMN_KEYS = [
  * the table by default").
  */
 export const DEFAULT_CONFIGURABLE_LEAD_COLUMN_ORDER = [
-  "studentRating",
   "campaign",
   "adSet",
   "ad",
@@ -72,11 +72,12 @@ export const DEFAULT_LEAD_COLUMN_WIDTHS: Record<LeadColumnKey, number> = Object.
 ) as Record<LeadColumnKey, number>;
 
 /**
- * Only active from the `lg` breakpoint up (see usage sites) - below that the
+ * The full cluster is frozen from `2xl` up (see usage sites). At smaller widths the
  * identity/status columns are already first in reading order (see the
  * column order in leads-table.tsx), which is enough to avoid scrolling to
  * edit on a narrow screen without needing ~700px of frozen columns to fit
- * inside a ~400px viewport.
+ * inside a narrow viewport. The added rating column brings the default frozen
+ * width to 890px, so 2xl leaves room for the sidebar and scrollable columns.
  *
  * IMPORTANT: the table itself must render with `table-fixed` (see
  * leads-table.tsx), and every column's width - sticky or not - must come
@@ -92,7 +93,7 @@ export const DEFAULT_LEAD_COLUMN_WIDTHS: Record<LeadColumnKey, number> = Object.
  * show/hide/reorder system only ever touches the configurable columns
  * (never sticky), so reordering can never interact with this at all.
  */
-export const STICKY_LEAD_COLUMN_KEYS: LeadColumnKey[] = ["leadDate", "name", "phone", "mainStatus", "secondaryStatus"];
+export const STICKY_LEAD_COLUMN_KEYS: LeadColumnKey[] = ["leadDate", "studentRating", "name", "phone", "mainStatus", "secondaryStatus"];
 
 /** The last sticky column - gets the visual border separating frozen from scrollable content. */
 export const LAST_STICKY_COLUMN: LeadColumnKey = "secondaryStatus";

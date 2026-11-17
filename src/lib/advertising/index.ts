@@ -3,14 +3,27 @@ import "server-only";
 import { checkMetaConfig } from "@/lib/advertising/meta/config";
 import { MetaAdvertisingProvider } from "@/lib/advertising/meta/provider";
 import { MockAdvertisingProvider } from "@/lib/advertising/mock-provider";
+import { buildSpendReconciliation, type AccountSpendResult } from "@/lib/advertising/reconciliation";
 import { AdvertisingApiError, type AdvertisingAccountInfo, type AdvertisingResult, type DateRange } from "@/lib/advertising/types";
+import { excludedCampaignIdsFrom } from "@/lib/campaign-scope";
+import { META_NOT_CONFIGURED_MESSAGE, demoDataEnabled } from "@/lib/runtime-mode";
+import type { LevelReach } from "@/lib/types";
+
+/** Which reach could not be loaded, in Hebrew, or null when all of it loaded. */
+function reachNoticeFor(levelReachLoaded: boolean, courseReachLoaded: boolean): string | null {
+  const missing: string[] = [];
+  if (!levelReachLoaded) missing.push("קמפיין ו-Ad Set");
+  if (!courseReachLoaded) missing.push("סך כל הקורסים");
+  if (missing.length === 0) return null;
+  return `התפוצה של ${missing.join(" ו-")} לא נטענה מ-Meta. במקום לחשב אותה מסכום המודעות, היא מוצגת כלא זמינה ("—").`;
+}
 
 /**
  * The one function every consumer (the /api/advertising route, the
  * Integrations page) calls to get advertising data - it decides mock vs. Meta
  * so nothing else has to.
  *
- *  - Meta not configured at all -> mock data (Phase 1's expected default state).
+ *  - Meta not configured at all -> an explicit error. Demo data is served only when ECOM_DEMO_DATA=1 is set on purpose.
  *  - Meta partially configured (one of the two required env vars set, not
  *    both) -> that's a real configuration mistake, throws rather than
  *    silently using mock data.
@@ -23,55 +36,81 @@ export async function getAdvertisingData(range: DateRange): Promise<AdvertisingR
   const check = checkMetaConfig();
 
   if (check.status === "unconfigured") {
+    if (!demoDataEnabled()) {
+      throw new AdvertisingApiError("not_configured", META_NOT_CONFIGURED_MESSAGE, "Meta env vars are empty and ECOM_DEMO_DATA is not set");
+    }
     const provider = new MockAdvertisingProvider();
-    const campaigns = await provider.getCampaigns(range);
-    return { source: "mock", campaigns, account: null };
+    const snapshot = await provider.getCampaigns(range);
+    const [levelReach, courseReach] = await Promise.all([provider.getLevelReach(range), provider.getCourseReach(range)]);
+    return {
+      source: "mock",
+      campaigns: snapshot.campaigns,
+      account: null,
+      unlisted: null,
+      reconciliation: null,
+      excludedCampaigns: snapshot.excludedCampaigns,
+      levelReach,
+      courseReach,
+      reachNotice: null,
+    };
   }
 
   if (check.status === "incomplete") {
     const missingLabel = check.missing.join(", ");
     throw new AdvertisingApiError(
       check.missing.includes("META_ACCESS_TOKEN") ? "missing_token" : "missing_account_id",
-      `הגדרת Meta Ads חסרה: ${missingLabel}. יש להשלים את שני משתני הסביבה (META_ACCESS_TOKEN ו-META_AD_ACCOUNT_ID) כדי להתחבר, או להשאיר את שניהם ריקים כדי להמשיך עם נתוני דמו.`,
+      `הגדרת Meta Ads חסרה: ${missingLabel}. יש להשלים את שני משתני הסביבה (META_ACCESS_TOKEN ו-META_AD_ACCOUNT_ID) כדי להתחבר.`,
       `Missing env vars: ${missingLabel}`
     );
   }
 
   const provider = new MetaAdvertisingProvider(check.config);
-  const campaigns = await provider.getCampaigns(range);
-  const account = await provider.getAccountInfo();
-  return { source: "meta", campaigns, account };
+  const snapshotRequest = provider.getCampaigns(range);
+  // Each reach request is separate. If one fails, only that reach is shown as unknown; the campaign data still loads.
+  const [snapshot, account, accountSpend, levelReach, courseReach] = await Promise.all([
+    snapshotRequest,
+    provider.getAccountInfo(),
+    provider.getAccountSpend(range).then(
+      (spend): AccountSpendResult => ({ ok: true, spend }),
+      (error: unknown): AccountSpendResult => ({
+        ok: false,
+        message: error instanceof AdvertisingApiError ? error.message : "שגיאה לא צפויה בקריאת סך ההוצאה בחשבון.",
+      })
+    ),
+    provider.getLevelReach(range).then(
+      (levels): LevelReach => levels,
+      (error: unknown): null => logReachFailure("campaign and ad set", error)
+    ),
+    snapshotRequest.then((snapshot) => provider.getCourseReach(range, excludedCampaignIdsFrom(snapshot.excludedCampaigns))).then(
+      (reach): number => reach,
+      (error: unknown): null => logReachFailure("course total", error)
+    ),
+  ]);
+
+  const reconciliation = buildSpendReconciliation({
+    campaigns: snapshot.campaigns,
+    unlisted: snapshot.unlisted,
+    excludedSpend: snapshot.excludedSpend,
+    accountSpend,
+  });
+  return {
+    source: "meta",
+    campaigns: snapshot.campaigns,
+    account,
+    unlisted: snapshot.unlisted,
+    reconciliation,
+    excludedCampaigns: snapshot.excludedCampaigns,
+    levelReach,
+    courseReach,
+    reachNotice: reachNoticeFor(levelReach !== null, courseReach !== null),
+  };
 }
 
-/**
- * Total ad spend for `range` across every campaign that spent in it - paused,
- * archived and switched-off campaigns included. Mock mode sums the mock
- * campaigns; Meta mode asks the account-level Insights edge directly.
- */
-export async function getAccountSpendForRange(range: DateRange): Promise<{ source: "mock" | "meta"; spend: number }> {
-  const check = checkMetaConfig();
-
-  if (check.status === "unconfigured") {
-    const campaigns = await new MockAdvertisingProvider().getCampaigns(range);
-    const spend = campaigns.reduce(
-      (total, campaign) =>
-        total + campaign.adSets.reduce((adSetTotal, adSet) => adSetTotal + adSet.ads.reduce((adTotal, ad) => adTotal + ad.metrics.spend, 0), 0),
-      0
-    );
-    return { source: "mock", spend };
-  }
-
-  if (check.status === "incomplete") {
-    const missingLabel = check.missing.join(", ");
-    throw new AdvertisingApiError(
-      check.missing.includes("META_ACCESS_TOKEN") ? "missing_token" : "missing_account_id",
-      `הגדרת Meta Ads חסרה: ${missingLabel}.`,
-      `Missing env vars: ${missingLabel}`
-    );
-  }
-
-  const provider = new MetaAdvertisingProvider(check.config);
-  return { source: "meta", spend: await provider.getAccountSpend(range) };
+/** Logs only the error code: the message and detail never contain a token, so this is safe to keep in the server log. */
+function logReachFailure(which: string, error: unknown): null {
+  const code = error instanceof AdvertisingApiError ? error.code : "unknown_error";
+  console.warn(`Meta reach for ${which} could not be loaded (${code}).`);
+  return null;
 }
 
 export type MetaConnectionStatus =

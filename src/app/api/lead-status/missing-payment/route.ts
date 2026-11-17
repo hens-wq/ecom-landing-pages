@@ -20,6 +20,7 @@ export const runtime = "nodejs";
  * listed (found: false). Hiding it would hide a real unpaid enrollment.
  */
 export async function GET() {
+
   try {
     const [records, index] = await Promise.all([getLeadStatusRepository().listEnrolledMissingPayment(), loadDashboardLeadIndex()]);
 

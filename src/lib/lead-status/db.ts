@@ -45,7 +45,7 @@ function getSql(): ReturnType<typeof neon> {
 let schemaReadyPromise: Promise<void> | null = null;
 
 /**
- * Idempotent: CREATE TABLE/INDEX IF NOT EXISTS only - never drops, never
+ * Idempotent: CREATE TABLE/INDEX and ADD COLUMN IF NOT EXISTS only - never drops, never
  * recreates, never touches existing rows. Memoized per warm server instance
  * so it only actually runs once per process, not once per request; a
  * failure clears the memo so the next call retries instead of caching a
@@ -67,6 +67,8 @@ export function ensureSchema(): Promise<void> {
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `;
+      // Additive/idempotent: historical rows remain unrated (NULL), never backfilled with an invented score.
+      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating smallint CHECK (student_rating BETWEEN 1 AND 5)`;
       await sql`CREATE INDEX IF NOT EXISTS lead_status_normalized_phone_idx ON lead_status (normalized_phone)`;
     })().catch((error) => {
       schemaReadyPromise = null;

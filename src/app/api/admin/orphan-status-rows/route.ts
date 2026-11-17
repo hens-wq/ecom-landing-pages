@@ -25,6 +25,7 @@ function timingSafeStringEqual(a: string, b: string): boolean {
 
 /** Returns a response when the request must be refused, or null when it may proceed. */
 function refuseUnlessAuthorized(request: NextRequest): NextResponse | null {
+  // The admin Bearer secret is the only way in. A script sends it; no dashboard control calls this route.
   const configuredSecret = process.env.LEAD_STATUS_ADMIN_SECRET?.trim();
   if (!configuredSecret) {
     return NextResponse.json({ error: { message: "נקודת הקצה אינה מוגדרת (LEAD_STATUS_ADMIN_SECRET חסר בצד השרת)." } }, { status: 503 });

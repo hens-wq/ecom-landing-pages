@@ -1,6 +1,7 @@
 import { safeDivide } from "@/lib/calculations";
 import { ENROLLED_MAIN_STATUS, type LeadStatusRecord } from "@/lib/lead-status/types";
 import { isPositiveAmount } from "@/lib/lead-status/validation";
+import { activeAmount } from "@/lib/performance/lead-metrics";
 
 /**
  * The amount that actually counts as revenue for this lead, given its
@@ -10,10 +11,7 @@ import { isPositiveAmount } from "@/lib/lead-status/validation";
  * that isn't a sale at all.
  */
 export function activePaymentAmount(record: LeadStatusRecord): number | null {
-  if (record.mainStatus !== "נרשם") return null;
-  if (record.secondaryStatus === "תשלום מלא") return record.fullPaymentAmount;
-  if (record.secondaryStatus === "תשלום חלקי") return record.partialPaymentAmount;
-  return null;
+  return activeAmount(record.mainStatus, record.secondaryStatus, record.fullPaymentAmount, record.partialPaymentAmount);
 }
 
 /** A sale is any enrolled lead (Main Status "נרשם"), whether or not a payment amount has been entered yet - revenue still only counts entered amounts (see activePaymentAmount). */
@@ -38,54 +36,6 @@ export function isIrrelevantRecord(record: LeadStatusRecord): boolean {
   if (record.mainStatus === "DATA") return true;
   if (record.mainStatus === "לא מעוניין" && record.secondaryStatus === 'ל"מ - אין שיתוף פעולה') return true;
   return false;
-}
-
-export interface SalesSummary {
-  totalLeads: number;
-  totalSales: number;
-  /** Percent (0-100), or null if there are no leads at all. */
-  conversionRate: number | null;
-  /** Meta Spend / Total Sales, or null if there are no sales (display "-"). */
-  costPerAcquisition: number | null;
-  /** Sum of every counted (active) payment amount. */
-  recordedRevenue: number;
-  /** Recorded Revenue / Meta Spend, or null if spend is 0. */
-  roas: number | null;
-}
-
-/**
- * `statusesByLeadId` covers leads with no manual record yet as "חדש"/"חדש" by
- * omission (see defaultLeadStatusRecord) - callers pass whatever the
- * repository actually has, never needing to pre-fill missing entries.
- */
-export function calculateSalesSummary(
-  leadIds: string[],
-  statusesByLeadId: Map<string, LeadStatusRecord>,
-  totalSpend: number
-): SalesSummary {
-  let totalSales = 0;
-  let recordedRevenue = 0;
-
-  for (const leadId of leadIds) {
-    const record = statusesByLeadId.get(leadId);
-    if (!record) continue;
-    if (isSaleRecord(record)) {
-      totalSales += 1;
-      recordedRevenue += activePaymentAmount(record) ?? 0;
-    }
-  }
-
-  const totalLeads = leadIds.length;
-  const conversionRateRatio = safeDivide(totalSales, totalLeads);
-
-  return {
-    totalLeads,
-    totalSales,
-    conversionRate: conversionRateRatio === null ? null : conversionRateRatio * 100,
-    costPerAcquisition: safeDivide(totalSpend, totalSales),
-    recordedRevenue,
-    roas: safeDivide(recordedRevenue, totalSpend),
-  };
 }
 
 export interface IrrelevantRateResult {

@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+
   const since = request.nextUrl.searchParams.get("since") ?? "";
   const until = request.nextUrl.searchParams.get("until") ?? "";
 

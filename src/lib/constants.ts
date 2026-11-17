@@ -5,14 +5,16 @@ export const NAV_ITEMS = [
   { href: "/", label: "דשבורד", labelEn: "Dashboard" },
   { href: "/leads", label: "לידים", labelEn: "Leads" },
   { href: "/sales-matching", label: "מכירות והתאמות", labelEn: "Sales & Matching" },
+  { href: "/optimization", label: "ניתוח קמפיינים", labelEn: "Campaign Analysis" },
   { href: "/integrations", label: "חיבורים", labelEn: "Integrations" },
 ] as const;
 
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
   { id: "today", label: "היום", resolve: (today) => singleDayDateRange(0, today) },
   { id: "yesterday", label: "אתמול", resolve: (today) => singleDayDateRange(1, today) },
-  { id: "last_7", label: "7 הימים האחרונים", resolve: (today) => presetDaysToDateRange(7, today) },
-  { id: "last_30", label: "30 הימים האחרונים", resolve: (today) => presetDaysToDateRange(30, today) },
+  { id: "today_and_yesterday", label: "היום ואתמול", resolve: (today) => presetDaysToDateRange(2, today) },
+  { id: "last_7", label: "7 ימים אחרונים", resolve: (today) => presetDaysToDateRange(7, today) },
+  { id: "last_30", label: "30 ימים אחרונים", resolve: (today) => presetDaysToDateRange(30, today) },
   { id: "current_month", label: "חודש נוכחי", resolve: (today) => currentMonthDateRange(today) },
 ];
 

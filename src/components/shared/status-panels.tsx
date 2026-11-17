@@ -29,7 +29,7 @@ export function ApiErrorPanel({ title = "לא ניתן היה לטעון נתו�
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">{title}</p>
           <p className="max-w-md text-sm text-muted-foreground">{message}</p>
-          <p className="font-mono text-[11px] text-muted-foreground/70">קוד שגיאה: {code}</p>
+          <p className="font-mono text-[11px] text-muted-foreground">קוד שגיאה: {code}</p>
         </div>
         <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
           נסה שוב

@@ -24,10 +24,9 @@ interface LeadRowProps {
   visibleColumnOrder: LeadColumnKey[];
 }
 
-const STICKY_CELL_CLASS = "lg:sticky lg:z-10 lg:bg-card group-hover:lg:bg-muted/40";
-const TECH_ID_CLASS = "overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground/70";
+const STICKY_CELL_CLASS = "2xl:sticky 2xl:z-10 2xl:bg-card group-hover:2xl:bg-muted/40";
+const TECH_ID_CLASS = "overflow-hidden text-left font-mono text-[11px] text-ellipsis text-muted-foreground";
 const CONFIGURABLE_KEYS_SET = new Set<LeadColumnKey>([
-  "studentRating",
   "campaign",
   "adSet",
   "ad",
@@ -61,12 +60,6 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
 
   function renderConfigurableCell(key: LeadColumnKey) {
     switch (key) {
-      case "studentRating":
-        return (
-          <TableCell key={key} className="whitespace-nowrap" style={columnStyle(widths.studentRating)}>
-            <StudentRatingFlames rating={statusRecord.studentRating} />
-          </TableCell>
-        );
       case "campaign":
         return (
           <TableCell
@@ -142,10 +135,13 @@ export function LeadRow({ lead, statusRecord, onSaveStatus, onStatusSaved, width
   return (
     <TableRow className="group" data-lead-id={lead.id}>
       <TableCell
-        className={cn(STICKY_CELL_CLASS, "border-l border-transparent lg:border-border tabular-nums-he")}
+        className={cn(STICKY_CELL_CLASS, "border-l border-transparent 2xl:border-border tabular-nums-he")}
         style={columnStyle(widths.leadDate, rightOffsets.leadDate)}
       >
         {formatDateTime(lead.createdTime)}
+      </TableCell>
+      <TableCell className={cn(STICKY_CELL_CLASS, "whitespace-nowrap")} style={columnStyle(widths.studentRating, rightOffsets.studentRating)}>
+        <StudentRatingFlames rating={statusRecord.studentRating} />
       </TableCell>
       <TableCell
         className={cn(STICKY_CELL_CLASS, "overflow-hidden font-medium text-ellipsis")}

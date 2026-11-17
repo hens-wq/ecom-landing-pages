@@ -6,6 +6,7 @@ import { Download, Info, RefreshCw, Search, X } from "lucide-react";
 import { DataSourceBadge } from "@/components/dashboard/data-source-badge";
 import { DatabaseStatusBadge, type DatabaseStatus } from "@/components/leads/database-status-badge";
 import { CustomDateRangeSelect } from "@/components/shared/custom-date-range-select";
+import { DataQualityBanner } from "@/components/shared/data-quality-banner";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { LeadColumnVisibilityMenu } from "@/components/leads/lead-column-visibility-menu";
 import type { LeadColumnKey } from "@/components/leads/lead-columns";
@@ -13,32 +14,49 @@ import { compareLeadSortValues, getLeadSortValue } from "@/components/leads/lead
 import { LeadsTable } from "@/components/leads/leads-table";
 import { MissingPaymentBanner } from "@/components/leads/missing-payment-banner";
 import { SalesKpiCards } from "@/components/leads/sales-kpi-cards";
+import { StudentRatingSummary } from "@/components/lead-quality/student-rating-summary";
 import { useLeadColumnLayout } from "@/components/leads/use-lead-column-layout";
 import type { LeadStatusPatch } from "@/components/leads/use-lead-status-editor";
 import { ApiErrorPanel, EmptyStatePanel, LoadingPanel } from "@/components/shared/status-panels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { type AdRow, type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
+import { type CampaignRow, buildPerformanceTree } from "@/lib/aggregate";
+import { sumScopedSpend } from "@/lib/performance/scope-spend";
+import { spendNotices } from "@/lib/performance/spend-notices";
 import { CUSTOM_DATE_RANGE_PRESET_ID, presetDaysToDateRange, resolveDateRangeSelection, type DateRangeSelection } from "@/lib/advertising/date-range";
 import type { AdvertisingResult } from "@/lib/advertising";
 import type { CampaignStatusMap } from "@/lib/campaign-status";
 import { DATE_RANGE_PRESETS, DEFAULT_DATE_RANGE_PRESET_ID, LEAD_SOURCE_LABELS } from "@/lib/constants";
-import { calculateIrrelevantRate, calculateSalesSummary, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import { calculateIrrelevantRate, isEnrolledMissingPayment, isSaleRecord } from "@/lib/lead-status/calculations";
+import { isoDateInTimezone } from "@/lib/advertising/timezone";
+import { computeLeadKpis, type LeadKpis } from "@/lib/performance/lead-metrics";
+import type { LeadFact } from "@/lib/performance/types";
 import type { MissingPaymentLead, MissingPaymentResponse } from "@/lib/lead-status/missing-payment";
+import { mergeStatusRecords } from "@/lib/lead-status/merge-status-records";
 import { defaultLeadStatusRecord, MAIN_STATUSES, type LeadStatusRecord, type MainStatus } from "@/lib/lead-status/types";
 import { buildNameLookup, landingLeadToMetaFormLead } from "@/lib/landing-leads/merge";
 import type { LandingLeadRecord } from "@/lib/landing-leads/types";
 import { buildLeadExportCsv, toLeadExportRow } from "@/lib/leads/export";
 import { leadMatchesSearch } from "@/lib/leads/search";
+import { courseLeads, isCourseLead } from "@/lib/leads/course-scope";
+import { matchesStudentRatingFilter, type StudentRatingFilter } from "@/lib/leads/student-rating-filter";
+import { summarizeStudentRatings } from "@/lib/lead-quality/student-rating";
 import type { LeadsResult, MetaFormLead } from "@/lib/leads";
 import { cn } from "@/lib/utils";
+
+/** The spend figures' own checks, carried from the advertising data together with the leads. */
+interface SpendCheck {
+  reconciliation: AdvertisingResult["reconciliation"];
+  unlistedSpend: number;
+}
 
 interface PageData {
   leadsResult: LeadsResult;
   campaignRows: CampaignRow[];
   statusesByLeadId: Map<string, LeadStatusRecord>;
   campaignStatuses: CampaignStatusMap;
+  spendCheck: SpendCheck;
 }
 
 type LoadState =
@@ -56,35 +74,23 @@ function uniqueOptions(leads: MetaFormLead[], idKey: "campaignId" | "adSetId" | 
   return Array.from(seen, ([id, label]) => ({ id, label }));
 }
 
-function flattenAdRows(campaignRows: CampaignRow[]): Array<{ campaignId: string; adSetId: string; ad: AdRow }> {
-  const rows: Array<{ campaignId: string; adSetId: string; ad: AdRow }> = [];
-  for (const campaign of campaignRows) {
-    for (const adSet of campaign.adSets) {
-      for (const ad of adSet.ads) rows.push({ campaignId: campaign.id, adSetId: adSet.id, ad });
-    }
-  }
-  return rows;
-}
-
-/** Spend for whatever campaign/ad set/ad/campaign-status scope is currently selected - matched by ID only, exactly like the rest of this app's attribution. */
-function sumScopedSpend(
-  campaignRows: CampaignRow[],
-  campaignStatuses: CampaignStatusMap,
-  filters: { campaignId: string | null; adSetId: string | null; adId: string | null; campaignStatus: "active" | "inactive" | null }
-): number {
-  let total = 0;
-  for (const { campaignId, adSetId, ad } of flattenAdRows(campaignRows)) {
-    if (filters.campaignId && campaignId !== filters.campaignId) continue;
-    if (filters.adSetId && adSetId !== filters.adSetId) continue;
-    if (filters.adId && ad.id !== filters.adId) continue;
-    if (filters.campaignStatus) {
-      const isActive = (campaignStatuses[campaignId] ?? "ended") === "active";
-      if (filters.campaignStatus === "active" && !isActive) continue;
-      if (filters.campaignStatus === "inactive" && isActive) continue;
-    }
-    total += ad.metrics.spend;
-  }
-  return total;
+/** The KPI layer's view of one lead on this page: its Meta IDs and its current status. Lead dates are only used for dashboard attribution, so an unreadable date is left empty here. */
+function toLeadFact(lead: MetaFormLead, record: LeadStatusRecord): LeadFact {
+  const created = new Date(lead.createdTime);
+  return {
+    id: lead.id,
+    sourceType: lead.sourceType,
+    leadDate: Number.isNaN(created.getTime()) ? "" : isoDateInTimezone(created),
+    campaignId: lead.campaignId || null,
+    adSetId: lead.adSetId || null,
+    adId: lead.adId || null,
+    statusKnown: true,
+    mainStatus: record.mainStatus,
+    secondaryStatus: record.secondaryStatus,
+    fullPaymentAmount: record.fullPaymentAmount,
+    partialPaymentAmount: record.partialPaymentAmount,
+    studentRating: record.studentRating,
+  };
 }
 
 const CAMPAIGN_STATUS_OPTIONS: FilterOption[] = [
@@ -98,6 +104,7 @@ interface CombinedLeadsFetchOk {
   campaignRows: CampaignRow[];
   campaignStatuses: CampaignStatusMap;
   statusesByLeadId: Map<string, LeadStatusRecord>;
+  spendCheck: SpendCheck;
 }
 interface CombinedLeadsFetchError {
   ok: false;
@@ -152,17 +159,28 @@ async function fetchCombinedLeads(
     };
   }
 
+  // Without a Meta connection /api/leads returns demo leads. They must never be combined with real landing leads and
+  // statuses, so the page reports the state instead of showing a mix of the two.
+  if ((leadsJson as LeadsResult).source !== "meta") {
+    return {
+      ok: false,
+      code: "demo_mode",
+      message: "החשבון לא מחובר ל-Meta Ads (מצב דמו), לכן לא ניתן להציג כאן לידים אמיתיים.",
+    };
+  }
+
   // Meta Instant Form leads keep being fetched live, exactly as before;
   // landing-page leads are the only ones persisted in Neon (see
   // lib/landing-leads) - combined here into one list so the rest of this
   // page (filters, KPI math, the table, the export) never needs to know
   // leads came from two different places.
-  const campaignRows = buildPerformanceTree((advertisingJson as AdvertisingResult).campaigns);
+  const advertising = advertisingJson as AdvertisingResult;
+  const campaignRows = buildPerformanceTree(advertising.campaigns, undefined, advertising.unlisted, advertising.levelReach);
   const nameLookup = buildNameLookup(campaignRows);
   const landingLeads = (landingLeadsJson.leads as LandingLeadRecord[]).map((record) => landingLeadToMetaFormLead(record, nameLookup));
   const leadsResult: LeadsResult = {
     ...(leadsJson as LeadsResult),
-    leads: [...(leadsJson as LeadsResult).leads, ...landingLeads].sort(
+    leads: courseLeads([...(leadsJson as LeadsResult).leads, ...landingLeads], advertising.excludedCampaigns).sort(
       (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
     ),
   };
@@ -200,6 +218,7 @@ async function fetchCombinedLeads(
     campaignRows,
     campaignStatuses: campaignStatusJson.statuses as CampaignStatusMap,
     statusesByLeadId,
+    spendCheck: { reconciliation: advertising.reconciliation, unlistedSpend: advertising.unlisted?.spend ?? 0 },
   };
 }
 
@@ -236,6 +255,7 @@ export default function LeadsPage() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState<"active" | "inactive" | null>(null);
   const [mainStatusFilter, setMainStatusFilter] = useState<MainStatus | null>(null);
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState<string | null>(null);
+  const [studentRatingFilter, setStudentRatingFilter] = useState<StudentRatingFilter | null>(null);
   /** Toggled only via the "סה"כ מכירות" KPI card - every enrolled lead ("נרשם"), paid or not. A separate flag since a sale isn't one single-value status the dropdowns can express. */
   const [salesOnlyFilter, setSalesOnlyFilter] = useState(false);
   /** Toggled via the missing-payment alert - enrolled leads with no payment amount entered. */
@@ -246,8 +266,6 @@ export default function LeadsPage() {
   /** A lead the alert asked us to bring into view. Consumed once that lead's row has rendered. */
   const pendingFocusLeadIdRef = useRef<string | null>(null);
   const [statusSaveTick, setStatusSaveTick] = useState(0);
-  /** Ad spend from the 1st of this month through today - undefined while loading, null if unavailable. Independent of the date range on screen. */
-  const [monthToDateSpend, setMonthToDateSpend] = useState<number | null | undefined>(undefined);
   const tableSectionRef = useRef<HTMLDivElement>(null);
 
   if (rangeKey !== trackedRangeKey) {
@@ -273,10 +291,15 @@ export default function LeadsPage() {
         setState({
           phase: "ready",
           data: {
-            leadsResult: result.leadsResult,
+            leadsResult: {
+              ...result.leadsResult,
+              // Leads from excluded (non-course) campaigns stay out of this page. The export files are unchanged.
+              leads: result.leadsResult.leads.filter(isCourseLead),
+            },
             campaignRows: result.campaignRows,
             statusesByLeadId: result.statusesByLeadId,
             campaignStatuses: result.campaignStatuses,
+            spendCheck: result.spendCheck,
           },
         });
       } catch {
@@ -341,37 +364,17 @@ export default function LeadsPage() {
     };
   }, [refreshTick, statusSaveTick]);
 
-  // Month-to-date spend depends only on today's date, not on the Leads range -
-  // loaded once per page load/refresh, never on a range change.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/advertising/month-to-date", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data: { spend?: unknown }) => {
-        if (cancelled) return;
-        setMonthToDateSpend(typeof data.spend === "number" ? data.spend : null);
-      })
-      .catch(() => {
-        if (!cancelled) setMonthToDateSpend(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshTick]);
-
-  const allLeads = useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
+  const allLeads =useMemo(() => (state.phase === "ready" ? state.data.leadsResult.leads : []), [state]);
   const source = state.phase === "ready" ? state.data.leadsResult.source : undefined;
   const statusesByLeadId = useMemo(() => (state.phase === "ready" ? state.data.statusesByLeadId : new Map<string, LeadStatusRecord>()), [state]);
   const campaignStatuses = useMemo(() => (state.phase === "ready" ? state.data.campaignStatuses : {}), [state]);
   const campaignRows = useMemo(() => (state.phase === "ready" ? state.data.campaignRows : []), [state]);
 
   const [statusOverrides, setStatusOverrides] = useState<Map<string, LeadStatusRecord>>(new Map());
-  const effectiveStatusesByLeadId = useMemo(() => {
-    if (statusOverrides.size === 0) return statusesByLeadId;
-    const merged = new Map(statusesByLeadId);
-    for (const [leadId, record] of statusOverrides) merged.set(leadId, record);
-    return merged;
-  }, [statusesByLeadId, statusOverrides]);
+  const effectiveStatusesByLeadId = useMemo(
+    () => statusOverrides.size === 0 ? statusesByLeadId : mergeStatusRecords(statusesByLeadId, statusOverrides),
+    [statusesByLeadId, statusOverrides],
+  );
 
   function getStatus(leadId: string, normalizedPhone: string | null): LeadStatusRecord {
     return effectiveStatusesByLeadId.get(leadId) ?? defaultLeadStatusRecord(leadId, normalizedPhone);
@@ -417,7 +420,8 @@ export default function LeadsPage() {
         return;
       }
 
-      const rows = result.leadsResult.leads.map((lead) => toLeadExportRow(lead, result.statusesByLeadId.get(lead.id)));
+      // Course analysis only: leads of excluded campaigns (see lib/campaign-scope) never reach the agent file.
+      const rows = courseLeads(result.leadsResult.leads).map((lead) => toLeadExportRow(lead, result.statusesByLeadId.get(lead.id)));
       const csv = buildLeadExportCsv(rows);
       const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -527,12 +531,13 @@ export default function LeadsPage() {
       const record = getStatus(lead.id, lead.normalizedPhone);
       if (mainStatusFilter && record.mainStatus !== mainStatusFilter) return false;
       if (secondaryStatusFilter && record.secondaryStatus !== secondaryStatusFilter) return false;
+      if (!matchesStudentRatingFilter(record.studentRating, studentRatingFilter)) return false;
       if (salesOnlyFilter && !isSaleRecord(record)) return false;
       if (missingPaymentOnly && !isEnrolledMissingPayment(record)) return false;
       return leadMatchesSearch(lead, searchQuery);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, salesOnlyFilter, missingPaymentOnly, searchQuery, effectiveStatusesByLeadId]);
+  }, [scopedLeads, mainStatusFilter, secondaryStatusFilter, studentRatingFilter, salesOnlyFilter, missingPaymentOnly, searchQuery, effectiveStatusesByLeadId]);
 
   // Independent of every filter above (never reset by a filter change, and
   // never resets a filter itself) - sorts whatever's already been fetched
@@ -589,10 +594,37 @@ export default function LeadsPage() {
     [campaignRows, campaignStatuses, campaignFilter, adSetFilter, adFilter, campaignStatusFilter]
   );
 
-  const salesSummary = useMemo(
-    () => calculateSalesSummary(scopedLeads.map((l) => l.id), effectiveStatusesByLeadId, scopedSpend),
-    [scopedLeads, effectiveStatusesByLeadId, scopedSpend]
+  // The same KPI formulas the dashboard uses (lib/performance). The cost figures need spend for exactly these leads, so they
+  // stay "—" while a lead-source filter is on: spend is not split by lead source.
+  const leadKpis = useMemo<LeadKpis>(
+    () =>
+      computeLeadKpis(
+        scopedLeads.map((lead) =>
+          toLeadFact(lead, effectiveStatusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone))
+        ),
+        scopedSpend,
+        { spendMatchesLeads: sourceFilter === null }
+      ),
+    [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter]
   );
+  const costNote = sourceFilter === null ? null : 'בחרו "הכול" במקור ליד כדי לחשב עלויות - ההוצאה לא מפוצלת לפי מקור ליד.';
+  const studentRatingSummary = useMemo(
+    () => summarizeStudentRatings(
+      scopedLeads.map((lead) => toLeadFact(lead, effectiveStatusesByLeadId.get(lead.id) ?? defaultLeadStatusRecord(lead.id, lead.normalizedPhone))),
+      sourceFilter === null ? scopedSpend : null,
+      true,
+    ),
+    [scopedLeads, effectiveStatusesByLeadId, scopedSpend, sourceFilter],
+  );
+  const spendCheck = state.phase === "ready" ? (state.data.spendCheck.reconciliation?.status ?? "none") : "none";
+  const pageNotices =
+    state.phase === "ready"
+      ? spendNotices({
+          reconciliation: state.data.spendCheck.reconciliation,
+          unlistedSpend: state.data.spendCheck.unlistedSpend,
+          isLive: state.data.leadsResult.source === "meta",
+        })
+      : [];
   const irrelevantRate = useMemo(
     () => calculateIrrelevantRate(scopedLeads.map((l) => l.id), effectiveStatusesByLeadId),
     [scopedLeads, effectiveStatusesByLeadId]
@@ -606,6 +638,7 @@ export default function LeadsPage() {
       campaignStatusFilter ||
       mainStatusFilter ||
       secondaryStatusFilter ||
+      studentRatingFilter ||
       salesOnlyFilter ||
       missingPaymentOnly ||
       searchQuery.trim()
@@ -620,6 +653,7 @@ export default function LeadsPage() {
     setCampaignStatusFilter(null);
     setMainStatusFilter(null);
     setSecondaryStatusFilter(null);
+    setStudentRatingFilter(null);
     setSalesOnlyFilter(false);
     setMissingPaymentOnly(false);
   }
@@ -756,13 +790,18 @@ export default function LeadsPage() {
 
       {state.phase === "ready" && (
         <>
+          <DataQualityBanner notices={pageNotices} />
           <SalesKpiCards
-            sales={salesSummary}
+            kpis={leadKpis}
             irrelevant={irrelevantRate}
-            monthToDateSpend={monthToDateSpend}
+            periodSpend={scopedSpend}
+            periodRange={range}
+            spendCheck={spendCheck}
+            costNote={costNote}
             onTotalSalesClick={handleTotalSalesClick}
             isSalesFilterActive={salesOnlyFilter}
           />
+          <StudentRatingSummary summary={studentRatingSummary} totalLeads={scopedLeads.length} leadsKnown={true} />
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -827,6 +866,16 @@ export default function LeadsPage() {
               options={secondaryStatusOptions}
               selectedId={secondaryStatusFilter}
               onChange={setSecondaryStatusFilter}
+            />
+            <FilterDropdown
+              label="דירוג ליד"
+              options={[
+                { id: "ordinary", label: "רגילים, 2–3 להבות" },
+                { id: "excellent", label: "מצוינים, 4–5 להבות" },
+                { id: "unrated", label: "נתונים לא זמינים" },
+              ]}
+              selectedId={studentRatingFilter}
+              onChange={(id) => setStudentRatingFilter(id as StudentRatingFilter | null)}
             />
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={resetAllFilters}>

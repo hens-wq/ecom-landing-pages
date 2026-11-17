@@ -84,7 +84,7 @@ export function IntegrationCard({ integration }: { integration: IntegrationDef }
             {integration.errorMessage}
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground/80">{integration.willProvide}</p>
+          <p className="text-xs text-muted-foreground">{integration.willProvide}</p>
         )}
         {integration.status === "connected" && integration.details && integration.details.length > 0 && (
           <div className="space-y-1 rounded-md border border-success/30 bg-success/[0.06] px-2.5 py-2 text-xs">
