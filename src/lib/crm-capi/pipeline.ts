@@ -2,7 +2,7 @@ import type { CrmCapiConfig } from "@/lib/crm-capi/config";
 import { buildCrmEvent, crmEventId } from "@/lib/crm-capi/event";
 import { CRM_CLAIM_LEASE_SECONDS, retryDelaySeconds } from "@/lib/crm-capi/policy";
 import { crmEventsForChange, type CrmEventType, type LeadQualitySnapshot } from "@/lib/crm-capi/rules";
-import { sendCrmEvent, type FetchLike } from "@/lib/crm-capi/send";
+import { sendCrmEvent, type CrmMetaReport, type FetchLike } from "@/lib/crm-capi/send";
 
 /**
  * Meta CRM feedback pipeline. Pure: every database call and every network call
@@ -106,10 +106,15 @@ export interface FlushSummary {
   deferred: number;
 }
 
+/** What the log gets for each Meta answer: Meta's sanitized report, the event name and the destination Dataset ID. */
+export type CrmMetaLogEntry = CrmMetaReport & { eventName: string; datasetId: string | null };
+
 export interface FlushDeps {
   config: CrmCapiConfig;
   outbox: Pick<CrmOutbox, "claim" | "finish">;
   fetchImpl: FetchLike;
+  /** Receives Meta's answer to each send, for logging. Optional, and it cannot change the outcome. */
+  onMetaReport?: (entry: CrmMetaLogEntry) => void;
 }
 
 async function processOne(event: ClaimedCrmEvent, deps: FlushDeps, now: Date): Promise<"sent" | "retry" | "failed" | "skipped"> {
@@ -119,7 +124,10 @@ async function processOne(event: ClaimedCrmEvent, deps: FlushDeps, now: Date): P
     return "skipped";
   }
 
-  const result = await sendCrmEvent(built.event, deps.config, deps.fetchImpl);
+  const eventName = built.event.event_name;
+  const result = await sendCrmEvent(built.event, deps.config, deps.fetchImpl, (report) =>
+    deps.onMetaReport?.({ ...report, eventName, datasetId: deps.config.datasetId })
+  );
   if (result.ok) {
     await deps.outbox.finish(event.id, { status: "sent" }, now);
     return "sent";

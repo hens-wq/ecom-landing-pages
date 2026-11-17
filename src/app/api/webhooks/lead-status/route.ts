@@ -145,9 +145,24 @@ function parseOptionalAmount(value: unknown): AmountParseResult {
   return { ok: false };
 }
 
-function webhookResponse<T>(body: T, status: LeadWebhookHttpStatus, reason: LeadWebhookReason, details: Pick<LeadWebhookDiagnostic, "operation" | "matchedBy"> = {}) {
+function webhookResponse<T>(
+  body: T,
+  status: LeadWebhookHttpStatus,
+  reason: LeadWebhookReason,
+  details: Pick<LeadWebhookDiagnostic, "operation" | "matchedBy" | "metaAvailable" | "leadIdProvided" | "phoneProvided"> = {}
+) {
   // One event for each outcome, with no request/response payload or personal data.
-  console.info(formatLeadWebhookDiagnostic({ status, reason, operation: details.operation, matchedBy: details.matchedBy }));
+  console.info(
+    formatLeadWebhookDiagnostic({
+      status,
+      reason,
+      operation: details.operation,
+      matchedBy: details.matchedBy,
+      metaAvailable: details.metaAvailable,
+      leadIdProvided: details.leadIdProvided,
+      phoneProvided: details.phoneProvided,
+    })
+  );
   return NextResponse.json(body, { status });
 }
 
@@ -224,7 +239,9 @@ export async function POST(request: NextRequest) {
     const result = await syncCrmStatus(syncInput, index, getLeadStatusRepository());
 
     if (!result.ok) {
-      return webhookResponse({ error: { message: result.message } }, result.status, result.code, { operation });
+      // A not_found records its lookup context as booleans only: was the Meta lead list readable, and which identifiers came with the request.
+      const lookup = result.code === "not_found" ? { metaAvailable: index.metaAvailable, leadIdProvided: leadId !== null, phoneProvided: phone !== null } : {};
+      return webhookResponse({ error: { message: result.message } }, result.status, result.code, { operation, ...lookup });
     }
     // Meta CRM events: queued after the status is saved (a failure is logged by name and never reaches this
     // reply), and sent after the reply. Nothing here can change the status or the reply.

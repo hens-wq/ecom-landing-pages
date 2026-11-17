@@ -21,6 +21,10 @@ export interface LeadWebhookDiagnostic {
   reason: LeadWebhookReason;
   operation?: "rating" | "status";
   matchedBy?: "lead_id" | "phone";
+  /** Lookup context for a not_found: was the Meta lead list readable, and which identifiers the request carried. Booleans only. */
+  metaAvailable?: boolean;
+  leadIdProvided?: boolean;
+  phoneProvided?: boolean;
 }
 
 const HTTP_STATUSES: readonly number[] = [200, 400, 401, 403, 404, 409, 500, 503];
@@ -35,5 +39,8 @@ export function formatLeadWebhookDiagnostic(input: LeadWebhookDiagnostic): strin
     reason: REASONS.includes(input.reason) ? input.reason : "unexpected_error",
     ...(input.operation === "rating" || input.operation === "status" ? { operation: input.operation } : {}),
     ...(input.matchedBy === "lead_id" || input.matchedBy === "phone" ? { matchedBy: input.matchedBy } : {}),
+    ...(typeof input.metaAvailable === "boolean" ? { metaAvailable: input.metaAvailable } : {}),
+    ...(typeof input.leadIdProvided === "boolean" ? { leadIdProvided: input.leadIdProvided } : {}),
+    ...(typeof input.phoneProvided === "boolean" ? { phoneProvided: input.phoneProvided } : {}),
   });
 }
