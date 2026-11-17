@@ -71,13 +71,6 @@ function parseAmount(value: string | number | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** The CHECK constraint keeps stored ratings to 1-5. Anything else reads as "no rating". */
-function parseRating(value: number | string | null): number | null {
-  if (value === null) return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
-}
-
 function mapRow(row: LeadStatusRow): LeadStatusRecord {
   return {
     leadId: row.meta_lead_id,
@@ -230,7 +223,6 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
         patch.fullPaymentAmount !== undefined ? patch.fullPaymentAmount : (existing?.fullPaymentAmount ?? null);
       const partialPaymentAmount =
         patch.partialPaymentAmount !== undefined ? patch.partialPaymentAmount : (existing?.partialPaymentAmount ?? null);
-      const studentRating = patch.studentRating !== undefined ? patch.studentRating : (existing?.studentRating ?? null);
 
       if (patch.studentRating !== undefined && patch.studentRating !== null && !isStudentRating(patch.studentRating)) {
         throw new TypeError("Invalid student rating");
