@@ -2,9 +2,11 @@
  * Configuration of the Meta CRM feedback events. Pure: it reads an env object
  * that the caller passes in, so tests never touch the real environment.
  *
- * Sending is OFF unless META_CAPI_CRM_SEND_ENABLED is set to true AND the CRM
- * dataset ID and the access token are both set. The website Lead switch
- * (META_CAPI_SEND_ENABLED) has no effect here.
+ * Sending is OFF unless META_CAPI_CRM_SEND_ENABLED is set to true AND both
+ * META_CRM_DATASET_ID (the CRM dataset) and META_CRM_ACCESS_TOKEN are set.
+ * There is no fallback: the website pixel's values (META_PIXEL_ID and
+ * META_CAPI_ACCESS_TOKEN) are never read here. The website Lead switch
+ * (META_CAPI_SEND_ENABLED) has no effect here either.
  */
 
 /**
@@ -29,7 +31,7 @@ type EnvSource = Record<string, string | undefined>;
 
 export function readCrmCapiConfig(env: EnvSource = process.env): CrmCapiConfig {
   const datasetId = env.META_CRM_DATASET_ID?.trim() || null;
-  const accessToken = env.META_CAPI_ACCESS_TOKEN?.trim() || null;
+  const accessToken = env.META_CRM_ACCESS_TOKEN?.trim() || null;
   const flagOn = (env.META_CAPI_CRM_SEND_ENABLED?.trim().toLowerCase() ?? "") === "true";
   return {
     datasetId,

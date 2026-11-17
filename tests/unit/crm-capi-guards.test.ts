@@ -26,6 +26,15 @@ test("CRM events are never website Lead events", () => {
   assert.doesNotMatch(event, /event_name: "Lead"/);
 });
 
+test("the CRM config reads its own token and dataset, and the website pixel keeps its own values", () => {
+  const config = read("src", "lib", "crm-capi", "config.ts");
+  assert.match(config, /env\.META_CRM_ACCESS_TOKEN/);
+  assert.match(config, /env\.META_CRM_DATASET_ID/);
+  assert.doesNotMatch(config, /env\.(META_CAPI_ACCESS_TOKEN|META_PIXEL_ID)/);
+  assert.match(read("src", "lib", "meta-capi", "config.ts"), /META_CAPI_ACCESS_TOKEN/);
+  assert.match(read("src", "lib", "meta-capi", "config.ts"), /META_PIXEL_ID/);
+});
+
 test("the outbox keeps one row per lead and event type, and claims rows without waiting on busy ones", () => {
   const outbox = read("src", "lib", "crm-capi", "outbox.ts");
   assert.match(outbox, /ON CONFLICT \(lead_key, event_type\) DO NOTHING/);
