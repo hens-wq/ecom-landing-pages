@@ -20,6 +20,7 @@ test("CRM events are never website Lead events", () => {
   const config = read("src", "lib", "crm-capi", "config.ts");
   assert.match(config, /QUALIFIED_EVENT_NAME = "QualifiedLead"/);
   assert.match(config, /REGISTERED_EVENT_NAME = "RegisteredLead"/);
+  assert.match(config, /RAW_EVENT_NAME = "RawLead"/);
   const event = read("src", "lib", "crm-capi", "event.ts");
   assert.match(event, /action_source: "system_generated"/);
   assert.doesNotMatch(event, /action_source: "website"/);
@@ -32,11 +33,12 @@ test("the outbox keeps one row per lead and event type, and claims rows without 
   assert.match(outbox, /FOR UPDATE SKIP LOCKED/);
 });
 
-test("the schema adds the rating column and the outbox table, and never drops or deletes", () => {
+test("the schema adds the rating column and the outbox table, and never drops a table, a column or a row", () => {
   const db = read("src", "lib", "lead-status", "db.ts");
   assert.match(db, /ADD COLUMN IF NOT EXISTS student_rating smallint/);
   assert.match(db, /CREATE TABLE IF NOT EXISTS crm_capi_events/);
-  assert.doesNotMatch(db, /DROP |TRUNCATE|DELETE FROM/);
+  assert.match(db, /crm_capi_events_event_type_valid/);
+  assert.doesNotMatch(db, /DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM/);
 });
 
 test("the webhook queues CRM events after a successful status update, replies, and never calls Meta itself", () => {

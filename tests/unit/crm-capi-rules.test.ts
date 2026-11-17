@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { crmEventsForChange, isQualified, isRegistered, type LeadQualitySnapshot } from "@/lib/crm-capi/rules";
+import {
+  crmEventsForChange,
+  crmEventsForRecord,
+  isQualified,
+  isRecentLead,
+  isRegistered,
+  type LeadQualitySnapshot,
+} from "@/lib/crm-capi/rules";
 
 const lead = (mainStatus: string, studentRating: number | null = null): LeadQualitySnapshot => ({ mainStatus, studentRating });
 
@@ -59,4 +66,29 @@ test("leaving qualification never sends an event", () => {
 test("no stored row counts as חדש with no rating", () => {
   assert.deepEqual(crmEventsForChange(undefined, lead("בתהליך")), ["qualified"]);
   assert.deepEqual(crmEventsForChange(undefined, lead("חדש")), []);
+});
+
+test("a first sighting of a recent lead queues its raw lead first, then the stages it is already at", () => {
+  assert.deepEqual(crmEventsForRecord(undefined, lead("חדש"), true), ["raw"]);
+  assert.deepEqual(crmEventsForRecord(undefined, lead("בתהליך"), true), ["raw", "qualified"]);
+  assert.deepEqual(crmEventsForRecord(undefined, lead("חדש", 4), true), ["raw", "qualified"]);
+  assert.deepEqual(crmEventsForRecord(undefined, lead("נרשם"), true), ["raw", "qualified", "registered"]);
+});
+
+test("an old lead seen for the first time queues nothing", () => {
+  assert.deepEqual(crmEventsForRecord(undefined, lead("נרשם"), false), []);
+});
+
+test("a lead that is already stored never gets a raw lead, however recent", () => {
+  assert.deepEqual(crmEventsForRecord(lead("חדש"), lead("בתהליך"), true), ["qualified"]);
+  assert.deepEqual(crmEventsForRecord(lead("חדש"), lead("חדש"), true), []);
+});
+
+test("a lead is recent up to eight days after its creation date; an unknown or odd date is not", () => {
+  const now = new Date("2026-11-16T00:00:00Z");
+  assert.equal(isRecentLead("2026-11-16", now), true);
+  assert.equal(isRecentLead("2026-11-08", now), true);
+  assert.equal(isRecentLead("2026-11-07", now), false);
+  assert.equal(isRecentLead(undefined, now), false);
+  assert.equal(isRecentLead("16/11/2026", now), false);
 });

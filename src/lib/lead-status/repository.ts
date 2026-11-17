@@ -61,6 +61,7 @@ interface LeadStatusRow {
   partial_payment_amount: string | number | null;
   student_rating: string | number | null;
   previous_student_rating?: string | number | null;
+  previously_stored?: boolean | null;
   updated_at: string;
 }
 
@@ -107,7 +108,7 @@ const RATING_ONLY_SQL = `
     student_rating = EXCLUDED.student_rating,
     normalized_phone = CASE WHEN $6::boolean THEN EXCLUDED.normalized_phone ELSE lead_status.normalized_phone END,
     updated_at = now()
-  RETURNING *, (SELECT student_rating FROM prior) AS previous_student_rating
+  RETURNING *, (SELECT student_rating FROM prior) AS previous_student_rating, EXISTS (SELECT 1 FROM prior) AS previously_stored
 `;
 
 class PostgresLeadStatusRepository implements LeadStatusRepository {
@@ -204,7 +205,12 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
       const rows = (await sql.query(RATING_ONLY_SQL, [
         leadId, normalizedPhone ?? null, DEFAULT_MAIN_STATUS, DEFAULT_SECONDARY_STATUS, studentRating, normalizedPhone !== undefined,
       ])) as LeadStatusRow[];
-      return { ...mapRow(rows[0]), previousStudentRating: storedStudentRating(rows[0].previous_student_rating ?? null) };
+      // No stored row before this write gives undefined (a first sighting). A stored row with no rating gives null.
+      const previouslyStored = rows[0].previously_stored === true;
+      return {
+        ...mapRow(rows[0]),
+        previousStudentRating: previouslyStored ? storedStudentRating(rows[0].previous_student_rating ?? null) : undefined,
+      };
     } catch (error) {
       throw wrapDatabaseError(error, "שגיאה בשמירת דירוג התלמיד. הנתונים לא נשמרו.");
     }

@@ -1,17 +1,18 @@
 import { isTooOld } from "@/lib/crm-capi/policy";
-import { CRM_LEAD_EVENT_SOURCE, QUALIFIED_EVENT_NAME, REGISTERED_EVENT_NAME } from "@/lib/crm-capi/config";
+import { CRM_LEAD_EVENT_SOURCE, QUALIFIED_EVENT_NAME, RAW_EVENT_NAME, REGISTERED_EVENT_NAME } from "@/lib/crm-capi/config";
 import type { CrmEventType } from "@/lib/crm-capi/rules";
 
 /**
  * One Meta CRM (lead-stage) event. Pure.
  *
  * This is NOT a website event. action_source is "system_generated", the event
- * names are the CRM ones (never "Lead"), and the identifier is the Meta Lead ID
- * itself, sent unhashed as user_data.lead_id. No email or phone is included.
+ * names are CRM stage names (never "Lead"), and the identifier is the Meta Lead
+ * ID itself, sent as user_data.lead_id. No email or phone is included.
  *
- * VERIFY before enabling: the custom_data keys (event_source, lead_event_source)
- * and the lead_id type. lead_id is sent as a string so no digit is lost in JSON.
- * Meta's developer docs could not be read from the build session.
+ * Checked against Meta's Conversion Leads payload specification: event_name is
+ * free text, custom_data carries event_source "crm" and lead_event_source (the
+ * CRM's name), and lead_id is the 15 to 17 digit leadgen_id. lead_id is sent as a
+ * string, because IDs above 2^53 cannot be held exactly as a JSON number.
  *
  * test_event_code is a request-level field, not part of the event (see send.ts).
  */
@@ -46,6 +47,7 @@ export function crmEventId(eventType: CrmEventType, metaLeadId: string): string 
 }
 
 const EVENT_NAMES: Record<CrmEventType, string> = {
+  raw: RAW_EVENT_NAME,
   qualified: QUALIFIED_EVENT_NAME,
   registered: REGISTERED_EVENT_NAME,
 };

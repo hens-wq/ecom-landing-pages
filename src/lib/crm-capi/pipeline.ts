@@ -1,7 +1,7 @@
 import type { CrmCapiConfig } from "@/lib/crm-capi/config";
 import { buildCrmEvent, crmEventId } from "@/lib/crm-capi/event";
 import { CRM_CLAIM_LEASE_SECONDS, retryDelaySeconds } from "@/lib/crm-capi/policy";
-import { crmEventsForChange, type CrmEventType, type LeadQualitySnapshot } from "@/lib/crm-capi/rules";
+import { crmEventsForRecord, isRecentLead, type CrmEventType, type LeadQualitySnapshot } from "@/lib/crm-capi/rules";
 import { sendCrmEvent, type CrmMetaReport, type FetchLike } from "@/lib/crm-capi/send";
 
 /**
@@ -77,12 +77,13 @@ export interface RecordDeps {
 /**
  * Queues the CRM events a change produces. Queues nothing while sending is off,
  * so a change made then is never queued and switching sending on later cannot
- * send an old backlog. Returns how many events were queued.
+ * send an old backlog. A lead's first sighting also queues its raw lead, while
+ * the lead is recent (see crmEventsForRecord). Returns how many events were queued.
  */
 export async function recordCrmChange(change: CrmChange, deps: RecordDeps): Promise<number> {
   if (!deps.sendEnabled) return 0;
 
-  const eventTypes = crmEventsForChange(change.previous, change.next);
+  const eventTypes = crmEventsForRecord(change.previous, change.next, isRecentLead(change.leadCreatedDate, change.now));
   if (eventTypes.length === 0) return 0;
 
   const eventTime = eventTimeFor(change);

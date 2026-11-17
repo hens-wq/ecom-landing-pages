@@ -76,7 +76,7 @@ export function ensureSchema(): Promise<void> {
         CREATE TABLE IF NOT EXISTS crm_capi_events (
           id bigserial PRIMARY KEY,
           lead_key text NOT NULL,
-          event_type text NOT NULL CHECK (event_type IN ('qualified', 'registered')),
+          event_type text NOT NULL,
           event_id text NOT NULL,
           event_time timestamptz NOT NULL,
           status text NOT NULL DEFAULT 'pending'
@@ -90,6 +90,19 @@ export function ensureSchema(): Promise<void> {
           updated_at timestamptz NOT NULL DEFAULT now(),
           CONSTRAINT crm_capi_events_lead_event_key UNIQUE (lead_key, event_type)
         )
+      `;
+      // The allowed stages, added once as a named check. A table created before the raw-lead
+      // stage existed still has its older two-stage check, which is replaced here.
+      await sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'crm_capi_events_event_type_valid') THEN
+            ALTER TABLE crm_capi_events DROP CONSTRAINT IF EXISTS crm_capi_events_event_type_check;
+            ALTER TABLE crm_capi_events ADD CONSTRAINT crm_capi_events_event_type_valid
+              CHECK (event_type IN ('raw', 'qualified', 'registered'));
+          END IF;
+        END
+        $$
       `;
       await sql`CREATE INDEX IF NOT EXISTS crm_capi_events_due_idx ON crm_capi_events (status, next_attempt_at)`;
     })().catch((error) => {
