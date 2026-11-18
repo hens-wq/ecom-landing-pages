@@ -11,7 +11,11 @@ import { classifyLeadQuality } from "@/lib/performance/lead-quality";
 // "ברח במעמד התשלום" (fled at the payment stage): a main status with itself as its only
 // secondary status. It is a qualified (green) lead, never a sale, and never a RegisteredLead.
 const STATUS = "ברח במעמד התשלום";
-const lead = (mainStatus: string, studentRating: number | null = null): LeadQualitySnapshot => ({ mainStatus, studentRating });
+const lead = (mainStatus: string, studentRating: number | null = null): LeadQualitySnapshot => ({
+  mainStatus,
+  secondaryStatus: mainStatus,
+  studentRating,
+});
 
 test("the status is listed once as a main status, with itself as its only secondary status", () => {
   assert.equal(MAIN_STATUSES.filter((status) => status === STATUS).length, 1);

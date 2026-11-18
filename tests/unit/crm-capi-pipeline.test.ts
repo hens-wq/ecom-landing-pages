@@ -333,7 +333,7 @@ test("a lead without a Meta Lead ID is recorded and skipped, never sent", async 
     {
       leadKey: "landing-7",
       previous: undefined,
-      next: { mainStatus: "בתהליך", studentRating: null },
+      next: { mainStatus: "בתהליך", secondaryStatus: "בתהליך", studentRating: null },
       statusChangedAt: undefined,
       now: at("2026-11-16T09:00:00Z"),
     },
@@ -361,7 +361,7 @@ test("a CRM timestamp older than seven days is skipped, never sent", async () =>
     {
       leadKey: LEAD,
       previous: undefined,
-      next: { mainStatus: "נרשם", studentRating: null },
+      next: { mainStatus: "נרשם", secondaryStatus: "נרשם", studentRating: null },
       statusChangedAt: at("2026-11-01T10:00:00Z"),
       now: at("2026-11-02T10:00:00Z"),
     },
@@ -394,4 +394,39 @@ test("a row whose database update fails after Meta accepted it is deferred, then
   const later = await h.flush(at("2026-11-16T11:06:00Z"));
   assert.equal(later.sent, 1);
   assert.equal(h.meta.sent.filter((item) => item.event.event_name === "QualifiedLead").length, 2);
+});
+
+test("a lead that cancels its registration gets one qualified event, and enrolling later sends only the registration", async () => {
+  const h = harness();
+  assert.equal(await h.webhook({ mainStatus: "ביטול הרשמה", secondaryStatus: "ביטל הרשמה - BDI שלילי" }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 1);
+  assert.equal(await h.webhook({ mainStatus: "ביטול הרשמה", secondaryStatus: "ביטל הרשמה - לקוח התחרט" }, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")), 0);
+  assert.equal(await h.webhook({ mainStatus: "נרשם", secondaryStatus: "נרשם" }, at("2026-11-16T10:00:00Z"), at("2026-11-16T10:00:00Z")), 1);
+  await h.flush(at("2026-11-16T11:00:00Z"));
+  assert.deepEqual(
+    h.meta.sent.map((item) => item.event.event_name),
+    ["QualifiedLead", "RegisteredLead"]
+  );
+});
+
+test("a not-interested lead with future potential gets one qualified event, however often it returns to that reason", async () => {
+  const h = harness();
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - מחיר יקר' }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 0);
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - פוטנציאל עתידי' }, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")), 1);
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - מחיר יקר' }, at("2026-11-16T10:00:00Z"), at("2026-11-16T10:00:00Z")), 0);
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - פוטנציאל עתידי' }, at("2026-11-16T10:30:00Z"), at("2026-11-16T10:30:00Z")), 0);
+  assert.equal(await h.webhook({ mainStatus: "בתהליך", secondaryStatus: "בתהליך" }, at("2026-11-16T11:00:00Z"), at("2026-11-16T11:00:00Z")), 0);
+  await h.flush(at("2026-11-16T12:00:00Z"));
+  assert.deepEqual(
+    h.meta.sent.map((item) => item.event.event_name),
+    ["QualifiedLead"]
+  );
+  assert.equal(h.outbox.rows.length, 1);
+});
+
+test("the other not-interested reasons never qualify a lead, and nothing is sent for them", async () => {
+  const h = harness();
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - מחיר יקר' }, at("2026-11-16T09:00:00Z"), at("2026-11-16T09:00:00Z")), 0);
+  assert.equal(await h.webhook({ mainStatus: "לא מעוניין", secondaryStatus: 'ל"מ - אין יכולת כלכלית' }, at("2026-11-16T09:30:00Z"), at("2026-11-16T09:30:00Z")), 0);
+  assert.deepEqual(await h.flush(at("2026-11-16T10:00:00Z")), { state: "ran", claimed: 0, sent: 0, retried: 0, failed: 0, skipped: 0, deferred: 0 });
+  assert.equal(h.meta.sent.length, 0);
 });
