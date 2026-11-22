@@ -48,20 +48,26 @@ test("the schema adds the rating column and the outbox table, and never drops or
   assert.doesNotMatch(db, /DROP |TRUNCATE|DELETE FROM/);
 });
 
+// The webhook's logic lives in lib/lead-status/webhook-handler.ts; the route only wires the real dependencies.
+const webhookHandler = () => read("src", "lib", "lead-status", "webhook-handler.ts");
+
 test("the webhook queues CRM events after a successful status update, replies, and never calls Meta itself", () => {
+  const handler = webhookHandler();
   const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
-  const syncAt = route.indexOf("if (!result.ok)");
-  const queueAt = route.indexOf("recordCrmChangeSafely({");
-  const replyAt = route.indexOf("return webhookResponse({ ok: true");
+  const syncAt = handler.indexOf("const result = await syncCrmStatus(");
+  const queueAt = handler.indexOf("await deps.recordCrm({");
+  const replyAt = handler.indexOf("{ ok: true, applied: true");
   assert.ok(syncAt > 0 && queueAt > syncAt && replyAt > queueAt, "order must be: sync, then queue, then reply");
-  assert.match(route, /after\(\(\) => flushCrmEventsSafely\(/);
-  assert.doesNotMatch(route, /sendCrmEvent|graph\.facebook/);
+  assert.match(handler, /deps\.schedule\(\(\) => deps\.flush\(10\)\)/);
+  assert.match(route, /schedule: \(task\) => after\(task\)/);
+  assert.match(route, /flush: \(limit\) => flushCrmEventsSafely\(limit\)/);
+  assert.doesNotMatch(handler + route, /sendCrmEvent|graph\.facebook/);
 });
 
 test("the webhook refuses a wrong rating but ignores an unreadable CRM timestamp", () => {
-  const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
-  assert.match(route, /parseStudentRatingUpdate\(body\)/);
-  assert.match(route, /if \(Number\.isNaN\(parsed\.getTime\(\)\)\) return undefined|Number\.isNaN\(parsed\.getTime\(\)\) \? undefined/);
+  const handler = webhookHandler();
+  assert.match(handler, /parseStudentRatingUpdate\(body\)/);
+  assert.match(handler, /Number\.isNaN\(parsed\.getTime\(\)\) \? undefined/);
 });
 
 test("the flush route is Bearer-protected and fails closed without its secret", () => {
@@ -78,6 +84,5 @@ test("the pipeline queues nothing and sends nothing while the flag is off", () =
 });
 
 test("the webhook passes the lead's creation date, so Meta never receives an event stamped before the lead existed", () => {
-  const route = read("src", "app", "api", "webhooks", "lead-status", "route.ts");
-  assert.match(route, /leadCreatedDate: index\.byId\.get\(result\.leadId\)\?\.createdDate/);
+  assert.match(webhookHandler(), /leadCreatedDate: index\.byId\.get\(result\.leadId\)\?\.createdDate/);
 });

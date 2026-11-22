@@ -92,6 +92,30 @@ export function ensureSchema(): Promise<void> {
         )
       `;
       await sql`CREATE INDEX IF NOT EXISTS crm_capi_events_due_idx ON crm_capi_events (status, next_attempt_at)`;
+      // Fireberry status updates that no lead matched (see lib/lead-status/pending-core.ts). One row per open update.
+      // Nothing is dropped: a row leaves "open" only by an explicit replay, a supersede or a dismissal.
+      await sql`
+        CREATE TABLE IF NOT EXISTS lead_status_pending (
+          id bigserial PRIMARY KEY,
+          dedupe_key text NOT NULL,
+          status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'superseded', 'dismissed')),
+          reason text NOT NULL CHECK (reason IN ('not_found', 'ambiguous', 'invalid_phone', 'missing_identity', 'meta_unavailable')),
+          kind text NOT NULL CHECK (kind IN ('status', 'rating')),
+          lead_id_hint text,
+          normalized_phone text,
+          payload jsonb NOT NULL,
+          first_received_at timestamptz NOT NULL DEFAULT now(),
+          last_received_at timestamptz NOT NULL DEFAULT now(),
+          received_count integer NOT NULL DEFAULT 1,
+          attempts integer NOT NULL DEFAULT 0,
+          last_checked_at timestamptz,
+          last_error text,
+          resolved_lead_id text,
+          resolved_at timestamptz
+        )
+      `;
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS lead_status_pending_open_key ON lead_status_pending (dedupe_key) WHERE status = 'open'`;
+      await sql`CREATE INDEX IF NOT EXISTS lead_status_pending_received_idx ON lead_status_pending (status, last_received_at)`;
     })().catch((error) => {
       schemaReadyPromise = null;
       throw wrapDatabaseError(error, "שגיאה באתחול טבלת הסטטוסים במסד הנתונים.");

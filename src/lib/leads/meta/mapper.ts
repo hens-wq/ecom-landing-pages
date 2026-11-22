@@ -12,6 +12,7 @@ export function mapMetaLeadgenNode(node: MetaLeadgenNode): MetaFormLead {
     name: contact.name,
     phone: contact.phone,
     normalizedPhone: contact.phone ? normalizeIsraeliPhone(contact.phone) : null,
+    matchNormalizedPhone: contact.matchPhone ? normalizeIsraeliPhone(contact.matchPhone) : null,
     email: contact.email,
     formId: node.form_id ?? "",
     campaignId: node.campaign_id ?? "",

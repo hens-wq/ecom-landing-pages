@@ -27,6 +27,7 @@ export async function loadDashboardLeadIndex(): Promise<DashboardLeadIndex> {
         name: lead.name,
         phone: lead.phone,
         normalizedPhone: lead.normalizedPhone,
+        matchPhone: lead.matchNormalizedPhone ?? lead.normalizedPhone,
         createdDate: isoDateInTimezone(new Date(lead.createdTime)),
       });
     }

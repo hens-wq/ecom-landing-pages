@@ -19,6 +19,11 @@ export interface MetaFormLead {
   name: string | null;
   phone: string | null;
   normalizedPhone: string | null;
+  /**
+   * The phone used to match a CRM update to this lead: the standard phone question, or else a phone-shaped
+   * answer to another question (see lib/leads/meta/field-data.ts). Only the CRM matching index reads it.
+   */
+  matchNormalizedPhone?: string | null;
   email: string | null;
   formId: string;
   campaignId: string;

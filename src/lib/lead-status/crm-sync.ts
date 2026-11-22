@@ -18,8 +18,17 @@ export interface DashboardLeadInfo {
   name: string | null;
   phone: string | null;
   normalizedPhone: string | null;
+  /**
+   * The phone a CRM update is matched against. It can be found under another question than the standard phone
+   * field (see lib/leads/meta/field-data.ts). Absent, it is the same as normalizedPhone. Display never reads it.
+   */
+  matchPhone?: string | null;
   /** Calendar date the lead was created in Asia/Jerusalem, "YYYY-MM-DD". */
   createdDate: string;
+}
+
+function matchPhoneOf(info: DashboardLeadInfo): string | null {
+  return info.matchPhone ?? info.normalizedPhone;
 }
 
 export interface DashboardLeadIndex {
@@ -83,11 +92,12 @@ export async function matchCrmLead(
   if (leadId) {
     const known = index.byId.get(leadId);
     if (known) {
+      const knownPhone = matchPhoneOf(known);
       return {
         ok: true,
         leadId,
         matchedBy: "lead_id",
-        normalizedPhone: known.normalizedPhone ? canonicalPhone(known.normalizedPhone) || null : null,
+        normalizedPhone: knownPhone ? canonicalPhone(knownPhone) || null : null,
       };
     }
   }
@@ -109,7 +119,8 @@ export async function matchCrmLead(
 
   const candidates = new Set<string>();
   for (const info of index.byId.values()) {
-    if (info.normalizedPhone && canonicalPhone(info.normalizedPhone) === phone) candidates.add(info.id);
+    const candidatePhone = matchPhoneOf(info);
+    if (candidatePhone && canonicalPhone(candidatePhone) === phone) candidates.add(info.id);
   }
   for (const id of await store.findLeadIdsByNormalizedPhone(phone)) candidates.add(id);
 
