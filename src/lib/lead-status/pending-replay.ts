@@ -1,8 +1,9 @@
 /**
- * Completes pending updates. Each open update is matched again against the leads the dashboard knows now,
- * and applied through the same sync the webhook uses. A dry run matches and validates but writes nothing.
- * An update is never applied over a newer write to its lead: it is marked superseded and stays on record.
- * Only counts and short codes are returned; the lead IDs appear only in the admin reply that asked for them.
+ * Completes pending updates. Each open update is matched again against the leads the dashboard knows now, by the
+ * same rules as the live webhook, and applied through the same sync. A dry run matches and validates but writes
+ * nothing. An update is never applied over a newer write to the same field of its lead: it is marked superseded
+ * and stays on record. An update whose match is uncertain is held, never guessed at.
+ * Only counts and short codes are returned; lead IDs appear only in an admin reply that asked for them.
  */
 import {
   checkCrmSyncRequest,
@@ -12,7 +13,15 @@ import {
   type CrmSyncInput,
   type DashboardLeadIndex,
 } from "@/lib/lead-status/crm-sync";
-import { isSuperseded, type CrmChangeRecorder, type PendingRow, type PendingStore } from "@/lib/lead-status/pending-core";
+import {
+  fieldFloorsOf,
+  isUpdateSuperseded,
+  payloadParts,
+  type CrmChangeRecorder,
+  type FieldFloors,
+  type PendingRow,
+  type PendingStore,
+} from "@/lib/lead-status/pending-core";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 export type ReplayOutcome =
@@ -22,6 +31,7 @@ export type ReplayOutcome =
   | "failed"
   | "not_found"
   | "ambiguous"
+  | "unverified"
   | "invalid_phone"
   | "no_identifier"
   | "meta_unavailable";
@@ -58,6 +68,7 @@ function emptyCounts(): Record<ReplayOutcome, number> {
     failed: 0,
     not_found: 0,
     ambiguous: 0,
+    unverified: 0,
     invalid_phone: 0,
     no_identifier: 0,
     meta_unavailable: 0,
@@ -67,8 +78,9 @@ function emptyCounts(): Record<ReplayOutcome, number> {
 type Resolution = { ok: true; leadId: string } | { ok: false; outcome: ReplayOutcome };
 
 /**
- * Which lead the update belongs to now. A lead ID is trusted only when the dashboard knows it. Otherwise a
- * valid phone must match exactly one lead, the same rule the webhook uses.
+ * Which lead the update belongs to now. A lead ID is trusted only when the dashboard knows it. Otherwise a valid
+ * phone must identify exactly one lead through its own phone question (or a stored earlier match). Anything less
+ * certain is reported, not applied.
  */
 async function resolveTarget(row: PendingRow, deps: ReplayDeps): Promise<Resolution> {
   if (deps.forcedLeadId !== undefined) {
@@ -79,7 +91,9 @@ async function resolveTarget(row: PendingRow, deps: ReplayDeps): Promise<Resolut
   if (row.normalizedPhone !== null && isValidIsraeliPhone(row.normalizedPhone)) {
     const match = await matchCrmLead({ phone: row.normalizedPhone }, deps.index, deps.store);
     if (match.ok) return { ok: true, leadId: match.leadId };
-    return { ok: false, outcome: match.code === "ambiguous" ? "ambiguous" : unknownOutcome };
+    if (match.code === "ambiguous") return { ok: false, outcome: "ambiguous" };
+    if (match.code === "unverified") return { ok: false, outcome: "unverified" };
+    return { ok: false, outcome: unknownOutcome };
   }
   if (row.leadIdHint !== null) return { ok: false, outcome: unknownOutcome };
   if (row.normalizedPhone !== null) return { ok: false, outcome: "invalid_phone" };
@@ -98,14 +112,24 @@ function syncInputFor(row: PendingRow, leadId: string): CrmSyncInput {
   };
 }
 
-function laterOf(floor: Date | null, receivedAt: Date): Date {
-  return floor === null || receivedAt.getTime() > floor.getTime() ? receivedAt : floor;
+/** The same store, with the update's own time attached to every write it makes, so the field times are the update's. */
+function storeAt(store: CrmStatusStore, sourceAt: Date): CrmStatusStore {
+  return {
+    get: (leadId) => store.get(leadId),
+    findLeadIdsByNormalizedPhone: (normalizedPhone) => store.findLeadIdsByNormalizedPhone(normalizedPhone),
+    upsert: (leadId, patch) => store.upsert(leadId, { ...patch, sourceAt }),
+    upsertStudentRating: (leadId, studentRating, normalizedPhone) => store.upsertStudentRating(leadId, studentRating, normalizedPhone, sourceAt),
+  };
+}
+
+function later(floor: Date | null, sourceAt: Date): Date {
+  return floor === null || sourceAt.getTime() > floor.getTime() ? sourceAt : floor;
 }
 
 /**
- * Oldest first. For each lead, the write time read before this run is the floor: an update received after
- * it may apply, and each applied update raises the floor, so two pending updates for one lead apply in order
- * and the newest one stays in force.
+ * Oldest change first. For each lead the floors are read before this run. After an update is applied, its time
+ * becomes the floor of the field it changed, so two pending updates for one lead apply in order and the newest one
+ * stays in force. Each field has its own floor: a later status change does not hold back a pending rating.
  */
 export async function replayPendingRows(rows: PendingRow[], deps: ReplayDeps): Promise<ReplayReport> {
   const report: ReplayReport = { dryRun: deps.dryRun, checked: 0, counts: emptyCounts(), rows: [] };
@@ -115,8 +139,8 @@ export async function replayPendingRows(rows: PendingRow[], deps: ReplayDeps): P
     report.rows.push(leadId === undefined ? { id: row.id, outcome } : { id: row.id, outcome, leadId });
   };
 
-  const ordered = [...rows].sort((a, b) => a.lastReceivedAt.getTime() - b.lastReceivedAt.getTime() || a.id - b.id);
-  const floors = new Map<string, Date | null>();
+  const ordered = [...rows].sort((a, b) => a.sourceAt.getTime() - b.sourceAt.getTime() || a.id - b.id);
+  const floors = new Map<string, FieldFloors>();
 
   for (const row of ordered) {
     const resolution = await resolveTarget(row, deps);
@@ -129,34 +153,41 @@ export async function replayPendingRows(rows: PendingRow[], deps: ReplayDeps): P
     const leadId = resolution.leadId;
     if (!floors.has(leadId)) {
       const existing = await deps.store.get(leadId);
-      floors.set(leadId, existing ? new Date(existing.updatedAt) : null);
+      floors.set(leadId, existing ? fieldFloorsOf(existing) : { status: null, rating: null });
     }
-    const floor = floors.get(leadId) ?? null;
-    if (isSuperseded(floor, row.lastReceivedAt)) {
+    const floor = floors.get(leadId) ?? { status: null, rating: null };
+    if (isUpdateSuperseded(row.payload, row.sourceAt, floor)) {
       if (!deps.dryRun) await deps.pending.markSuperseded(row.id, leadId);
       record(row, "superseded", leadId);
       continue;
     }
 
     const input = syncInputFor(row, leadId);
+    const parts = payloadParts(row.payload);
+    const raiseFloors = (): void => {
+      floors.set(leadId, {
+        status: parts.status ? later(floor.status, row.sourceAt) : floor.status,
+        rating: parts.rating ? later(floor.rating, row.sourceAt) : floor.rating,
+      });
+    };
+
     if (deps.dryRun) {
-      const check = checkCrmSyncRequest(input);
-      if (!check.ok) record(row, "failed", leadId);
+      if (!checkCrmSyncRequest(input).ok) record(row, "failed", leadId);
       else {
-        floors.set(leadId, laterOf(floor, row.lastReceivedAt));
+        raiseFloors();
         record(row, "would_apply", leadId);
       }
       continue;
     }
 
-    const result = await syncCrmStatus(input, deps.index, deps.store);
+    const result = await syncCrmStatus(input, deps.index, storeAt(deps.store, row.sourceAt));
     if (!result.ok) {
       await deps.pending.markChecked(row.id, result.code);
       record(row, "failed", leadId);
       continue;
     }
-    // The change time is the CRM's own time when it sent one, otherwise the time the update was received.
-    const statusChangedAt = row.payload.statusChangedAt ? new Date(row.payload.statusChangedAt) : row.lastReceivedAt;
+    // The CRM's own change time when it sent one; otherwise the time the update happened.
+    const statusChangedAt = row.payload.statusChangedAt ? new Date(row.payload.statusChangedAt) : row.sourceAt;
     await deps.recordCrm({
       leadKey: result.leadId,
       previous: result.previous,
@@ -166,7 +197,7 @@ export async function replayPendingRows(rows: PendingRow[], deps: ReplayDeps): P
       now: deps.now,
     });
     await deps.pending.markApplied(row.id, result.leadId);
-    floors.set(leadId, laterOf(floor, row.lastReceivedAt));
+    raiseFloors();
     record(row, "applied", result.leadId);
   }
   return report;

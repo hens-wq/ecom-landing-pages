@@ -13,6 +13,7 @@ export type LeadWebhookReason =
   | "invalid_phone"
   | "not_found"
   | "ambiguous"
+  | "unverified_match"
   | "meta_unavailable"
   | "database_error"
   | "unexpected_error";
@@ -45,6 +46,7 @@ const REASONS: readonly string[] = [
   "invalid_phone",
   "not_found",
   "ambiguous",
+  "unverified_match",
   "meta_unavailable",
   "database_error",
   "unexpected_error",

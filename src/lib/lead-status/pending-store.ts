@@ -12,9 +12,9 @@ import {
 import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status/db";
 
 /**
- * Postgres side of the pending updates (table lead_status_pending, created by ensureSchema). Only a row that is
- * still open is ever changed by a replay, so two runs cannot both settle the same update. Timestamps come from
- * the database clock, the same clock the status rows use.
+ * Postgres side of the pending updates (table lead_status_pending, created by ensureSchema). A replay only changes
+ * a row that is still open, so two runs cannot both settle the same update. Receipt times come from the database
+ * clock, the same clock the status rows use.
  */
 
 interface PendingDbRow {
@@ -25,6 +25,7 @@ interface PendingDbRow {
   lead_id_hint: string | null;
   normalized_phone: string | null;
   payload: PendingPayload | null;
+  source_at: string;
   first_received_at: string;
   last_received_at: string;
   received_count: number | string;
@@ -44,6 +45,7 @@ function mapRow(row: PendingDbRow): PendingRow {
     leadIdHint: row.lead_id_hint,
     normalizedPhone: row.normalized_phone,
     payload: row.payload ?? {},
+    sourceAt: new Date(row.source_at),
     firstReceivedAt: new Date(row.first_received_at),
     lastReceivedAt: new Date(row.last_received_at),
     receivedCount: Number(row.received_count),
@@ -70,12 +72,14 @@ export const pendingStore: PendingStore = {
   async insert(input: NewPendingUpdate) {
     return withSchema("שגיאה בשמירת העדכון הממתין במסד הנתונים. העדכון לא נשמר.", async () => {
       const sql = getSqlClient();
+      // A new row counts as checked at receipt, so the retry waits before it looks at the row again.
       const rows = (await sql`
-        INSERT INTO lead_status_pending (dedupe_key, reason, kind, lead_id_hint, normalized_phone, payload)
-        VALUES (${input.dedupeKey}, ${input.reason}, ${input.kind}, ${input.leadIdHint}, ${input.normalizedPhone}, ${JSON.stringify(input.payload)}::jsonb)
+        INSERT INTO lead_status_pending (dedupe_key, reason, kind, lead_id_hint, normalized_phone, payload, source_at, last_checked_at)
+        VALUES (${input.dedupeKey}, ${input.reason}, ${input.kind}, ${input.leadIdHint}, ${input.normalizedPhone}, ${JSON.stringify(input.payload)}::jsonb, ${input.sourceAt.toISOString()}::timestamptz, now())
         ON CONFLICT (dedupe_key) WHERE status = 'open'
         DO UPDATE SET received_count = lead_status_pending.received_count + 1,
                       last_received_at = now(),
+                      source_at = GREATEST(lead_status_pending.source_at, EXCLUDED.source_at),
                       reason = EXCLUDED.reason
         RETURNING id, (xmax = 0) AS inserted
       `) as { id: string | number; inserted: boolean }[];
@@ -89,7 +93,21 @@ export const pendingStore: PendingStore = {
       const rows = (await sql`
         SELECT * FROM lead_status_pending
         WHERE status = 'open'
-        ORDER BY last_received_at, id
+        ORDER BY source_at, id
+        LIMIT ${limit}
+      `) as PendingDbRow[];
+      return rows.map(mapRow);
+    });
+  },
+
+  async listRetryable(limit: number) {
+    return withSchema("שגיאה בטעינת העדכונים הממתינים ממסד הנתונים.", async () => {
+      const sql = getSqlClient();
+      const rows = (await sql`
+        SELECT * FROM lead_status_pending
+        WHERE status = 'open'
+          AND (last_checked_at IS NULL OR last_checked_at < now() - interval '10 minutes')
+        ORDER BY source_at, id
         LIMIT ${limit}
       `) as PendingDbRow[];
       return rows.map(mapRow);

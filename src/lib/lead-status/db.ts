@@ -69,6 +69,10 @@ export function ensureSchema(): Promise<void> {
       `;
       // Additive/idempotent: historical rows remain unrated (NULL), never backfilled with an invented score.
       await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating smallint CHECK (student_rating BETWEEN 1 AND 5)`;
+      // Per-field write times, so an older pending update is judged against the field it changes, not the whole row.
+      // Null on rows written before this existed: they fall back to updated_at (the conservative choice).
+      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS status_at timestamptz`;
+      await sql`ALTER TABLE lead_status ADD COLUMN IF NOT EXISTS student_rating_at timestamptz`;
       await sql`CREATE INDEX IF NOT EXISTS lead_status_normalized_phone_idx ON lead_status (normalized_phone)`;
       // CRM "דירוג תלמיד" (1-5 flames). Nullable, so existing rows are untouched.
       // Meta CRM feedback outbox: one row per lead and event type (see lib/crm-capi/outbox.ts).
@@ -99,12 +103,13 @@ export function ensureSchema(): Promise<void> {
           id bigserial PRIMARY KEY,
           dedupe_key text NOT NULL,
           status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'superseded', 'dismissed')),
-          reason text NOT NULL CHECK (reason IN ('not_found', 'ambiguous', 'invalid_phone', 'missing_identity', 'meta_unavailable')),
+          reason text NOT NULL CHECK (reason IN ('not_found', 'ambiguous', 'invalid_phone', 'missing_identity', 'meta_unavailable', 'unverified_match', 'imported')),
           kind text NOT NULL CHECK (kind IN ('status', 'rating')),
           lead_id_hint text,
           normalized_phone text,
           payload jsonb NOT NULL,
           first_received_at timestamptz NOT NULL DEFAULT now(),
+          source_at timestamptz NOT NULL DEFAULT now(),
           last_received_at timestamptz NOT NULL DEFAULT now(),
           received_count integer NOT NULL DEFAULT 1,
           attempts integer NOT NULL DEFAULT 0,

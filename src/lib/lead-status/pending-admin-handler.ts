@@ -19,6 +19,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import type { CrmStatusStore, DashboardLeadIndex } from "@/lib/lead-status/crm-sync";
+import { parseImportRows } from "@/lib/lead-status/pending-import";
 import { replayPendingRows } from "@/lib/lead-status/pending-replay";
 import type { CrmChangeRecorder, PendingRow, PendingStatus, PendingStore } from "@/lib/lead-status/pending-core";
 
@@ -98,6 +99,7 @@ function publicRow(row: PendingRow) {
     leadIdHint: row.leadIdHint,
     normalizedPhone: row.normalizedPhone,
     payload: row.payload,
+    sourceAt: row.sourceAt.toISOString(),
     firstReceivedAt: row.firstReceivedAt.toISOString(),
     lastReceivedAt: row.lastReceivedAt.toISOString(),
     receivedCount: row.receivedCount,
@@ -194,6 +196,26 @@ export async function handlePendingAction(request: Request, deps: PendingAdminDe
       });
       if (report.counts.applied > 0) deps.schedule(() => deps.flush(20));
       return json({ ok: true, ...report }, 200);
+    }
+
+    if (body.action === "import") {
+      // Ratings Fireberry recorded while the automation was off. Each row needs its own changedAt (see pending-import.ts).
+      const dryRun = body.dryRun === true;
+      if (!Array.isArray(body.rows) || body.rows.length === 0 || body.rows.length > 500) {
+        return json({ error: { message: "rows: מערך של 1 עד 500 שורות." } }, 400);
+      }
+      const parsed = parseImportRows(body.rows, deps.now());
+      if (dryRun) {
+        return json({ ok: true, dryRun: true, received: body.rows.length, valid: parsed.valid.length, invalid: parsed.invalid }, 200);
+      }
+      let stored = 0;
+      let repeated = 0;
+      for (const update of parsed.valid) {
+        const result = await deps.pending.insert(update);
+        if (result.inserted) stored += 1;
+        else repeated += 1;
+      }
+      return json({ ok: true, dryRun: false, received: body.rows.length, stored, repeated, invalid: parsed.invalid }, 200);
     }
 
     if (body.action === "dismiss") {

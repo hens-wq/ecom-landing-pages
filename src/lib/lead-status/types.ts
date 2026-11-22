@@ -101,6 +101,10 @@ export interface LeadStatusRecord {
   partialPaymentAmount: number | null;
   /** CRM "דירוג תלמיד" as received - null when the CRM has none. Never defaulted. */
   studentRating: number | null;
+  /** When the status fields were last written (ISO). Null for rows written before this was recorded. */
+  statusAt?: string | null;
+  /** When the rating was last written (ISO). Null when no rating was ever written. */
+  studentRatingAt?: string | null;
   updatedAt: string; // ISO datetime
 }
 

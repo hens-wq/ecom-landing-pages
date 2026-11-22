@@ -23,6 +23,7 @@ import {
   type PendingReason,
   type PendingStore,
 } from "@/lib/lead-status/pending-core";
+import { replayPendingRows } from "@/lib/lead-status/pending-replay";
 import { normalizeIsraeliPhone } from "@/lib/phone";
 
 export interface LeadStatusWebhookDeps {
@@ -30,7 +31,7 @@ export interface LeadStatusWebhookDeps {
   now: () => Date;
   loadIndex: () => Promise<DashboardLeadIndex>;
   store: CrmStatusStore;
-  pending: Pick<PendingStore, "insert">;
+  pending: PendingStore;
   recordCrm: CrmChangeRecorder;
   /** Runs after the reply is sent (the route passes Next's after()). */
   schedule: (task: () => Promise<void>) => void;
@@ -40,6 +41,9 @@ export interface LeadStatusWebhookDeps {
 }
 
 type Operation = "status" | "rating";
+
+/** The reasons this webhook can store. "imported" comes only from the admin import, never from a live request. */
+type WebhookPendingReason = Exclude<PendingReason, "imported">;
 
 /** The CRM's own time for the status change. An unreadable value is ignored, never refused, so it cannot block the update. */
 function parseStatusChangedAt(value: unknown): Date | undefined {
@@ -100,7 +104,7 @@ interface UnidentifiedUpdate {
   phone: string | number | null;
   statusChangedAt: Date | undefined;
   operation: Operation;
-  reason: PendingReason;
+  reason: WebhookPendingReason;
   metaAvailable?: boolean;
 }
 
@@ -116,6 +120,7 @@ async function keepUnidentified(deps: LeadStatusWebhookDeps, update: Unidentifie
     leadIdHint: update.leadId,
     normalizedPhone,
     payload,
+    sourceAt: deps.now(),
   });
   const details = {
     operation: update.operation,
@@ -135,6 +140,34 @@ async function keepUnidentified(deps: LeadStatusWebhookDeps, update: Unidentifie
     );
   }
   return reply(deps, { ok: true, applied: false, ...recorded }, 200, update.reason, details);
+}
+
+/** How many open updates one webhook call retries. A row is retried again only after the retry interval (10 minutes). */
+const RETRY_BATCH = 25;
+
+/**
+ * Retries the due pending updates in the background after a webhook reply, using the lead index this request
+ * already loaded. It applies only what the same rules allow, and it never throws: a failure is logged by name only.
+ * This is what completes a rating that arrives before its lead does, once the lead is in the dashboard.
+ */
+async function retryOpenUpdates(deps: LeadStatusWebhookDeps, index: DashboardLeadIndex): Promise<void> {
+  try {
+    if (!index.metaAvailable) return;
+    const rows = await deps.pending.listRetryable(RETRY_BATCH);
+    if (rows.length === 0) return;
+    const report = await replayPendingRows(rows, {
+      index,
+      store: deps.store,
+      pending: deps.pending,
+      recordCrm: deps.recordCrm,
+      now: deps.now(),
+      dryRun: false,
+    });
+    if (report.counts.applied > 0) await deps.flush(20);
+    deps.log(JSON.stringify({ event: "lead_status_pending_retry", checked: report.checked, applied: report.counts.applied, superseded: report.counts.superseded }));
+  } catch (error) {
+    deps.log(JSON.stringify({ event: "lead_status_pending_retry", error: error instanceof Error ? error.name : "unknown" }));
+  }
 }
 
 export async function runLeadStatusWebhook(request: Request, deps: LeadStatusWebhookDeps): Promise<Response> {
@@ -229,6 +262,7 @@ export async function runLeadStatusWebhook(request: Request, deps: LeadStatusWeb
         now: deps.now(),
       });
       deps.schedule(() => deps.flush(10));
+      deps.schedule(() => retryOpenUpdates(deps, index));
       return reply(
         deps,
         { ok: true, applied: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record },
@@ -243,7 +277,9 @@ export async function runLeadStatusWebhook(request: Request, deps: LeadStatusWeb
     }
 
     // Lookup misses: the update is kept. When the Meta list itself was unavailable, the miss is not proof of absence.
-    const reason: PendingReason = result.code === "not_found" && !index.metaAvailable ? "meta_unavailable" : result.code;
+    const reason: WebhookPendingReason =
+      result.code === "not_found" && !index.metaAvailable ? "meta_unavailable" : result.code === "unverified" ? "unverified_match" : result.code;
+    deps.schedule(() => retryOpenUpdates(deps, index));
     return await keepUnidentified(deps, {
       input: syncInput,
       leadId,

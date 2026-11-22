@@ -33,6 +33,8 @@ export interface LeadStatusUpsertPatch {
   partialPaymentAmount?: number | null;
   /** Undefined preserves the stored rating atomically; null explicitly clears it. */
   studentRating?: StudentRating | null;
+  /** When the update happened, for a replayed update. Undefined = now. Sets the field times, never the lead's ownership. */
+  sourceAt?: Date | null;
 }
 
 export interface LeadStatusRepository {
@@ -49,7 +51,7 @@ export interface LeadStatusRepository {
   deleteUnpaidStatusRows(leadIds: string[]): Promise<string[]>;
   upsert(leadId: string, patch: LeadStatusUpsertPatch): Promise<LeadStatusRecord>;
   /** Does not read/overwrite existing status or payment fields, even when another update is concurrent. */
-  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }>;
+  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null, sourceAt?: Date | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }>;
 }
 
 interface LeadStatusRow {
@@ -61,6 +63,8 @@ interface LeadStatusRow {
   partial_payment_amount: string | number | null;
   student_rating: string | number | null;
   previous_student_rating?: string | number | null;
+  status_at?: string | null;
+  student_rating_at?: string | null;
   updated_at: string;
 }
 
@@ -69,6 +73,10 @@ function parseAmount(value: string | number | null): number | null {
   if (value === null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isoOrNull(value: string | null | undefined): string | null {
+  return value === null || value === undefined ? null : new Date(value).toISOString();
 }
 
 function mapRow(row: LeadStatusRow): LeadStatusRecord {
@@ -80,13 +88,15 @@ function mapRow(row: LeadStatusRow): LeadStatusRecord {
     fullPaymentAmount: parseAmount(row.full_payment_amount),
     partialPaymentAmount: parseAmount(row.partial_payment_amount),
     studentRating: storedStudentRating(row.student_rating),
+    statusAt: isoOrNull(row.status_at),
+    studentRatingAt: isoOrNull(row.student_rating_at),
     updatedAt: row.updated_at,
   };
 }
 
 const UPSERT_SQL = `
-  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, student_rating, created_at, updated_at)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, full_payment_amount, partial_payment_amount, student_rating, created_at, updated_at, status_at, student_rating_at)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now(), COALESCE($9::timestamptz, now()), CASE WHEN $8::boolean THEN COALESCE($9::timestamptz, now()) END)
   ON CONFLICT (meta_lead_id) DO UPDATE SET
     normalized_phone = EXCLUDED.normalized_phone,
     main_status = EXCLUDED.main_status,
@@ -94,19 +104,22 @@ const UPSERT_SQL = `
     full_payment_amount = EXCLUDED.full_payment_amount,
     partial_payment_amount = EXCLUDED.partial_payment_amount,
     student_rating = CASE WHEN $8::boolean THEN EXCLUDED.student_rating ELSE lead_status.student_rating END,
-    updated_at = now()
+    updated_at = now(),
+    status_at = COALESCE($9::timestamptz, now()),
+    student_rating_at = CASE WHEN $8::boolean THEN COALESCE($9::timestamptz, now()) ELSE lead_status.student_rating_at END
   RETURNING *
 `;
 
 /** Rating-only UPSERT deliberately does not assign main_status, secondary_status, or either payment column on conflict. */
 const RATING_ONLY_SQL = `
   WITH prior AS (SELECT student_rating FROM lead_status WHERE meta_lead_id = $1)
-  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, student_rating, created_at, updated_at)
-  VALUES ($1, $2, $3, $4, $5, now(), now())
+  INSERT INTO lead_status (meta_lead_id, normalized_phone, main_status, secondary_status, student_rating, created_at, updated_at, status_at, student_rating_at)
+  VALUES ($1, $2, $3, $4, $5, now(), now(), '1970-01-01T00:00:00Z'::timestamptz, COALESCE($7::timestamptz, now()))
   ON CONFLICT (meta_lead_id) DO UPDATE SET
     student_rating = EXCLUDED.student_rating,
     normalized_phone = CASE WHEN $6::boolean THEN EXCLUDED.normalized_phone ELSE lead_status.normalized_phone END,
-    updated_at = now()
+    updated_at = now(),
+    student_rating_at = COALESCE($7::timestamptz, now())
   RETURNING *, (SELECT student_rating FROM prior) AS previous_student_rating
 `;
 
@@ -196,13 +209,14 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
     }
   }
 
-  async upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }> {
+  async upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null, sourceAt?: Date | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }> {
     try {
       if (studentRating !== null && !isStudentRating(studentRating)) throw new TypeError("Invalid student rating");
       await ensureSchema();
       const sql = getSqlClient();
       const rows = (await sql.query(RATING_ONLY_SQL, [
         leadId, normalizedPhone ?? null, DEFAULT_MAIN_STATUS, DEFAULT_SECONDARY_STATUS, studentRating, normalizedPhone !== undefined,
+        sourceAt ? sourceAt.toISOString() : null,
       ])) as LeadStatusRow[];
       return { ...mapRow(rows[0]), previousStudentRating: storedStudentRating(rows[0].previous_student_rating ?? null) };
     } catch (error) {
@@ -236,6 +250,7 @@ class PostgresLeadStatusRepository implements LeadStatusRepository {
         partialPaymentAmount,
         patch.studentRating ?? null,
         patch.studentRating !== undefined,
+        patch.sourceAt ? patch.sourceAt.toISOString() : null,
       ])) as LeadStatusRow[];
 
       return mapRow(rows[0]);

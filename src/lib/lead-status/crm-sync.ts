@@ -27,10 +27,6 @@ export interface DashboardLeadInfo {
   createdDate: string;
 }
 
-function matchPhoneOf(info: DashboardLeadInfo): string | null {
-  return info.matchPhone ?? info.normalizedPhone;
-}
-
 export interface DashboardLeadIndex {
   byId: Map<string, DashboardLeadInfo>;
   /** False when the Meta lead list couldn't be read. Meta leads can't then be verified by ID or matched by phone. */
@@ -49,10 +45,11 @@ export interface CrmStatusStore {
       fullPaymentAmount?: number | null;
       partialPaymentAmount?: number | null;
       studentRating?: StudentRating | null;
+      sourceAt?: Date | null;
     }
   ): Promise<LeadStatusRecord>;
   /** Atomic rating-only write: existing statuses and payment amounts must remain untouched. */
-  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }>;
+  upsertStudentRating(leadId: string, studentRating: StudentRating | null, normalizedPhone?: string | null, sourceAt?: Date | null): Promise<LeadStatusRecord & { previousStudentRating?: StudentRating | null }>;
 }
 
 export interface CrmSyncInput {
@@ -67,11 +64,11 @@ export interface CrmSyncInput {
 
 export type CrmLeadMatch =
   | { ok: true; leadId: string; matchedBy: "lead_id" | "phone"; normalizedPhone: string | null }
-  | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous"; message: string };
+  | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous" | "unverified"; message: string };
 
 export type CrmSyncResult =
   | { ok: true; leadId: string; matchedBy: "lead_id" | "phone"; record: LeadStatusRecord; previous: LeadStatusRecord | undefined }
-  | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous"; message: string };
+  | { ok: false; status: 400 | 404 | 409; code: "invalid_request" | "invalid_phone" | "not_found" | "ambiguous" | "unverified"; message: string };
 
 function canonicalPhone(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
@@ -92,7 +89,7 @@ export async function matchCrmLead(
   if (leadId) {
     const known = index.byId.get(leadId);
     if (known) {
-      const knownPhone = matchPhoneOf(known);
+      const knownPhone = known.normalizedPhone;
       return {
         ok: true,
         leadId,
@@ -117,15 +114,26 @@ export async function matchCrmLead(
     return { ok: false, status: 400, code: "invalid_phone", message: "מספר הטלפון אינו תקין. לא בוצע עדכון." };
   }
 
-  const candidates = new Set<string>();
+  // A phone match is certain only when it comes from the lead's own phone question or from a stored earlier match.
+  // A phone found only under another question is never enough to update a lead on its own: it is held as unverified.
+  const certain = new Set<string>();
+  const other = new Set<string>();
   for (const info of index.byId.values()) {
-    const candidatePhone = matchPhoneOf(info);
-    if (candidatePhone && canonicalPhone(candidatePhone) === phone) candidates.add(info.id);
+    if (info.normalizedPhone && canonicalPhone(info.normalizedPhone) === phone) certain.add(info.id);
+    else if (info.matchPhone && canonicalPhone(info.matchPhone) === phone) other.add(info.id);
   }
-  for (const id of await store.findLeadIdsByNormalizedPhone(phone)) candidates.add(id);
+  for (const id of await store.findLeadIdsByNormalizedPhone(phone)) certain.add(id);
+  const candidates = new Set<string>([...certain, ...other]);
 
   if (candidates.size === 1) {
-    return { ok: true, leadId: [...candidates][0], matchedBy: "phone", normalizedPhone: phone };
+    const [only] = [...candidates];
+    if (certain.has(only)) return { ok: true, leadId: only, matchedBy: "phone", normalizedPhone: phone };
+    return {
+      ok: false,
+      status: 409,
+      code: "unverified",
+      message: "הטלפון מופיע אצל ליד אחד רק בשאלה מותאמת, לא בשאלת הטלפון. לא בוצע עדכון עד אישור ידני.",
+    };
   }
   if (candidates.size > 1) {
     return {
