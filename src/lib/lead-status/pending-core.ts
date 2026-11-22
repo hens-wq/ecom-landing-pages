@@ -80,6 +80,12 @@ export interface PendingStore {
   markApplied(id: number, leadId: string): Promise<void>;
   markSuperseded(id: number, leadId: string): Promise<void>;
   markDismissed(id: number): Promise<void>;
+  /** Takes the single completion-run lock for `leaseSeconds`. False when another run holds it. */
+  tryAcquireRun(holder: string, leaseSeconds: number): Promise<boolean>;
+  /** Releases the lock, but only while this holder still has it. */
+  releaseRun(holder: string): Promise<void>;
+  /** Open updates grouped by reason: how many, and the oldest receipt time of each group. */
+  openSummary(): Promise<{ reason: PendingReason; count: number; oldestSourceAt: Date }[]>;
 }
 
 /** The change the CRM feedback needs. recordCrmChangeSafely takes this shape. */
@@ -93,6 +99,14 @@ export interface CrmChangeInput {
 }
 
 export type CrmChangeRecorder = (change: CrmChangeInput) => Promise<void>;
+
+/** How long one completion run holds the lock. A run that stops without releasing it frees the lock when this ends. */
+export const RUN_LEASE_SECONDS = 600;
+
+/** Automatic completion (the retry after a webhook and the 15-minute job) applies changes only when this is "on". */
+export function autoCompleteEnabled(env: Record<string, string | undefined>): boolean {
+  return (env.LEAD_STATUS_AUTO_COMPLETE ?? "").trim().toLowerCase() === "on";
+}
 
 /** The payload with its keys sorted and absent keys dropped, so the same update always gives the same text. */
 export function canonicalPayloadJson(payload: PendingPayload): string {

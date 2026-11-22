@@ -1,36 +1,43 @@
 /**
- * Ratings Fireberry recorded while the sync automation was off. An export of those records becomes pending rating
- * updates, with the time Fireberry recorded for each change as their source time. They are then applied by the same
- * replay and the same matching rules as any other pending update. Pure: no I/O.
+ * Ratings Fireberry recorded while the sync automation was off, taken from one export. The whole export carries ONE
+ * time: exportedAt, the moment the export was taken. Each row is the rating as it stood at that moment. Pure: no I/O.
  *
- * Each row needs: changedAt (ISO 8601: when the rating was set in Fireberry), a rating as the automation sends it
- * (pcfsystemfield350 = the raw Picklist code 6-10, or studentRating = 1-5), and an identity: leadId (the Meta Lead
- * ID, as a string) and/or phone. A row without a usable time is refused, never given a guessed one.
- * An empty rating is refused too: an import never clears a rating. Export rows without a rating are skipped, not imported as a clear.
+ * Why the export time and not a record's modified date: Fireberry's modified date changes with any edit to the
+ * record, so it does not show when the rating changed. The export time is the only time known for sure. A rating
+ * written live after the export supersedes the export row; one written before it does not.
+ *
+ * A row needs: a rating as the automation sends it (pcfsystemfield350 = the raw code 6-10, or studentRating = 1-5),
+ * and an identity: leadId (the Meta Lead ID as a string) and/or phone. An empty rating is refused: an import never
+ * clears a rating. A row with a time field of its own is refused, so no record's own date can become a rating's time.
  */
 import { normalizeIsraeliPhone } from "@/lib/phone";
 import { parseStudentRatingUpdate } from "@/lib/lead-status/student-rating";
 import { pendingDedupeKey, type NewPendingUpdate } from "@/lib/lead-status/pending-core";
 
-/** A small allowance for a clock that runs ahead. Anything later is a bad time, not a future change. */
-const FUTURE_ALLOWANCE_MS = 24 * 60 * 60 * 1000;
+/** Row fields that would carry a time of their own. They are refused. */
+const TIME_FIELDS = ["changedAt", "modifiedAt", "modifiedOn", "updatedAt"] as const;
+
+export interface ImportValidRow {
+  /** The row's position in the request (0-based), for the reply. */
+  index: number;
+  update: NewPendingUpdate;
+}
 
 export interface ImportParseResult {
-  valid: NewPendingUpdate[];
+  valid: ImportValidRow[];
   invalid: { index: number; error: string }[];
 }
 
-export function parseImportRows(rows: unknown[], now: Date): ImportParseResult {
+export function parseImportRows(rows: unknown[], exportedAt: Date): ImportParseResult {
   const result: ImportParseResult = { valid: [], invalid: [] };
   rows.forEach((raw, index) => {
     const refuse = (error: string) => result.invalid.push({ index, error });
     if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return refuse("השורה אינה אובייקט JSON.");
     const row = raw as Record<string, unknown>;
 
-    if (typeof row.changedAt !== "string" || !row.changedAt.trim()) return refuse("חסר changedAt (תאריך ISO של שינוי הדירוג ב-Fireberry).");
-    const changedAt = new Date(row.changedAt.trim());
-    if (Number.isNaN(changedAt.getTime())) return refuse("changedAt אינו תאריך ISO תקין.");
-    if (changedAt.getTime() > now.getTime() + FUTURE_ALLOWANCE_MS) return refuse("changedAt נמצא בעתיד.");
+    if (TIME_FIELDS.some((field) => row[field] !== undefined)) {
+      return refuse("שורה עם שדה זמן משלה אינה נתמכת. הזמן של כל הייבוא הוא exportedAt בלבד.");
+    }
 
     const leadId = typeof row.leadId === "string" && row.leadId.trim() ? row.leadId.trim() : null;
     const phone =
@@ -50,13 +57,16 @@ export function parseImportRows(rows: unknown[], now: Date): ImportParseResult {
 
     const payload = { studentRating: rating.value };
     result.valid.push({
-      dedupeKey: pendingDedupeKey({ leadIdHint: leadId, normalizedPhone, kind: "rating", payload }),
-      reason: "imported",
-      kind: "rating",
-      leadIdHint: leadId,
-      normalizedPhone,
-      payload,
-      sourceAt: changedAt,
+      index,
+      update: {
+        dedupeKey: pendingDedupeKey({ leadIdHint: leadId, normalizedPhone, kind: "rating", payload }),
+        reason: "imported",
+        kind: "rating",
+        leadIdHint: leadId,
+        normalizedPhone,
+        payload,
+        sourceAt: exportedAt,
+      },
     });
   });
   return result;

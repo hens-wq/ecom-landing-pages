@@ -14,7 +14,8 @@ import { ensureSchema, getSqlClient, wrapDatabaseError } from "@/lib/lead-status
 /**
  * Postgres side of the pending updates (table lead_status_pending, created by ensureSchema). A replay only changes
  * a row that is still open, so two runs cannot both settle the same update. Receipt times come from the database
- * clock, the same clock the status rows use.
+ * clock, the same clock the status rows use. The completion-run lock is one row (lead_status_pending_run): a run
+ * takes it with one conditional statement, so two runs can never hold it together.
  */
 
 interface PendingDbRow {
@@ -188,6 +189,42 @@ export const pendingStore: PendingStore = {
         SET status = 'dismissed', resolved_at = now(), last_checked_at = now(), last_error = 'dismissed_by_admin'
         WHERE id = ${id} AND status = 'open'
       `;
+    });
+  },
+
+  async tryAcquireRun(holder: string, leaseSeconds: number) {
+    return withSchema("שגיאה בנעילת הרצת ההשלמה במסד הנתונים.", async () => {
+      const sql = getSqlClient();
+      // One statement: the row is taken only when it is free, or its lease has ended. Two runs cannot both get it.
+      const rows = (await sql`
+        INSERT INTO lead_status_pending_run (id, holder, locked_until)
+        VALUES (1, ${holder}, now() + (${leaseSeconds}::int * interval '1 second'))
+        ON CONFLICT (id) DO UPDATE SET holder = EXCLUDED.holder, locked_until = EXCLUDED.locked_until
+        WHERE lead_status_pending_run.locked_until < now()
+        RETURNING holder
+      `) as { holder: string }[];
+      return rows[0]?.holder === holder;
+    });
+  },
+
+  async releaseRun(holder: string) {
+    await withSchema("שגיאה בשחרור נעילת הרצת ההשלמה במסד הנתונים.", async () => {
+      const sql = getSqlClient();
+      await sql`UPDATE lead_status_pending_run SET locked_until = now() WHERE id = 1 AND holder = ${holder}`;
+    });
+  },
+
+  async openSummary() {
+    return withSchema("שגיאה בטעינת סיכום העדכונים הממתינים ממסד הנתונים.", async () => {
+      const sql = getSqlClient();
+      const rows = (await sql`
+        SELECT reason, count(*)::int AS n, min(source_at) AS oldest
+        FROM lead_status_pending
+        WHERE status = 'open'
+        GROUP BY reason
+        ORDER BY reason
+      `) as { reason: PendingReason; n: number; oldest: string | Date }[];
+      return rows.map((row) => ({ reason: row.reason, count: Number(row.n), oldestSourceAt: new Date(row.oldest) }));
     });
   },
 };

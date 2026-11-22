@@ -14,7 +14,7 @@ The secret stays in server configuration and the sender's existing connection. D
 
 ## Identify the dashboard lead
 
-Send `leadId` as a string: the verified Meta Lead ID or the dashboard's internal landing-page lead ID. It is **not** a Fireberry contact ID. Alternatively send an Israeli `phone` in a supported format. The existing matcher refuses ambiguous phone matches with HTTP 409; names are never used. No matching identity returns 404 and writes nothing.
+Send `leadId` as a string: the verified Meta Lead ID or the dashboard's internal landing-page lead ID. It is **not** a Fireberry contact ID. Alternatively send an Israeli `phone` in a supported format. Names are never used. An ambiguous phone is never guessed: the update is kept for an admin (see "Updates the dashboard cannot place yet").
 
 ## Rating-only update
 
@@ -95,3 +95,27 @@ The schema change adds nullable `student_rating` with a database check for integ
 `updatedAt` is server receipt time. No verified Fireberry modification timestamp or event sequence is currently part of the payload, so delayed out-of-order CRM events cannot be rejected by source time; the last rating received wins. Repeated delivery of the same update preserves the same business value, while receipt time may advance.
 
 Successful responses include the matched dashboard lead ID, matching method and the persisted `record.studentRating`. The webhook never changes Meta campaigns or budgets, and rating does not itself create an enrollment or a payment.
+
+## Updates the dashboard cannot place yet
+
+An update that cannot be placed yet is kept in the durable queue (table `lead_status_pending`) and answered `200` with `applied: false` and a `reason`, so the automation keeps running:
+
+- `not_found`: no lead has this phone or ID yet.
+- `ambiguous`: more than one lead has this phone. Nothing is guessed.
+- `unverified_match`: the phone appears only under a custom question. Nothing is applied until an admin chooses the lead.
+- `meta_unavailable`: the Meta lead list could not be read. The reply also carries `retryLater: true`.
+- `missing_identity`, `invalid_phone`: no usable identifier.
+
+A failed save answers `503`. Contract errors (`400`, `401`, `403`) are never stored.
+
+Held updates are completed through the admin endpoint `/api/admin/lead-status/pending` (bearer `LEAD_STATUS_ADMIN_SECRET`):
+
+- `replay`: matches the held updates again. With `dryRun: true` it reports what would apply, and what each row would queue for Meta, and writes nothing.
+- `auto`: the 15-minute job. It is a dry run until `LEAD_STATUS_AUTO_COMPLETE` is `on`.
+- `apply`: applies one held update to a lead the admin chooses (`id`, `leadId`). `GET ?id=<id>&candidates=1` lists the leads that share the phone, by ID and status only.
+- `import`: rating records from a Fireberry export. One `exportedAt` (the moment the export was taken) for the whole file. A row with a time field of its own is refused, and so is an empty rating: an import never clears a rating.
+- `dismiss`: closes one held update.
+
+Only one completion run at a time. A replay or an apply answers `409` while another run holds the lock, and the job answers `skipped_busy`.
+
+A held update keeps the time it was received. An imported rating carries the export time and never queues a Meta event, because its change time is not known.

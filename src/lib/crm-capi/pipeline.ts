@@ -1,6 +1,6 @@
 import type { CrmCapiConfig } from "@/lib/crm-capi/config";
 import { buildCrmEvent, crmEventId } from "@/lib/crm-capi/event";
-import { CRM_CLAIM_LEASE_SECONDS, retryDelaySeconds } from "@/lib/crm-capi/policy";
+import { CRM_CLAIM_LEASE_SECONDS, isTooOld, retryDelaySeconds } from "@/lib/crm-capi/policy";
 import { crmEventsForChange, type CrmEventType, type LeadQualitySnapshot } from "@/lib/crm-capi/rules";
 import { sendCrmEvent, type CrmMetaReport, type FetchLike } from "@/lib/crm-capi/send";
 
@@ -86,6 +86,8 @@ export async function recordCrmChange(change: CrmChange, deps: RecordDeps): Prom
   if (eventTypes.length === 0) return 0;
 
   const eventTime = eventTimeFor(change);
+  // Too old for Meta: never queued. A row that failed later would keep the (lead, type) key and block every later event of that type.
+  if (isTooOld(eventTime, change.now)) return 0;
   const events: NewCrmEvent[] = eventTypes.map((eventType) => ({
     leadKey: change.leadKey,
     eventType,

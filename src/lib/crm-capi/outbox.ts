@@ -85,6 +85,18 @@ export async function claimDueCrmEvents(limit: number, now: Date, leaseUntil: Da
   }
 }
 
+/** Read-only: true when the outbox already holds an event of this type for this lead. The completion dry run uses it. */
+export async function isCrmEventQueued(leadKey: string, eventType: CrmEventType): Promise<boolean> {
+  try {
+    await ensureSchema();
+    const sql = getSqlClient();
+    const rows = (await sql`SELECT 1 FROM crm_capi_events WHERE lead_key = ${leadKey} AND event_type = ${eventType} LIMIT 1`) as unknown[];
+    return rows.length > 0;
+  } catch (error) {
+    throw wrapDatabaseError(error, "שגיאה בבדיקת אירועי CRM במסד הנתונים.");
+  }
+}
+
 export async function finishCrmEvent(id: number, outcome: CrmEventOutcome, now: Date): Promise<void> {
   try {
     await ensureSchema();

@@ -1,5 +1,7 @@
 import { after } from "next/server";
 
+import { readCrmCapiConfig } from "@/lib/crm-capi/config";
+import { isCrmEventQueued } from "@/lib/crm-capi/outbox";
 import { flushCrmEventsSafely, recordCrmChangeSafely } from "@/lib/crm-capi/service";
 import { loadDashboardLeadIndex } from "@/lib/lead-status/dashboard-leads";
 import { handlePendingAction, handlePendingList, type PendingAdminDeps } from "@/lib/lead-status/pending-admin-handler";
@@ -13,7 +15,8 @@ export const maxDuration = 60;
 
 /**
  * GET  /api/admin/lead-status/pending   - the pending Fireberry status updates, newest first
- * POST /api/admin/lead-status/pending   - replay (optionally a dry run), apply one to a known lead, or dismiss one
+ * POST /api/admin/lead-status/pending   - replay (dry run or real), auto (the 15-minute job), apply one to a known lead,
+ *                                         import Fireberry ratings with their export time, or dismiss one
  *   Authorization: Bearer <LEAD_STATUS_ADMIN_SECRET>
  *
  * The admin secret is its own credential: the webhook tokens cannot call these routes.
@@ -28,6 +31,7 @@ function deps(): PendingAdminDeps {
     recordCrm: recordCrmChangeSafely,
     schedule: (task) => after(task),
     flush: (limit) => flushCrmEventsSafely(limit),
+    crm: { sendEnabled: readCrmCapiConfig().sendEnabled, isQueued: isCrmEventQueued },
   };
 }
 

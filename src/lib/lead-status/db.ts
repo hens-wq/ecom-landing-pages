@@ -121,6 +121,14 @@ export function ensureSchema(): Promise<void> {
       `;
       await sql`CREATE UNIQUE INDEX IF NOT EXISTS lead_status_pending_open_key ON lead_status_pending (dedupe_key) WHERE status = 'open'`;
       await sql`CREATE INDEX IF NOT EXISTS lead_status_pending_received_idx ON lead_status_pending (status, last_received_at)`;
+      // The completion-run lock: one row, id 1. Only one run (manual, scheduled or after a webhook) replays at a time.
+      await sql`
+        CREATE TABLE IF NOT EXISTS lead_status_pending_run (
+          id integer PRIMARY KEY CHECK (id = 1),
+          holder text NOT NULL,
+          locked_until timestamptz NOT NULL
+        )
+      `;
     })().catch((error) => {
       schemaReadyPromise = null;
       throw wrapDatabaseError(error, "שגיאה באתחול טבלת הסטטוסים במסד הנתונים.");
