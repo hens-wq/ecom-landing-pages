@@ -111,11 +111,10 @@ A failed save answers `503`. Contract errors (`400`, `401`, `403`) are never sto
 Held updates are completed through the admin endpoint `/api/admin/lead-status/pending` (bearer `LEAD_STATUS_ADMIN_SECRET`):
 
 - `replay`: matches the held updates again. With `dryRun: true` it reports what would apply, and what each row would queue for Meta, and writes nothing.
-- `auto`: the 15-minute job. It is a dry run until `LEAD_STATUS_AUTO_COMPLETE` is `on`.
 - `apply`: applies one held update to a lead the admin chooses (`id`, `leadId`). `GET ?id=<id>&candidates=1` lists the leads that share the phone, by ID and status only.
 - `import`: rating records from a Fireberry export. One `exportedAt` (the moment the export was taken) for the whole file. A row with a time field of its own is refused, and so is an empty rating: an import never clears a rating.
 - `dismiss`: closes one held update.
 
-Only one completion run at a time. A replay or an apply answers `409` while another run holds the lock, and the job answers `skipped_busy`.
+Held updates are also retried automatically after each webhook reply, once their last check is more than 10 minutes old. Only one completion run at a time: a replay or an apply answers `409` while another run holds the lock.
 
 A held update keeps the time it was received. An imported rating carries the export time and never queues a Meta event, because its change time is not known.

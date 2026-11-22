@@ -9,7 +9,7 @@
  *     pending update and answered 200 with applied: false. An automation that gets 200 keeps running; the stored
  *     update is completed later by the admin replay (POST /api/admin/lead-status/pending).
  *   - When the Meta lead list cannot be read the update is still stored in the durable queue, and the reply is 200
- *     with applied: false, reason meta_unavailable and retryLater: true. The completion job retries it. A failed save is a 503.
+ *     with applied: false, reason meta_unavailable and retryLater: true. A later webhook reply retries it. A failed save is a 503.
  *   - A database failure is 503 and an unexpected one is 500. Real failures are never answered 200.
  */
 import { randomUUID } from "node:crypto";
@@ -20,7 +20,6 @@ import { formatLeadWebhookDiagnostic, type LeadWebhookReason } from "@/lib/lead-
 import { checkCrmSyncRequest, syncCrmStatus, type CrmStatusStore, type CrmSyncInput, type DashboardLeadIndex } from "@/lib/lead-status/crm-sync";
 import {
   RUN_LEASE_SECONDS,
-  autoCompleteEnabled,
   pendingDedupeKey,
   type CrmChangeRecorder,
   type PendingKind,
@@ -135,7 +134,7 @@ async function keepUnidentified(deps: LeadStatusWebhookDeps, update: Unidentifie
     recorded: true,
   };
   const recorded = { recorded: true, reason: update.reason, pendingId: stored.id, duplicate: !stored.inserted };
-  // Kept in the durable queue, so the sender gets a success and keeps running; the completion job finishes the update.
+  // Kept in the durable queue, so the sender gets a success and keeps running; a later webhook reply finishes the update.
   // A failed save never reaches this line: the insert throws, and the catch answers 503.
   const retryLater = update.reason === "meta_unavailable" ? { retryLater: true } : {};
   return reply(deps, { ok: true, applied: false, ...recorded, ...retryLater }, 200, update.reason, details);
@@ -268,7 +267,8 @@ export async function runLeadStatusWebhook(request: Request, deps: LeadStatusWeb
         now: deps.now(),
       });
       deps.schedule(() => deps.flush(10));
-      if (autoCompleteEnabled(deps.env)) deps.schedule(() => retryOpenUpdates(deps, index));
+      // Held updates whose lead is now known are completed after every reply (the run lock keeps two retries apart).
+      deps.schedule(() => retryOpenUpdates(deps, index));
       return reply(
         deps,
         { ok: true, applied: true, matchedBy: result.matchedBy, leadId: result.leadId, record: result.record },
@@ -285,7 +285,7 @@ export async function runLeadStatusWebhook(request: Request, deps: LeadStatusWeb
     // Lookup misses: the update is kept. When the Meta list itself was unavailable, the miss is not proof of absence.
     const reason: WebhookPendingReason =
       result.code === "not_found" && !index.metaAvailable ? "meta_unavailable" : result.code === "unverified" ? "unverified_match" : result.code;
-    if (autoCompleteEnabled(deps.env)) deps.schedule(() => retryOpenUpdates(deps, index));
+    deps.schedule(() => retryOpenUpdates(deps, index));
     return await keepUnidentified(deps, {
       input: syncInput,
       leadId,

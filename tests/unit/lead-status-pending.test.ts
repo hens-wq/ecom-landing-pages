@@ -249,7 +249,7 @@ function index(leads: { id: string; phone: string | null }[], metaAvailable = tr
   };
 }
 
-function harness(initial: { leads: DashboardLeadIndex; statuses?: LeadStatusRecord[]; autoComplete?: boolean }) {
+function harness(initial: { leads: DashboardLeadIndex; statuses?: LeadStatusRecord[] }) {
   const clock = new Clock();
   const store = new FakeStatusStore(clock);
   for (const row of initial.statuses ?? []) store.rows.set(row.leadId, row);
@@ -265,10 +265,7 @@ function harness(initial: { leads: DashboardLeadIndex; statuses?: LeadStatusReco
   let scheduled: (() => Promise<void>)[] = [];
   let currentIndex = initial.leads;
   const deps: LeadStatusWebhookDeps = {
-    env: {
-      LEAD_STATUS_WEBHOOK_SECRET: WEBHOOK_SECRET,
-      LEAD_STATUS_AUTO_COMPLETE: initial.autoComplete === false ? "off" : "on",
-    },
+    env: { LEAD_STATUS_WEBHOOK_SECRET: WEBHOOK_SECRET },
     now: () => clock.now,
     loadIndex: async () => currentIndex,
     store,
@@ -526,18 +523,7 @@ test("credentials keep their codes: no token 401, and an unconfigured endpoint 5
   assert.equal(h.pending.all.length, 0);
 });
 
-// ---------- retry: after a webhook, and the completion job ----------
-
-test("with LEAD_STATUS_AUTO_COMPLETE off, a later webhook does not apply the pending update by itself", async () => {
-  const h = harness({ leads: index([]), autoComplete: false });
-  await send(h, { phone: PHONE, pcfsystemfield350: 9 });
-  h.setIndex(index([{ id: LEAD, phone: PHONE }]));
-  h.clock.now = at(60);
-  await send(h, { phone: "0501111111", pcfsystemfield350: 6 });
-  await h.runScheduled();
-  assert.equal(h.store.rows.get(LEAD), undefined, "nothing written");
-  assert.equal(h.pending.all.find((row) => row.normalizedPhone === PHONE)?.status, "open");
-});
+// ---------- retry: after every webhook reply ----------
 
 test("a pending rating is applied by a later webhook once its lead is known and its last check is old enough", async () => {
   const h = harness({ leads: index([]) });
@@ -550,36 +536,6 @@ test("a pending rating is applied by a later webhook once its lead is known and 
   await send(h, { phone: "0502222222", pcfsystemfield350: 6 });
   await h.runScheduled();
   assert.equal(h.store.rows.get(LEAD)?.studentRating, 4, "due after the interval");
-});
-
-test("the completion job only reports while LEAD_STATUS_AUTO_COMPLETE is off, and applies once it is on", async () => {
-  const off = harness({ leads: index([]), autoComplete: false });
-  await send(off, { phone: PHONE, ...OPEN_STATUS });
-  off.setIndex(index([{ id: LEAD, phone: PHONE }]));
-  const dry = await handlePendingAction(adminRequest({ action: "auto" }), adminDepsFor(off));
-  const dryBody = (await dry.json()) as { mode: string; reason: string; counts: Record<string, number> };
-  assert.equal(dry.status, 200);
-  assert.equal(dryBody.mode, "dry_run");
-  assert.equal(dryBody.reason, "auto_complete_off");
-  assert.equal(dryBody.counts.would_apply, 1);
-  assert.equal(off.pending.all[0].status, "open");
-  assert.equal(off.store.writes.length, 0);
-
-  const on = harness({ leads: index([]), autoComplete: true });
-  await send(on, { phone: PHONE, ...OPEN_STATUS });
-  on.setIndex(index([{ id: LEAD, phone: PHONE }]));
-  on.clock.now = at(60);
-  const real = await handlePendingAction(adminRequest({ action: "auto" }), adminDepsFor(on));
-  const realBody = (await real.json()) as { mode: string; counts: Record<string, number> };
-  assert.equal(realBody.mode, "applied");
-  assert.equal(realBody.counts.applied, 1);
-  assert.equal(on.store.rows.get(LEAD)?.mainStatus, "בתהליך");
-});
-
-test("the completion job answers 503 while Meta is unavailable, so a failed run is visible", async () => {
-  const h = harness({ leads: index([], false) });
-  const result = await handlePendingAction(adminRequest({ action: "auto" }), adminDepsFor(h));
-  assert.equal(result.status, 503);
 });
 
 // ---------- one completion run at a time ----------
@@ -597,17 +553,6 @@ test("while another completion run holds the lock, a replay answers 409 and chan
   const free = await handlePendingAction(adminRequest({ action: "replay" }), adminDepsFor(h));
   assert.equal(free.status, 200);
   assert.equal(h.pending.all[0].status, "applied");
-});
-
-test("the completion job reports skipped_busy instead of waiting when another run is active", async () => {
-  const h = harness({ leads: index([]), autoComplete: true });
-  await send(h, { phone: PHONE, ...OPEN_STATUS });
-  h.setIndex(index([{ id: LEAD, phone: PHONE }]));
-  h.clock.now = at(60);
-  h.pending.runHeld = true;
-  const reply = await handlePendingAction(adminRequest({ action: "auto" }), adminDepsFor(h));
-  assert.equal(((await reply.json()) as { mode: string }).mode, "skipped_busy");
-  assert.equal(h.pending.all[0].status, "open");
 });
 
 // ---------- ambiguous phone: the admin chooses, with the candidates in view ----------
@@ -697,7 +642,7 @@ test("a pending update with a status and a rating keeps its rating when a newer 
   });
   h.setIndex(index([{ id: LEAD, phone: PHONE }]));
   const report = await replayPendingRows(await h.pending.listOpen(50), {
-    index: h.deps.loadIndex ? await h.deps.loadIndex() : index([]),
+    index: await h.deps.loadIndex(),
     store: h.store,
     pending: h.pending,
     recordCrm: h.deps.recordCrm,

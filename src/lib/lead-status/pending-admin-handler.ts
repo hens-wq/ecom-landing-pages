@@ -1,5 +1,5 @@
 /**
- * /api/admin/lead-status/pending: review and completion of the pending Fireberry updates. Pure: the environment, the
+ * /api/admin/lead-status/pending: review and completion of the held Fireberry updates. Pure: the environment, the
  * lead index, the stores, the CRM settings and the recorder are passed in, so it is tested without a database or Meta.
  *
  * Authorization: "Authorization: Bearer <LEAD_STATUS_ADMIN_SECRET>", at least 32 characters. The webhook credentials
@@ -10,13 +10,12 @@
  *        &diagnostics=1                                   (adds index counts and the open updates by reason)
  *        &id=<pending id>&candidates=1                    (the leads that share the update's phone, to choose from)
  *   POST { "action": "replay", "dryRun": true | false, "limit": 1..200 }
- *        { "action": "auto" }     the 15-minute job. A dry run while LEAD_STATUS_AUTO_COMPLETE is not "on".
  *        { "action": "apply", "id": 12, "leadId": "<a lead the dashboard knows>" }
  *        { "action": "dismiss", "id": 12 }
  *        { "action": "import", "exportedAt": "<ISO time the export was taken>", "dryRun": true | false, "rows": [...] }
  *
- * One completion run at a time. A real replay, an apply or an auto run takes the run lock. While another run holds
- * it, the reply is 409 (replay, apply) or "skipped_busy" (auto). The lease ends by itself if a run stops early.
+ * Held updates are also retried by the webhook itself, after each reply. One completion run at a time: a real replay
+ * or an apply takes the run lock, and while another run holds it the reply is 409.
  *
  * The replies hold the stored phone and payload of each pending update, for the admin who asked for them. They
  * never go to a log.
@@ -27,7 +26,6 @@ import type { CrmStatusStore, DashboardLeadIndex } from "@/lib/lead-status/crm-s
 import { parseImportRows } from "@/lib/lead-status/pending-import";
 import { replayPendingRows, type ReplayCrmPreview } from "@/lib/lead-status/pending-replay";
 import {
-  autoCompleteEnabled,
   RUN_LEASE_SECONDS,
   type CrmChangeRecorder,
   type NewPendingUpdate,
@@ -40,8 +38,6 @@ import { normalizeIsraeliPhone } from "@/lib/phone";
 export const ADMIN_SECRET_ENV = "LEAD_STATUS_ADMIN_SECRET";
 export const MIN_ADMIN_SECRET_LENGTH = 32;
 
-/** How many open updates one automatic run looks at. */
-const AUTO_BATCH = 50;
 /** An export time may be at most this far ahead of the clock (a small allowance for clock drift). */
 const FUTURE_ALLOWANCE_MS = 5 * 60 * 1000;
 /** An export older than this is refused: its rows no longer describe the current state. */
@@ -313,42 +309,6 @@ export async function handlePendingAction(request: Request, deps: PendingAdminDe
       return json({ ok: true, ...outcome }, 200);
     }
 
-    if (body.action === "auto") {
-      // The 15-minute job. While LEAD_STATUS_AUTO_COMPLETE is not "on" it only reports what it would do.
-      const index = await deps.loadIndex();
-      if (!index.metaAvailable) {
-        return json({ error: { message: "קריאת הלידים מ-Meta אינה זמינה. ההשלמה האוטומטית לא רצה.", retryable: true } }, 503);
-      }
-      if (!autoCompleteEnabled(deps.env)) {
-        const rows = await deps.pending.listOpen(AUTO_BATCH);
-        const report = await replayPendingRows(rows, {
-          index,
-          store: deps.store,
-          pending: deps.pending,
-          recordCrm: deps.recordCrm,
-          now: deps.now(),
-          dryRun: true,
-          crm: deps.crm,
-        });
-        return json({ ok: true, mode: "dry_run", reason: "auto_complete_off", ...report }, 200);
-      }
-      const outcome = await withRunLock(deps, async () => {
-        const rows = await deps.pending.listRetryable(AUTO_BATCH);
-        const report = await replayPendingRows(rows, {
-          index,
-          store: deps.store,
-          pending: deps.pending,
-          recordCrm: deps.recordCrm,
-          now: deps.now(),
-          dryRun: false,
-        });
-        if (report.counts.applied > 0) deps.schedule(() => deps.flush(20));
-        return report;
-      });
-      if (outcome === "busy") return json({ ok: true, mode: "skipped_busy" }, 200);
-      return json({ ok: true, mode: "applied", ...outcome }, 200);
-    }
-
     if (body.action === "apply") {
       const id = positiveInteger(body.id);
       const leadId = typeof body.leadId === "string" ? body.leadId.trim() : "";
@@ -434,7 +394,7 @@ export async function handlePendingAction(request: Request, deps: PendingAdminDe
       return json({ ok: true, id, status: "dismissed" }, 200);
     }
 
-    return json({ error: { message: "פעולה לא מוכרת. האפשרויות: replay, auto, apply, import, dismiss." } }, 400);
+    return json({ error: { message: "פעולה לא מוכרת. האפשרויות: replay, apply, import, dismiss." } }, 400);
   } catch (error) {
     return failureReply(error);
   }

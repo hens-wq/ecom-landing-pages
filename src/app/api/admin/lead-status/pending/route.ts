@@ -15,7 +15,7 @@ export const maxDuration = 60;
 
 /**
  * GET  /api/admin/lead-status/pending   - the pending Fireberry status updates, newest first
- * POST /api/admin/lead-status/pending   - replay (dry run or real), auto (the 15-minute job), apply one to a known lead,
+ * POST /api/admin/lead-status/pending   - replay (dry run or real), apply one to a known lead,
  *                                         import Fireberry ratings with their export time, or dismiss one
  *   Authorization: Bearer <LEAD_STATUS_ADMIN_SECRET>
  *
